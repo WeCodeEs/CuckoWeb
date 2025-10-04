@@ -477,6 +477,84 @@ export default function Orders() {
         </DndContext>
       </div>
 
+      <div className="mt-6 bg-white dark:bg-darkbg-lighter rounded-xl shadow-sm border border-gray-200 dark:border-darkbg p-4 md:p-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Historial de pedidos entregados</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Consulta los pedidos marcados como entregados y filtra por fecha de entrega.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <label htmlFor="delivered-date-filter" className="text-sm text-gray-700 dark:text-gray-200">
+              Fecha de entrega
+            </label>
+            <input
+              id="delivered-date-filter"
+              type="date"
+              value={deliveredDateFilter}
+              onChange={(event) => setDeliveredDateFilter(event.target.value)}
+              className="px-3 py-2 rounded-lg border border-gray-300 dark:border-darkbg bg-white dark:bg-darkbg text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-secondary"
+            />
+            {deliveredDateFilter && (
+              <button
+                onClick={() => setDeliveredDateFilter('')}
+                className="text-sm text-primary dark:text-secondary hover:underline"
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-darkbg">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-darkbg">
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Pedido
+                </th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Cliente
+                </th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Total
+                </th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Entregado
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-darkbg divide-y divide-gray-200 dark:divide-darkbg">
+              {deliveredOrders.length > 0 ? (
+                deliveredOrders.map((order) => (
+                  <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-darkbg-darker transition-colors">
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">#{order.id}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                      {order.user ? `${order.user.first_name} ${order.user.last_name}` : 'Cliente'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                      S/. {order.total.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                      {order.delivered_at ? new Date(order.delivered_at).toLocaleString('es-PE') : '—'}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4} className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-300">
+                    {deliveredDateFilter
+                      ? 'No se encontraron pedidos entregados para la fecha seleccionada.'
+                      : 'Aún no hay pedidos entregados registrados.'}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {isDrawerOpen && selectedOrder && (
         <PedidoDrawer
           order={selectedOrder}

@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import PedidoCard from '../components/pedidos/PedidoCard';
 import PedidoDrawer from '../components/pedidos/PedidoDrawer';
 import PrintPreviewModal from '../components/pedidos/PrintPreviewModal';
+import DeliveredOrdersHistoryModal from '../components/pedidos/DeliveredOrdersHistoryModal';
 import SkeletonKanbanCard from '../components/skeletons/SkeletonKanbanCard';
 import { Printer, Plus, Trash2 } from 'lucide-react';
 import {
@@ -101,7 +102,27 @@ export default function Orders() {
   const [showPrintPreview, setShowPrintPreview] = React.useState(false);
   const [activeId, setActiveId] = React.useState<number | null>(null);
   const [isTouchDevice, setIsTouchDevice] = React.useState(false);
+  const [deliveredDateFilter, setDeliveredDateFilter] = React.useState('');
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = React.useState(false);
   const { toast } = useToast();
+
+  const deliveredOrders = React.useMemo(() => {
+    const delivered = orders.filter((order) => order.status === 'Entregado' && order.delivered_at);
+
+    if (!deliveredDateFilter) {
+      return delivered;
+    }
+
+    return delivered.filter((order) => {
+      const deliveredDate = new Date(order.delivered_at as string);
+      if (Number.isNaN(deliveredDate.getTime())) {
+        return false;
+      }
+
+      const formattedDate = deliveredDate.toISOString().split('T')[0];
+      return formattedDate === deliveredDateFilter;
+    });
+  }, [orders, deliveredDateFilter]);
 
   // Enhanced device detection
   useEffect(() => {
@@ -395,6 +416,12 @@ export default function Orders() {
               <Printer className="w-4 h-4" />
               Prueba de Impresión
             </button>
+            <button
+              onClick={() => setIsHistoryModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary dark:bg-secondary rounded-xl hover:bg-primary-dark dark:hover:bg-secondary/90 transition-colors"
+            >
+              Ver historial
+            </button>
           </div>
         </div>
 
@@ -463,6 +490,16 @@ export default function Orders() {
 
       {showPrintPreview && (
         <PrintPreviewModal onClose={() => setShowPrintPreview(false)} />
+      )}
+
+      {isHistoryModalOpen && (
+        <DeliveredOrdersHistoryModal
+          orders={deliveredOrders}
+          deliveredDateFilter={deliveredDateFilter}
+          onDateFilterChange={setDeliveredDateFilter}
+          onClearFilter={() => setDeliveredDateFilter('')}
+          onClose={() => setIsHistoryModalOpen(false)}
+        />
       )}
     </div>
   );

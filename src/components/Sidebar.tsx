@@ -101,6 +101,7 @@ export default function Sidebar() {
   const location = useLocation();
   const isAdmin = user?.role === 'Administrador';
   const [expandedMenus, setExpandedMenus] = useState<string[]>(['/menus', '/adicionales']);
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
   const filteredRoutes = routes.filter(route => !route.adminOnly || isAdmin);
 
@@ -176,12 +177,12 @@ export default function Sidebar() {
     <div className="bg-primary-dark dark:bg-darkbg-darker text-white w-64 min-h-screen flex flex-col transition-colors duration-200">
       <div className="bg-white dark:bg-darkbg-darker p-6 flex flex-col items-center">
         <img 
-          src="https://ctjfdevwmxtuhylpspih.supabase.co/storage/v1/object/public/product_images//Logo%20Vertical%20(1).jpg"
+          src={`${SUPABASE_URL}/storage/v1/object/sign/images/Logo_Vertical.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9iYjIwYTQ2OC0zZGUxLTQ4ZGMtOWY4Zi04ODUyNDRiNDIwYzEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvTG9nb19WZXJ0aWNhbC5qcGciLCJpYXQiOjE3NTk4Njk0ODQsImV4cCI6NDkxMzQ2OTQ4NH0.fVr0DAFBXQuW-38eQIqfCCAqNwo3mCdEo45tLJmohqM`}
           alt="Café Admin Logo"
           className="h-28 w-auto mb-4 block dark:hidden"
         />
         <img 
-          src="https://ctjfdevwmxtuhylpspih.supabase.co/storage/v1/object/public/product_images//Fondo%20Obscuro.png"
+          src={`${SUPABASE_URL}/storage/v1/object/sign/images/Logo_Cuckoo_Fondo_Oscuro.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9iYjIwYTQ2OC0zZGUxLTQ4ZGMtOWY4Zi04ODUyNDRiNDIwYzEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvTG9nb19DdWNrb29fRm9uZG9fT3NjdXJvLnBuZyIsImlhdCI6MTc1OTg2OTcxNywiZXhwIjo0OTEzNDY5NzE3fQ.6JcaTT2Nwfu9PpiDSpjhhbGREcnVvI1lPktXne9A_DQ`}
           alt="Café Admin Logo"
           className="h-28 w-auto mb-4 hidden dark:block"
         />

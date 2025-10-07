@@ -8,6 +8,7 @@ export default function Login() {
   const { signIn, error, loading, user } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
   useEffect(() => {
     if (user) {
@@ -32,12 +33,12 @@ export default function Login() {
     <div className="min-h-screen bg-gray-50 dark:bg-darkbg flex flex-col items-center justify-center py-6 sm:px-6 lg:px-8 transition-colors duration-200">
       <div className="w-full max-w-md space-y-4">
         <img
-          src="https://ctjfdevwmxtuhylpspih.supabase.co/storage/v1/object/public/product_images//Logo_Vertical__1_-removebg-preview.png"
+          src={`${SUPABASE_URL}/storage/v1/object/sign/images/Logo_Vertical_removebg.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9iYjIwYTQ2OC0zZGUxLTQ4ZGMtOWY4Zi04ODUyNDRiNDIwYzEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvTG9nb19WZXJ0aWNhbF9yZW1vdmViZy5wbmciLCJpYXQiOjE3NTk4Njk2MTcsImV4cCI6NDkxMzQ2OTYxN30.mHw60hLmacUR5tLUhs9DuOKTnyeALMFRuWbJ0heaEqE`}
           alt="CuckooEats Logo"
           className="h-[250px] w-auto mx-auto block dark:hidden"
         />
         <img
-          src="https://ctjfdevwmxtuhylpspih.supabase.co/storage/v1/object/public/product_images//Fondo%20Obscuro.png"
+          src={`${SUPABASE_URL}/storage/v1/object/sign/images/Logo_Cuckoo_Fondo_Oscuro.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9iYjIwYTQ2OC0zZGUxLTQ4ZGMtOWY4Zi04ODUyNDRiNDIwYzEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvTG9nb19DdWNrb29fRm9uZG9fT3NjdXJvLnBuZyIsImlhdCI6MTc1OTg2OTcxNywiZXhwIjo0OTEzNDY5NzE3fQ.6JcaTT2Nwfu9PpiDSpjhhbGREcnVvI1lPktXne9A_DQ`}
           alt="CuckooEats Logo"
           className="h-[250px] w-auto mx-auto hidden dark:block"
         />

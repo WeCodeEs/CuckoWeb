@@ -69,7 +69,7 @@ export const useUsuariosStore = create<UsuariosState>((set, get) => ({
       }
 
       // Call Edge Function to get all staff users
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/staff-users`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-staff-users`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -78,17 +78,21 @@ export const useUsuariosStore = create<UsuariosState>((set, get) => ({
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+        const err = await response.json().catch(() => ({}));
+        const msg = err?.error?.message || err?.error || `HTTP ${response.status}`;
+        throw new Error(msg);
       }
 
-      const { users } = await response.json();
+      const { success, data, error } = await response.json();
       
-      console.log('📊 Received users from Edge Function:', users?.length || 0);
+      if (!success) {
+        throw new Error(error?.message || 'No fue posible cargar los usuarios');
+      }
+      console.log('📊 Received users from Edge Function:', data?.length || 0);
       
       // Transform data to match expected format
-      const transformedUsers: StaffUser[] = (users || []).map((user: any) => ({
-        id: user.uuid,
+      const transformedUsers: StaffUser[] = (data || []).map((user: any) => ({
+        id: user.id,
         email: user.email || '',
         full_name: user.full_name || '',
         role: user.role || 'Sin perfil',

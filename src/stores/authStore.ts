@@ -107,7 +107,9 @@ export const useAuthStore = create<AuthState>((set) => ({
         if (signInError) {
           if (signInError.message === 'Invalid login credentials') {
             throw new Error('Credenciales inválidas. Por favor verifica tu correo y contraseña.');
-          }
+          } else if (signInError.message === 'User is banned') {
+            throw new Error('El usuario ha sido desactivado.');
+          } 
           throw signInError;
         }
 

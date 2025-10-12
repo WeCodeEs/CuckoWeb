@@ -127,7 +127,7 @@ export const useUsuariosStore = create<UsuariosState>((set, get) => ({
       }
 
       // Call Edge Function to create user
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/staff-users`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-staff-user`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -137,11 +137,16 @@ export const useUsuariosStore = create<UsuariosState>((set, get) => ({
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+        const err = await response.json().catch(() => ({}));
+        const msg = err?.error?.message || err?.error || `HTTP ${response.status}`;
+        throw new Error(msg);
       }
 
-      console.log('✅ User created successfully');
+      const { success, data: created, error } = await response.json();
+      if (!success) {
+        throw new Error(error?.message || 'No fue posible crear el usuario');
+      }
+      console.log('✅ User created successfully', created);
       
       // Refresh the users list
       await get().fetchUsuarios();

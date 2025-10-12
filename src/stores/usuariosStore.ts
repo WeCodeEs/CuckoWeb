@@ -223,20 +223,26 @@ export const useUsuariosStore = create<UsuariosState>((set, get) => ({
       }
 
       // Call Edge Function to delete user
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/staff-users?id=${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-staff-user`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ id }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+        const err = await response.json().catch(() => ({}));
+        const msg = err?.error?.message || err?.error || `HTTP ${response.status}`;
+        throw new Error(msg);
       }
 
-      console.log('✅ User deleted successfully');
+      const { success, data, error } = await response.json();
+      if (!success) {
+        throw new Error(error?.message || 'No fue posible eliminar el usuario');
+      }
+      console.log('✅ User deleted successfully', data);
       
       // Refresh the users list
       await get().fetchUsuarios();

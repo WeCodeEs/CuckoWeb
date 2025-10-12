@@ -2,6 +2,13 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useUsuariosStore } from '../../stores/usuariosStore';
 
+const strongPassword = (p: string) =>
+  typeof p === 'string'
+  && p.length >= 8 && p.length <= 128
+  && /[A-Z]/.test(p) && /[a-z]/.test(p)
+  && /\d/.test(p) && /[^A-Za-z0-9]/.test(p)
+  && !/\s/.test(p);
+
 interface Props {
   onClose: () => void;
 }
@@ -15,10 +22,23 @@ export default function UsuarioModal({ onClose }: Props) {
     role: selectedUser?.role || 'Operador',
     active: selectedUser?.active ?? true,
   });
+  const [passwordError, setPasswordError] = useState<string | undefined>(undefined);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      if (!selectedUser) {
+        if (!strongPassword(formData.password)) {
+          setPasswordError('Contraseña inválida: longitud mínima 8 carácteres, incluir mayúscula, minúscula, dígito y carácter especial, sin espacios.');
+          return;
+        }
+      } else if (formData.password && !strongPassword(formData.password)) {
+        setPasswordError('Contraseña inválida: longitud mínima 8 carácteres, incluir mayúscula, minúscula, dígito y carácter especial, sin espacios.');
+        return;
+      } else {
+        setPasswordError(undefined);
+      }
+
       if (selectedUser) {
         const updateData: any = {
           id: selectedUser.id,
@@ -28,7 +48,7 @@ export default function UsuarioModal({ onClose }: Props) {
         };
 
         if (formData.email !== selectedUser.email) {
-          updateData.email = formData.email;
+          updateData.email = formData.email.trim().toLowerCase();
         }
 
         if (formData.password) {
@@ -38,7 +58,7 @@ export default function UsuarioModal({ onClose }: Props) {
         await updateUsuario(updateData);
       } else {
         await createUsuario({
-          email: formData.email,
+          email: formData.email.trim().toLowerCase(),
           password: formData.password,
           full_name: formData.full_name,
           role: formData.role as 'Administrador' | 'Operador',
@@ -112,11 +132,27 @@ export default function UsuarioModal({ onClose }: Props) {
               type="password"
               id="password"
               value={formData.password}
-              onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+              onChange={(e) => {
+                const val = e.target.value;
+                setFormData(prev => ({ ...prev, password: val }));
+                if (val.length === 0 && selectedUser) {
+                  setPasswordError(undefined);
+                } else {
+                  setPasswordError(strongPassword(val) ? undefined :
+                    'Contraseña inválida: longitud mínima 8 carácteres, incluir mayúscula, minúscula, dígito y carácter especial, sin espacios.');
+                }
+              }}
               className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary bg-white dark:bg-darkbg text-gray-900 dark:text-white"
               required={!selectedUser}
-              minLength={6}
+              minLength={8}
+              aria-invalid={!!passwordError}
             />
+            {passwordError && (
+              <p className="mt-1 px-2 text-xs text-red-600 dark:text-red-400">{passwordError}</p>
+            )}
+            {!passwordError && (
+              <p className="mt-1 px-2 text-xs text-gray-500 dark:text-gray-400">Mín. 8 caracteres, uso de mayúscula, número y símbolo. Sin espacios.</p>
+            )}
           </div>
 
           <div>
@@ -167,7 +203,11 @@ export default function UsuarioModal({ onClose }: Props) {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-primary dark:bg-secondary rounded-lg hover:bg-primary-dark dark:hover:bg-secondary/90 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-white bg-primary dark:bg-secondary rounded-lg hover:bg-primary-dark dark:hover:bg-secondary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              disabled={
+                (!selectedUser && !!passwordError) ||
+                (!!selectedUser && formData.password.length > 0 && !!passwordError)
+              }
             >
               {selectedUser ? 'Guardar Cambios' : 'Crear Usuario'}
             </button>

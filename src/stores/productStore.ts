@@ -70,7 +70,6 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
   uploadImage: async (file: File) => {
     try {
-      // ======================= LOGS AÑADIDOS AQUÍ =======================
       console.log('--- Iniciando carga de imagen ---');
       console.log('1. Archivo recibido:', file);
 
@@ -88,13 +87,11 @@ export const useProductStore = create<ProductState>((set, get) => ({
         });
 
       console.log('3. Respuesta de Supabase Storage (upload):', { data, uploadError });
-      // =================================================================
 
       if (uploadError) {
         throw uploadError;
       }
 
-      // ======================= LOGS AÑADIDOS AQUÍ =======================
       console.log('4. Obteniendo URL pública para la ruta:', filePath);
       const { data: { publicUrl } } = supabase.storage
         .from('menu_items')
@@ -102,11 +99,10 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
       console.log('5. URL pública obtenida:', publicUrl);
       console.log('--- Carga de imagen finalizada ---');
-      // =================================================================
 
       return publicUrl;
     } catch (error: any) {
-      console.error('💥 ERROR en uploadImage:', error);
+      console.error('ERROR en uploadImage:', error);
       throw new Error('Error al subir la imagen');
     }
   },
@@ -137,6 +133,15 @@ export const useProductStore = create<ProductState>((set, get) => ({
               extra_price,
               active
             )
+          ),
+          variants:product_variants (
+            variant_option_id,
+            additional_price,
+            active,
+            variant_option:variant_options (
+              name,
+              active
+            )
           )
         `)
         .order('created_at', { ascending: false });
@@ -152,6 +157,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
     }
   },
 
+
   fetchProductVariants: async (productId: number) => {
     try {
       
@@ -160,7 +166,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         .select(`
           id,
           name,
-          additional_price,
+          base_price,
           active,
           product_variants!left (
             product_id,

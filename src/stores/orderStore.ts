@@ -11,8 +11,10 @@ export interface OrderDetail {
   unit_price: number;
   product: {
     name: string;
-    variant?: {
-      name?: string;
+  };
+  product_variant?: {
+    variant: {
+      name: string;
     };
   };
   ingredients?: Array<{
@@ -36,7 +38,7 @@ export interface Order {
     uuid: string;
     first_name: string;
     last_name: string;
-    faculty_id?: number;
+    faculty?: string; 
   };
 }
 
@@ -58,7 +60,6 @@ export const useOrderStore = create<OrderStore>((set, get) => {
   let subscription: any = null;
 
   const subscribeToOrders = () => {
-    // Unsubscribe from any existing subscription
     if (subscription) {
       supabase.removeChannel(subscription);
     }
@@ -67,26 +68,19 @@ export const useOrderStore = create<OrderStore>((set, get) => {
       .channel('orders-realtime')
       .on('postgres_changes', 
         { 
-          event: 'INSERT', 
+          event: '*',
           schema: 'public', 
-          table: 'orders' 
+          table: 'orders_today' 
         }, 
         async (payload) => {
-          try {
-            // Play sound if supported and user has interacted with page
-            if ('Audio' in window && document.hasFocus()) {
-              try {
+          if (payload.eventType === 'INSERT') {
+            try {
+              if ('Audio' in window && document.hasFocus()) {
                 const audio = new Audio('/assets/new-order.mp3');
                 audio.volume = 0.5;
-                await audio.play();
-              } catch (audioError) {
-                console.log('Audio play failed (expected on mobile):', audioError);
+                await audio.play().catch(e => console.log('Audio play failed:', e));
               }
-            }
-
-            // Show browser notification if permitted
-            if ('Notification' in window && Notification.permission === 'granted') {
-              try {
+              if ('Notification' in window && Notification.permission === 'granted') {
                 new Notification('Nuevo Pedido', {
                   body: `Pedido #${payload.new.id} recibido`,
                   icon: '/vite.svg',
@@ -94,37 +88,19 @@ export const useOrderStore = create<OrderStore>((set, get) => {
                   requireInteraction: false,
                   silent: false
                 });
-              } catch (notificationError) {
-                console.log('Notification failed:', notificationError);
               }
+            } catch (error) {
+              console.error('Error handling new order notification:', error);
             }
-
-            // Fetch updated orders list
-            await get().fetchOrders();
-          } catch (error) {
-            console.error('Error handling new order notification:', error);
           }
-        }
-      )
-      .on('postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'orders'
-        },
-        async () => {
-          try {
-            await get().fetchOrders();
-          } catch (error) {
-            console.error('Error handling order update:', error);
-          }
+          await get().fetchOrders();
         }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('Successfully subscribed to orders');
+          console.log('Subscrito exitosamente a las órdenes de hoy.');
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('Error subscribing to orders');
+          console.error('Error al subscribirse a las órdenes.');
         }
       });
   };
@@ -147,8 +123,8 @@ export const useOrderStore = create<OrderStore>((set, get) => {
       try {
         set({ loading: true, error: null });
 
-        let { data, error } = await supabase
-          .from('orders')
+        const { data, error } = await supabase
+          .from('orders_today')
           .select(`
             id,
             user_uuid,
@@ -163,20 +139,17 @@ export const useOrderStore = create<OrderStore>((set, get) => {
               uuid,
               first_name,
               last_name,
-              faculty_id
+              faculty
             ),
             details:order_details (
               id,
               product_id,
-              variant_option_id,
               product_variant_id,
               quantity,
               unit_price,
-              product:products (
-                name,
-                variant:variant_options!inner (
-                  name
-                )
+              product:products (name),
+              product_variant:product_variants (
+                variant:variant_options (name)
               ),
               ingredients:order_detail_ingredients (
                 ingredient:ingredient_options (
@@ -190,14 +163,13 @@ export const useOrderStore = create<OrderStore>((set, get) => {
 
         if (error) throw error;
 
-        // Transform the data to include ingredients in a more accessible format
-        if (data) {
-          data = data.map(order => {
+        let transformedData = data;
+        if (transformedData) {
+          transformedData = transformedData.map(order => {
             if (order.details) {
-              order.details = order.details.map(detail => {
-                // Transform ingredients from the nested structure to a simpler array
+              order.details = order.details.map((detail: any) => {
                 if (detail.ingredients) {
-                  detail.ingredients = detail.ingredients.map(ing => ({
+                  detail.ingredients = detail.ingredients.map((ing: any) => ({
                     name: ing.ingredient.name,
                     extra_price: ing.ingredient.extra_price
                   }));
@@ -209,7 +181,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
           });
         }
 
-        set({ orders: data || [], loading: false });
+        set({ orders: transformedData as Order[] || [], loading: false });
       } catch (error: any) {
         console.error('Error fetching orders:', error);
         set({
@@ -231,12 +203,10 @@ export const useOrderStore = create<OrderStore>((set, get) => {
 
         if (error) throw error;
 
-        // Check if any rows were updated
         if (!data || data.length === 0) {
           throw new Error('No se pudo actualizar el pedido. Verifique que el pedido existe y que tiene permisos para modificarlo.');
         }
 
-        // Refresh orders list
         await get().fetchOrders();
       } catch (error: any) {
         console.error('Error updating order status:', error);

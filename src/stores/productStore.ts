@@ -70,28 +70,43 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
   uploadImage: async (file: File) => {
     try {
+      // ======================= LOGS AÑADIDOS AQUÍ =======================
+      console.log('--- Iniciando carga de imagen ---');
+      console.log('1. Archivo recibido:', file);
+
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).slice(2)}.${fileExt}`;
       const filePath = `${fileName}`;
 
+      console.log(`2. Intentando subir al bucket 'menu_items' con la ruta:`, filePath);
+
       const { data, error: uploadError } = await supabase.storage
-        .from('product_images')
+        .from('menu_items') 
         .upload(filePath, file, {
           cacheControl: '3600',
           upsert: false
         });
 
+      console.log('3. Respuesta de Supabase Storage (upload):', { data, uploadError });
+      // =================================================================
+
       if (uploadError) {
         throw uploadError;
       }
 
+      // ======================= LOGS AÑADIDOS AQUÍ =======================
+      console.log('4. Obteniendo URL pública para la ruta:', filePath);
       const { data: { publicUrl } } = supabase.storage
-        .from('product_images')
+        .from('menu_items')
         .getPublicUrl(filePath);
+
+      console.log('5. URL pública obtenida:', publicUrl);
+      console.log('--- Carga de imagen finalizada ---');
+      // =================================================================
 
       return publicUrl;
     } catch (error: any) {
-      console.error('Error uploading image:', error);
+      console.error('💥 ERROR en uploadImage:', error);
       throw new Error('Error al subir la imagen');
     }
   },

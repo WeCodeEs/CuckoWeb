@@ -136,7 +136,7 @@ export default function VariantOptions() {
                       {option.name}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-white">
-                      {formatCurrency(option.additional_price)}
+                      {formatCurrency(option.base_price)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <button

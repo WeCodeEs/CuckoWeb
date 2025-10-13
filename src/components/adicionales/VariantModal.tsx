@@ -24,7 +24,7 @@ export default function VariantModal({ onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: selectedOption?.name || '',
-    additional_price: selectedOption?.additional_price || 0,
+    additional_price: selectedOption?.base_price || 0,
     active: selectedOption?.active ?? true,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});

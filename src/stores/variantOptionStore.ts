@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 export interface VariantOption {
   id: number;
   name: string;
-  additional_price: number;
+  base_price: number;
   active: boolean;
   created_at: string;
 }
@@ -16,7 +16,7 @@ interface VariantOptionState {
   selectedOption: VariantOption | null;
   isModalOpen: boolean;
   fetchOptions: () => Promise<void>;
-  createOption: (name: string, additional_price: number) => Promise<void>;
+  createOption: (name: string, base_price: number) => Promise<void>;
   updateOption: (id: number, data: Partial<VariantOption>) => Promise<void>;
   deleteOption: (id: number) => Promise<void>;
   toggleActive: (id: number, active: boolean) => Promise<void>;
@@ -51,13 +51,13 @@ export const useVariantOptionStore = create<VariantOptionState>((set, get) => ({
     }
   },
 
-  createOption: async (name: string, additional_price: number) => {
+  createOption: async (name: string, base_price: number) => {
     try {
       set({ loading: true, error: null });
       
       const { error } = await supabase
         .from('variant_options')
-        .insert([{ name, additional_price }])
+        .insert([{ name, base_price }])
         .select()
         .single();
 

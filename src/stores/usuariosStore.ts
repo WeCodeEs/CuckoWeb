@@ -59,7 +59,7 @@ export const useUsuariosStore = create<UsuariosState>((set, get) => ({
     try {
       set({ loading: true, error: null });
       
-      console.log('🔍 Fetching users via Edge Function...');
+      console.log('Fetching users.');
       
       // Get current session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -88,7 +88,7 @@ export const useUsuariosStore = create<UsuariosState>((set, get) => ({
       if (!success) {
         throw new Error(error?.message || 'No fue posible cargar los usuarios');
       }
-      console.log('📊 Received users from Edge Function:', data?.length || 0);
+      console.log('Received users:', data?.length || 0);
       
       // Transform data to match expected format
       const transformedUsers: StaffUser[] = (data || []).map((user: any) => ({
@@ -101,11 +101,11 @@ export const useUsuariosStore = create<UsuariosState>((set, get) => ({
         has_profile: !!(user.full_name && user.role)
       }));
 
-      console.log('✅ Transformed users:', transformedUsers);
+      console.log('Transformed users:', transformedUsers);
       
       set({ usuarios: transformedUsers, loading: false });
     } catch (error: any) {
-      console.error('❌ Error fetching users:', error);
+      console.error('Error fetching users:', error);
       set({ 
         error: error.message || 'Error al cargar los usuarios',
         loading: false 
@@ -117,7 +117,7 @@ export const useUsuariosStore = create<UsuariosState>((set, get) => ({
     try {
       set({ loading: true, error: null });
 
-      console.log('🔄 Creating user via Edge Function:', { email: data.email, full_name: data.full_name, role: data.role });
+      console.log('Creating user:', { email: data.email, full_name: data.full_name, role: data.role });
 
       // Get current session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -127,32 +127,32 @@ export const useUsuariosStore = create<UsuariosState>((set, get) => ({
       }
 
       // Call Edge Function to create user
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-staff-user`, {
+      const { data: response, error: invokeError } = await supabase.functions.invoke('create-staff-user', {
         method: 'POST',
+        body: data,
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify(data),
       });
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        const msg = err?.error?.message || err?.error || `HTTP ${response.status}`;
+      if (invokeError) {
+        const msg = await parseEdgeError(invokeError);
+        console.error('Error creating new user:', msg);
+        throw new Error(msg || 'Error al crear usuario');
+      }
+
+      if (!response?.success) {
+        const msg = response?.error?.message || 'No fue posible crear el usuario';
         throw new Error(msg);
       }
 
-      const { success, data: created, error } = await response.json();
-      if (!success) {
-        throw new Error(error?.message || 'No fue posible crear el usuario');
-      }
-      console.log('✅ User created successfully', created);
+      console.log('User created successfully', response.data);
       
       // Refresh the users list
       await get().fetchUsuarios();
       set({ isModalOpen: false });
     } catch (error: any) {
-      console.error('❌ Error creating user:', error);
+      console.error('Error creating user:', error);
       set({ 
         error: error.message || 'Error al crear el usuario',
         loading: false 
@@ -165,7 +165,7 @@ export const useUsuariosStore = create<UsuariosState>((set, get) => ({
     try {
       set({ loading: true, error: null });
 
-      console.log('🔄 Updating user via Edge Function:', { id: data.id, email: data.email, full_name: data.full_name, role: data.role });
+      console.log('Updating user:', { id: data.id, email: data.email, full_name: data.full_name, role: data.role });
 
       // Get current session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -174,33 +174,32 @@ export const useUsuariosStore = create<UsuariosState>((set, get) => ({
         throw new Error('No active session');
       }
 
-      // Call Edge Function to update user
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-staff-user`, {
+      const { data: response, error: invokeError } = await supabase.functions.invoke('update-staff-user', {
         method: 'PATCH',
+        body: data,
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify(data),
       });
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        const msg = err?.error?.message || err?.error || `HTTP ${response.status}`;
+      if (invokeError) {
+        const msg = await parseEdgeError(invokeError);
+        console.error('Error updating user:', msg);
+        throw new Error(msg || 'Error al actualizar usuario');
+      }
+
+      if (!response?.success) {
+        const msg = response?.error?.message || 'No fue posible actualizar el usuario';
         throw new Error(msg);
       }
 
-      const { success, data: updated, error } = await response.json();
-      if (!success) {
-        throw new Error(error?.message || 'No fue posible actualizar el usuario');
-      }
-      console.log('✅ User updated successfully', updated);
+      console.log('User updated successfully.', response.data);
       
       // Refresh the users list
       await get().fetchUsuarios();
       set({ isModalOpen: false, selectedUser: null });
     } catch (error: any) {
-      console.error('❌ Error updating user:', error);
+      console.error('Error updating user:', error);
       set({ 
         error: error.message || 'Error al actualizar el usuario',
         loading: false 
@@ -213,7 +212,7 @@ export const useUsuariosStore = create<UsuariosState>((set, get) => ({
     try {
       set({ loading: true, error: null });
 
-      console.log('🔄 Deleting user via Edge Function:', id);
+      console.log('Deleting user:', id);
 
       // Get current session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -223,31 +222,31 @@ export const useUsuariosStore = create<UsuariosState>((set, get) => ({
       }
 
       // Call Edge Function to delete user
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-staff-user`, {
+      const { data: response, error: invokeError } = await supabase.functions.invoke('delete-staff-user', {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ id }),
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        const msg = err?.error?.message || err?.error || `HTTP ${response.status}`;
+      if (invokeError) {
+        const msg = await parseEdgeError(invokeError);
+        console.error('Error deleting user:', msg);
+        throw new Error(msg || 'Error al eliminar usuario');
+      }
+
+      if (!response?.success) {
+        const msg = response?.error?.message || 'No fue posible eliminar el usuario';
         throw new Error(msg);
       }
 
-      const { success, data, error } = await response.json();
-      if (!success) {
-        throw new Error(error?.message || 'No fue posible eliminar el usuario');
-      }
-      console.log('✅ User deleted successfully', data);
+      console.log('User deleted successfully.', response.data);
       
       // Refresh the users list
       await get().fetchUsuarios();
     } catch (error: any) {
-      console.error('❌ Error deleting user:', error);
+      console.error('Error deleting user:', error);
       set({ 
         error: error.message || 'Error al eliminar el usuario',
         loading: false 
@@ -266,3 +265,18 @@ export const useUsuariosStore = create<UsuariosState>((set, get) => ({
     }
   },
 }));
+
+
+// Parsea el error de una Edge Function 
+export async function parseEdgeError(invokeError: any): Promise<string> {
+  let fallbackMessage = invokeError?.message || 'Error al ejecutar la función';
+
+  try {
+    const res = await invokeError.context.json();
+    return res?.error?.message ?? res?.message ?? fallbackMessage;
+  } catch (e) {
+    console.warn('No se pudo leer el body del error:', e);
+  }
+
+  return fallbackMessage;
+}

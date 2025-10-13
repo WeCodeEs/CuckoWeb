@@ -70,7 +70,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
         { 
           event: '*',
           schema: 'public', 
-          table: 'orders_today' 
+          table: 'orders' 
         }, 
         async (payload) => {
           if (payload.eventType === 'INSERT') {

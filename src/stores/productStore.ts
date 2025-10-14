@@ -12,6 +12,7 @@ export interface Product {
   created_at: string;
   category?: {
     name: string;
+    active: boolean;
   };
   variants?: Array<{
     variant_option_id: number;
@@ -124,7 +125,8 @@ export const useProductStore = create<ProductState>((set, get) => ({
           active,
           created_at,
           category:categories (
-            name
+            name,
+            active 
           ),
           ingredients:product_customizable_ingredients (
             ingredient_option_id,

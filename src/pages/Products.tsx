@@ -33,10 +33,18 @@ export default function Products() {
     setIsModalOpen(true);
   };
 
-
   const handleToggleStatus = async (product: Product) => {
+    const newStatus = !product.active;
+
+    if (newStatus === true) {
+      if (product.category && !product.category.active) {
+        alert(`No se puede activar el producto "${product.name}" porque la categoría "${product.category.name}" está desactivada.`);
+        return; 
+      }
+    }
+
     try {
-      await toggleProductStatus(product.id, !product.active);
+      await toggleProductStatus(product.id, newStatus);
     } catch (error) {
       console.error("Error al cambiar el estado del producto:", error);
     }

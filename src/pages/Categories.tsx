@@ -32,6 +32,13 @@ export default function Categories() {
 
   const handleToggleStatus = async (category: Category) => {
     const newStatus = !category.active;
+
+    if (newStatus === true) {
+      if (category.menu && !category.menu.active) {
+        alert(`No se puede activar la categoría "${category.name}" porque el menú "${category.menu.name}" está desactivado.`);
+        return; 
+      }
+    }
     
     if (newStatus === false) {
       const confirmed = window.confirm(

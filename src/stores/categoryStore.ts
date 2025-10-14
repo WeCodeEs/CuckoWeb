@@ -9,6 +9,7 @@ export interface Category {
   created_at: string;
   menu?: {
     name: string;
+    active: boolean;
   };
 }
 
@@ -52,7 +53,8 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
           active,
           created_at,
           menu:menus (
-            name
+            name,
+            active  
           )
         `)
         .order('created_at', { ascending: false });

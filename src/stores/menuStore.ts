@@ -7,12 +7,14 @@ export interface Menu {
   description: string | null;
   active: boolean;
   created_at: string;
+  icon_name: string; 
 }
 
 interface MenuForm {
   name: string;
   description: string;
   active: boolean;
+  icon_name: string;
 }
 
 interface MenuState {
@@ -24,9 +26,9 @@ interface MenuState {
   fetchMenus: () => Promise<void>;
   createMenu: (menu: MenuForm) => Promise<void>;
   updateMenu: (id: number, menu: MenuForm) => Promise<void>;
-  deleteMenu: (id: number) => Promise<void>;
   setSelectedMenu: (menu: Menu | null) => void;
   setIsModalOpen: (isOpen: boolean) => void;
+  toggleMenuStatus: (menuId: number, newStatus: boolean) => Promise<void>;
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -62,7 +64,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       
       const { error } = await supabase
         .from('menus')
-        .insert([menu])
+        .insert([menu]) 
         .select()
         .single();
 
@@ -101,23 +103,44 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     }
   },
 
-  deleteMenu: async (id: number) => {
+  toggleMenuStatus: async (menuId: number, newStatus: boolean) => {
     try {
-      set({ loading: true, error: null });
-      
-      const { error } = await supabase
+      const { error: menuError } = await supabase
         .from('menus')
-        .delete()
-        .eq('id', id);
+        .update({ active: newStatus })
+        .eq('id', menuId);
+      if (menuError) throw menuError;
 
-      if (error) throw error;
+      const { data: categories, error: categoryFetchError } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('menu_id', menuId);
+      if (categoryFetchError) throw categoryFetchError;
 
-      get().fetchMenus();
+      if (categories && categories.length > 0) {
+        const categoryIds = categories.map(c => c.id);
+
+        const { error: categoryError } = await supabase
+          .from('categories')
+          .update({ active: newStatus })
+          .in('id', categoryIds);
+        if (categoryError) throw categoryError;
+
+        const { error: productError } = await supabase
+          .from('products')
+          .update({ active: newStatus })
+          .in('category_id', categoryIds);
+        if (productError) throw productError;
+      }
+
+      set((state) => ({
+        menus: state.menus.map(m =>
+          m.id === menuId ? { ...m, active: newStatus } : m
+        ),
+      }));
     } catch (error: any) {
-      set({ 
-        error: error.message || 'Error al eliminar el menú',
-        loading: false 
-      });
+      console.error("Error al cambiar el estado del menú y su cascada:", error);
+      throw error;
     }
   },
 

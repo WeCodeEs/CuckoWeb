@@ -20,7 +20,7 @@ interface Props {
 }
 
 export default function ProductModal({ onClose }: Props) {
-  const { selectedProduct, createProduct, updateProduct, fetchProductVariants } = useProductStore();
+  const { selectedProduct, createProduct, updateProduct } = useProductStore();
   const { categories, fetchCategories } = useCategoryStore();
   const { 
     options: variants, 
@@ -45,7 +45,6 @@ export default function ProductModal({ onClose }: Props) {
     active: selectedProduct?.active ?? true,
   });
 
-  const [selectedVariants, setSelectedVariants] = useState<number[]>([]);
   const [selectedIngredients, setSelectedIngredients] = useState<number[]>([]);
   const [variantState, setVariantState] = useState<Record<number, { active: boolean; priceOverride: number }>>({});
   const [loadingVariants, setLoadingVariants] = useState(false);
@@ -58,59 +57,29 @@ export default function ProductModal({ onClose }: Props) {
 
   useEffect(() => {
     fetchCategories();
-    loadVariants();
+    fetchVariants();
     fetchIngredients();
+
     if (selectedProduct) {
       if (selectedProduct.image_url) {
         setImagePreview(selectedProduct.image_url);
       }
-      // Set initial ingredients
-      const initialIngredients = selectedProduct.ingredients?.map(i => i.ingredient_option_id) || [];
+      
+      const initialIngredients = selectedProduct.ingredients
+        ?.filter(i => i.active) 
+        .map(i => i.ingredient_option_id) || [];
       setSelectedIngredients(initialIngredients);
-    }
-  }, [fetchCategories, fetchIngredients, selectedProduct]);
 
-  const loadVariants = async () => {
-    try {
-      setLoadingVariants(true);
-      
-      await fetchVariants();
-      
-      if (selectedProduct) {
-        // Load existing product variants
-        const productVariants = await fetchProductVariants(selectedProduct.id);
-        
-        const initialState: Record<number, { active: boolean; priceOverride: number }> = {};
-        
-        // Initialize state for all globally active variants
-        variants.filter(v => v.active).forEach(variant => {
-          const productVariant = productVariants.find(pv => pv.id === variant.id);
-          const hasProductVariant = productVariant?.product_variants?.[0];
-          
-          initialState[variant.id] = {
-            active: hasProductVariant?.active || false,
-            priceOverride: hasProductVariant?.additional_price ?? variant.additional_price
-          };
-        });
-        
-        setVariantState(initialState);
-      } else {
-        // For new products, initialize with all variants inactive
-        const initialState: Record<number, { active: boolean; priceOverride: number }> = {};
-        variants.filter(v => v.active).forEach(variant => {
-          initialState[variant.id] = {
-            active: false,
-            priceOverride: variant.additional_price
-          };
-        });
-        setVariantState(initialState);
-      }
-    } catch (error) {
-      // Error loading variants
-    } finally {
-      setLoadingVariants(false);
+      const initialVariantState: Record<number, { active: boolean; priceOverride: number }> = {};
+      selectedProduct.variants?.forEach(pv => {
+        initialVariantState[pv.variant_option_id] = {
+          active: pv.active,
+          priceOverride: pv.additional_price,
+        };
+      });
+      setVariantState(initialVariantState);
     }
-  };
+  }, [fetchCategories, fetchVariants, fetchIngredients, selectedProduct]);
 
   const filteredVariants = variants.filter(variant => 
     variant.active &&
@@ -118,6 +87,7 @@ export default function ProductModal({ onClose }: Props) {
   );
 
   const filteredIngredients = ingredients.filter(ingredient => 
+    ingredient.active &&
     ingredient.name.toLowerCase().includes(ingredientSearch.toLowerCase())
   );
 
@@ -159,10 +129,8 @@ export default function ProductModal({ onClose }: Props) {
     const variant = variants.find(v => v.id === variantId);
     if (!variant) return;
 
-    // Lock the current sorting order during interaction
     setInteractionLock(variantId);
     
-    // Clear the lock after a short delay to allow for price editing
     setTimeout(() => {
       setInteractionLock(null);
     }, 2000);
@@ -170,7 +138,7 @@ export default function ProductModal({ onClose }: Props) {
       ...prev,
       [variantId]: {
         active: !prev[variantId]?.active,
-        priceOverride: prev[variantId]?.priceOverride ?? variant.additional_price
+        priceOverride: prev[variantId]?.priceOverride ?? variant.base_price
       }
     }));
   };
@@ -200,7 +168,7 @@ export default function ProductModal({ onClose }: Props) {
           .filter(([_, state]) => state.active)
           .map(([variantId, state]) => ({
             variant_option_id: parseInt(variantId),
-            additional_price: state.priceOverride || variants.find(v => v.id === parseInt(variantId))?.additional_price || 0
+            additional_price: state.priceOverride || variants.find(v => v.id === parseInt(variantId))?.base_price || 0
           }))
       };
 
@@ -442,7 +410,7 @@ export default function ProductModal({ onClose }: Props) {
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={loadVariants}
+                        onClick={fetchVariants}
                         disabled={loadingVariants}
                         className="p-2 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-secondary hover:bg-gray-100 dark:hover:bg-darkbg rounded-lg transition-colors"
                         title="Recargar variantes"
@@ -479,16 +447,14 @@ export default function ProductModal({ onClose }: Props) {
                       </div>
                     ) : filteredVariants
                       .sort((a, b) => {
-                        const aState = variantState[a.id] || { active: false, priceOverride: a.additional_price };
-                        const bState = variantState[b.id] || { active: false, priceOverride: b.additional_price };
+                        const aState = variantState[a.id] || { active: false, priceOverride: a.base_price };
+                        const bState = variantState[b.id] || { active: false, priceOverride: b.base_price };
                         
-                        // When editing a product, show selected variants first
                         if (selectedProduct) {
                           if (aState.active && !bState.active) return -1;
                           if (!aState.active && bState.active) return 1;
                         }
                         
-                        // Then sort alphabetically
                         return a.name.localeCompare(b.name);
                       }).length === 0 ? (
                       <div className="col-span-full text-center py-8">
@@ -500,26 +466,22 @@ export default function ProductModal({ onClose }: Props) {
                     ) : (
                       filteredVariants
                         .sort((a, b) => {
-                          // If we're in interaction lock mode, don't reorder
                           if (interactionLock !== null) {
                             return a.name.localeCompare(b.name);
                           }
                           
-                          // Normal sorting: selected variants first when editing
                           if (selectedProduct) {
-                            const aState = variantState[a.id] || { active: false, priceOverride: a.additional_price };
-                            const bState = variantState[b.id] || { active: false, priceOverride: b.additional_price };
+                            const aState = variantState[a.id] || { active: false, priceOverride: a.base_price };
+                            const bState = variantState[b.id] || { active: false, priceOverride: b.base_price };
                             
-                            // Selected variants first
                             if (aState.active && !bState.active) return -1;
                             if (!aState.active && bState.active) return 1;
                           }
                           
-                          // Then alphabetically
                           return a.name.localeCompare(b.name);
                         })
                         .map(variant => {
-                        const state = variantState[variant.id] || { active: false, priceOverride: variant.additional_price };
+                        const state = variantState[variant.id] || { active: false, priceOverride: variant.base_price };
                         
                         return (
                           <div
@@ -544,7 +506,7 @@ export default function ProductModal({ onClose }: Props) {
                                 </label>
                               </div>
                               <span className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded">
-                                Global: {formatCurrency(variant.additional_price)}
+                                Global: {formatCurrency(variant.base_price)}
                               </span>
                             </div>
                             
@@ -563,7 +525,7 @@ export default function ProductModal({ onClose }: Props) {
                                     min="0"
                                     step="0.50"
                                     className="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 dark:border-darkbg focus:ring-1 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary rounded-lg bg-white dark:bg-darkbg text-gray-900 dark:text-white"
-                                    placeholder={formatCurrency(variant.additional_price)}
+                                    placeholder={formatCurrency(variant.base_price)}
                                   />
                                 </div>
                               </div>

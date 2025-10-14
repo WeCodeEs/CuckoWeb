@@ -4,6 +4,7 @@ import { useIngredientOptionStore, IngredientOption } from '../../stores/ingredi
 import { useToast } from '../../components/ui/use-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { formatCurrency } from '../../utils/formatCurrency';
 import SkeletonTable from '../../components/skeletons/SkeletonTable';
 
 export default function IngredientOptions() {
@@ -107,6 +108,9 @@ export default function IngredientOptions() {
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Nombre
                   </th>
+                  <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Precio Extra
+                  </th>
                   <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Estado
                   </th>
@@ -126,6 +130,9 @@ export default function IngredientOptions() {
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                       {option.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-white">
+                      {formatCurrency(option.extra_price)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <button

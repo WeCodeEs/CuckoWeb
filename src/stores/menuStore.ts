@@ -14,6 +14,7 @@ interface MenuForm {
   name: string;
   description: string;
   active: boolean;
+  icon_name: string;
 }
 
 interface MenuState {
@@ -61,14 +62,9 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     try {
       set({ loading: true, error: null });
       
-      const menuToCreate = {
-        ...menu,
-        icon_name: 'ForkKnife',
-      };
-
       const { error } = await supabase
         .from('menus')
-        .insert([menuToCreate])
+        .insert([menu]) 
         .select()
         .single();
 

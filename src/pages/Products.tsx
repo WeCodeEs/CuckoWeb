@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import { Plus, Pencil, Trash2, AlertCircle, Search } from 'lucide-react';
-import { useProductStore } from '../stores/productStore';
+import { Plus, Pencil, AlertCircle, Search } from 'lucide-react';
+import { useProductStore, Product } from '../stores/productStore';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { formatCurrency } from '../utils/formatCurrency';
@@ -14,7 +14,7 @@ export default function Products() {
     error,
     isModalOpen,
     fetchProducts,
-    deleteProduct,
+    toggleProductStatus,
     setSelectedProduct,
     setIsModalOpen
   } = useProductStore();
@@ -28,14 +28,17 @@ export default function Products() {
     fetchProducts();
   }, [fetchProducts]);
 
-  const handleEdit = (product: any) => {
+  const handleEdit = (product: Product) => { 
     setSelectedProduct(product);
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este producto?')) {
-      await deleteProduct(id);
+
+  const handleToggleStatus = async (product: Product) => {
+    try {
+      await toggleProductStatus(product.id, !product.active);
+    } catch (error) {
+      console.error("Error al cambiar el estado del producto:", error);
     }
   };
 
@@ -53,7 +56,7 @@ export default function Products() {
     
     switch (sortBy) {
       case 'category':
-        aValue = a.category?.name?.toLowerCase() || 'zzz'; // Put uncategorized at end
+        aValue = a.category?.name?.toLowerCase() || 'zzz';
         bValue = b.category?.name?.toLowerCase() || 'zzz';
         break;
       case 'created_at':
@@ -69,7 +72,6 @@ export default function Products() {
     return 0;
   });
 
-  // Get unique categories for filter dropdown
   const categories = React.useMemo(() => {
     const uniqueCategories = new Set(
       products
@@ -217,15 +219,21 @@ export default function Products() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900 dark:text-white">
                       {formatCurrency(product.base_price)}
                     </td>
+                    
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        product.active
-                          ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400'
-                      }`}>
+                      <button
+                        onClick={() => handleToggleStatus(product)}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${
+                          product.active
+                            ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/30'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                        title={product.active ? 'Clic para desactivar' : 'Clic para activar'}
+                      >
                         {product.active ? 'Activo' : 'Inactivo'}
-                      </span>
+                      </button>
                     </td>
+
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                       {format(new Date(product.created_at), "d 'de' MMMM, yyyy", { locale: es })}
                     </td>
@@ -237,14 +245,7 @@ export default function Products() {
                           title="Editar"
                         >
                           <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(product.id)}
-                          className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors"
-                          title="Eliminar"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        </button>                                               
                       </div>
                     </td>
                   </tr>

@@ -59,6 +59,7 @@ interface ProductState {
   setIsModalOpen: (isOpen: boolean) => void;
   uploadImage: (file: File) => Promise<string>;
   fetchProductVariants: (productId: number) => Promise<any[]>;
+  toggleProductStatus: (id: number, active: boolean) => Promise<void>;
 }
 
 export const useProductStore = create<ProductState>((set, get) => ({
@@ -156,7 +157,6 @@ export const useProductStore = create<ProductState>((set, get) => ({
       });
     }
   },
-
 
   fetchProductVariants: async (productId: number) => {
     try {
@@ -402,6 +402,30 @@ export const useProductStore = create<ProductState>((set, get) => ({
         error: error.message || 'Error al eliminar el producto',
         loading: false 
       });
+      throw error;
+    }
+  },
+
+  toggleProductStatus: async (id: number, active: boolean) => {
+    try {
+      // 1. Actualiza la base de datos
+      const { error } = await supabase
+        .from('products')
+        .update({ active })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // 2. Actualiza el estado local (actualización optimista)
+      // Esto evita tener que recargar toda la lista de productos
+      set((state) => ({
+        products: state.products.map(p =>
+          p.id === id ? { ...p, active } : p
+        ),
+      }));
+    } catch (error: any) {
+      console.error("Error al cambiar el estado del producto:", error);
+      // Relanza el error para que el componente pueda manejarlo si es necesario
       throw error;
     }
   },

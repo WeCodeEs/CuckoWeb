@@ -15,13 +15,13 @@ interface VariantOptionState {
   error: string | null;
   selectedOption: VariantOption | null;
   isModalOpen: boolean;
-  fetchOptions: () => Promise<void>;
+  fetchOptions: () => Promise<VariantOption[]>; // Se actualiza el tipo de retorno
   createOption: (name: string, base_price: number) => Promise<void>;
   updateOption: (id: number, data: Partial<VariantOption>) => Promise<void>;
-  deleteOption: (id: number) => Promise<void>;
   toggleActive: (id: number, active: boolean) => Promise<void>;
   setSelectedOption: (option: VariantOption | null) => void;
   setIsModalOpen: (isOpen: boolean) => void;
+  toggleCascadeStatus: (optionId: number, newStatus: boolean) => Promise<void>;
 }
 
 export const useVariantOptionStore = create<VariantOptionState>((set, get) => ({
@@ -43,11 +43,13 @@ export const useVariantOptionStore = create<VariantOptionState>((set, get) => ({
       if (error) throw error;
 
       set({ options: data || [], loading: false });
+      return data || []; 
     } catch (error: any) {
       set({ 
         error: error.message || 'Error al cargar las variantes',
         loading: false 
       });
+      return []; 
     }
   },
 
@@ -57,7 +59,7 @@ export const useVariantOptionStore = create<VariantOptionState>((set, get) => ({
       
       const { error } = await supabase
         .from('variant_options')
-        .insert([{ name, base_price }])
+        .insert([{ name, base_price, active: true }]) 
         .select()
         .single();
 
@@ -108,23 +110,28 @@ export const useVariantOptionStore = create<VariantOptionState>((set, get) => ({
     }
   },
 
-  deleteOption: async (id: number) => {
+  toggleCascadeStatus: async (optionId: number, newStatus: boolean) => {
     try {
-      set({ loading: true, error: null });
-      
-      const { error } = await supabase
+      const { error: optionError } = await supabase
         .from('variant_options')
-        .delete()
-        .eq('id', id);
+        .update({ active: newStatus })
+        .eq('id', optionId);
+      if (optionError) throw optionError;
 
-      if (error) throw error;
+      const { error: linkError } = await supabase
+        .from('product_variants')
+        .update({ active: newStatus })
+        .eq('variant_option_id', optionId);
+      if (linkError) throw linkError;
 
-      get().fetchOptions();
+      set((state) => ({
+        options: state.options.map(opt =>
+          opt.id === optionId ? { ...opt, active: newStatus } : opt
+        ),
+      }));
+      
     } catch (error: any) {
-      set({ 
-        error: error.message || 'Error al eliminar la variante',
-        loading: false 
-      });
+      console.error("Error al cambiar el estado de la variante:", error);
       throw error;
     }
   },

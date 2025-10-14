@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
-import { Plus, Pencil, Trash2, AlertCircle } from 'lucide-react';
-import { useMenuStore } from '../stores/menuStore';
+import { Plus, Pencil, AlertCircle } from 'lucide-react';
+import { useMenuStore, Menu } from '../stores/menuStore';
+import { useCategoryStore } from '../stores/categoryStore';
+import { useProductStore } from '../stores/productStore';
 import MenuModal from '../components/MenuModal';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -13,23 +15,41 @@ export default function Menus() {
     error,
     isModalOpen,
     fetchMenus,
-    deleteMenu,
+    toggleMenuStatus,
     setSelectedMenu,
     setIsModalOpen
   } = useMenuStore();
+
+  const { fetchCategories } = useCategoryStore();
+  const { fetchProducts } = useProductStore();
 
   useEffect(() => {
     fetchMenus();
   }, [fetchMenus]);
 
-  const handleEdit = (menu: any) => {
+  const handleEdit = (menu: Menu) => {
     setSelectedMenu(menu);
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este menú?')) {
-      await deleteMenu(id);
+  const handleToggleStatus = async (menu: Menu) => {
+    const newStatus = !menu.active;
+
+    if (newStatus === false) {
+      const confirmed = window.confirm(
+        `¿Estás seguro de que deseas desactivar el menú "${menu.name}"? \n\nTodas sus categorías y productos también se desactivarán.`
+      );
+      if (!confirmed) return;
+    }
+
+    try {
+      await toggleMenuStatus(menu.id, newStatus);
+
+      fetchCategories();
+      fetchProducts();
+      
+    } catch (err) {
+      console.error("Error al cambiar el estado del menú:", err);
     }
   };
 
@@ -104,15 +124,21 @@ export default function Menus() {
                     <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
                       {menu.description || '-'}
                     </td>
+                    
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        menu.active
-                          ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400'
-                      }`}>
+                      <button
+                        onClick={() => handleToggleStatus(menu)}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${
+                          menu.active
+                            ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/30'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                        title={menu.active ? 'Clic para desactivar' : 'Clic para activar'}
+                      >
                         {menu.active ? 'Activo' : 'Inactivo'}
-                      </span>
+                      </button>
                     </td>
+
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                       {format(new Date(menu.created_at), "d 'de' MMMM, yyyy", { locale: es })}
                     </td>
@@ -124,14 +150,7 @@ export default function Menus() {
                           title="Editar"
                         >
                           <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(menu.id)}
-                          className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors"
-                          title="Eliminar"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        </button>                        
                       </div>
                     </td>
                   </tr>

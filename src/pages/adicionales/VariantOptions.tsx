@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { Plus, Pencil, Trash2, AlertCircle, Search } from 'lucide-react';
-import { useVariantOptionStore } from '../../stores/variantOptionStore';
+import { Plus, Pencil, AlertCircle, Search } from 'lucide-react';
+import { useVariantOptionStore, VariantOption } from '../../stores/variantOptionStore';
+import { useToast } from '../../components/ui/use-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -13,35 +14,31 @@ export default function VariantOptions() {
     error,
     isModalOpen,
     fetchOptions,
-    deleteOption,
-    updateOption,
     setSelectedOption,
-    setIsModalOpen
+    setIsModalOpen,
+    toggleCascadeStatus
   } = useVariantOptionStore();
 
   const [searchTerm, setSearchTerm] = React.useState('');
+  const { toast } = useToast(); // Se inicializa el hook
 
   useEffect(() => {
     fetchOptions();
   }, [fetchOptions]);
 
-  const handleEdit = (option: any) => {
+  const handleEdit = (option: VariantOption) => {
     setSelectedOption(option);
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar esta variante?')) {
-      await deleteOption(id);
-    }
-  };
 
-  const handleToggleActive = async (id: number, active: boolean) => {
+  const handleToggleActive = async (option: VariantOption) => {
+    const newStatus = !option.active;
     try {
-      await updateOption(id, { active: !active });
+      await toggleCascadeStatus(option.id, newStatus);
       toast({
         title: 'Estado actualizado',
-        description: `Variante ${!active ? 'activada' : 'desactivada'} exitosamente`,
+        description: `Variante ${newStatus ? 'activada' : 'desactivada'} exitosamente`,
       });
     } catch (error: any) {
       toast({
@@ -140,12 +137,13 @@ export default function VariantOptions() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <button
-                        onClick={() => handleToggleActive(option.id, option.active)}
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        onClick={() => handleToggleActive(option)}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${
                           option.active
-                            ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400'
+                            ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/30'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                         }`}
+                        title={option.active ? 'Clic para desactivar' : 'Clic para activar'}
                       >
                         {option.active ? 'Activa' : 'Inactiva'}
                       </button>
@@ -161,13 +159,6 @@ export default function VariantOptions() {
                           title="Editar"
                         >
                           <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(option.id)}
-                          className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors"
-                          title="Eliminar"
-                        >
-                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>

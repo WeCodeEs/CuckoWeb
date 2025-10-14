@@ -27,9 +27,9 @@ interface CategoryState {
   fetchCategories: () => Promise<void>;
   createCategory: (category: CategoryForm) => Promise<void>;
   updateCategory: (id: number, category: CategoryForm) => Promise<void>;
-  deleteCategory: (id: number) => Promise<void>;
   setSelectedCategory: (category: Category | null) => void;
   setIsModalOpen: (isOpen: boolean) => void;
+  toggleCategoryStatus: (id: number, active: boolean) => Promise<void>;
 }
 
 export const useCategoryStore = create<CategoryState>((set, get) => ({
@@ -113,23 +113,29 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
     }
   },
 
-  deleteCategory: async (id: number) => {
+  toggleCategoryStatus: async (id: number, active: boolean) => {
     try {
-      set({ loading: true, error: null });
-      
-      const { error } = await supabase
+      const { error: categoryError } = await supabase
         .from('categories')
-        .delete()
+        .update({ active })
         .eq('id', id);
 
-      if (error) throw error;
+      if (categoryError) throw categoryError;
 
-      get().fetchCategories();
+      const { error: productError } = await supabase
+        .from('products')
+        .update({ active: active }) 
+        .eq('category_id', id);
+      
+      if (productError) throw productError;
+      set((state) => ({
+        categories: state.categories.map(c =>
+          c.id === id ? { ...c, active } : c
+        ),
+      }));
     } catch (error: any) {
-      set({ 
-        error: error.message || 'Error al eliminar la categoría',
-        loading: false 
-      });
+      console.error("Error al cambiar el estado de la categoría:", error);
+      throw error;
     }
   },
 

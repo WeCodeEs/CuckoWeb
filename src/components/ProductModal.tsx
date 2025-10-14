@@ -65,7 +65,9 @@ export default function ProductModal({ onClose }: Props) {
         setImagePreview(selectedProduct.image_url);
       }
       
-      const initialIngredients = selectedProduct.ingredients?.map(i => i.ingredient_option_id) || [];
+      const initialIngredients = selectedProduct.ingredients
+        ?.filter(i => i.active) 
+        .map(i => i.ingredient_option_id) || [];
       setSelectedIngredients(initialIngredients);
 
       const initialVariantState: Record<number, { active: boolean; priceOverride: number }> = {};
@@ -85,6 +87,7 @@ export default function ProductModal({ onClose }: Props) {
   );
 
   const filteredIngredients = ingredients.filter(ingredient => 
+    ingredient.active &&
     ingredient.name.toLowerCase().includes(ingredientSearch.toLowerCase())
   );
 

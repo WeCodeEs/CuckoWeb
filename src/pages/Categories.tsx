@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { Plus, Pencil, Trash2, AlertCircle } from 'lucide-react';
-import { useCategoryStore } from '../stores/categoryStore';
+import { Plus, Pencil, AlertCircle } from 'lucide-react';
+import { useCategoryStore, Category } from '../stores/categoryStore';
+import { useProductStore } from '../stores/productStore';
 import CategoryModal from '../components/CategoryModal';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -13,23 +14,41 @@ export default function Categories() {
     error,
     isModalOpen,
     fetchCategories,
-    deleteCategory,
+    toggleCategoryStatus,
     setSelectedCategory,
     setIsModalOpen
   } = useCategoryStore();
+
+  const { deactivateProductsByCategory, fetchProducts } = useProductStore();
 
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
 
-  const handleEdit = (category: any) => {
+  const handleEdit = (category: Category) => {
     setSelectedCategory(category);
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar esta categoría?')) {
-      await deleteCategory(id);
+  const handleToggleStatus = async (category: Category) => {
+    const newStatus = !category.active;
+    
+    if (newStatus === false) {
+      const confirmed = window.confirm(
+        `¿Estás seguro de que deseas desactivar la categoría "${category.name}"? \n\nTodos los productos dentro de esta categoría también se desactivarán.`
+      );
+      if (!confirmed) return;
+    }
+
+    try {
+      await toggleCategoryStatus(category.id, newStatus);
+      
+      if (newStatus === false) {
+        await deactivateProductsByCategory(category.id);
+        fetchProducts(); 
+      }
+    } catch (err) {
+      console.error("Error al cambiar el estado de la categoría:", err);
     }
   };
 
@@ -104,15 +123,21 @@ export default function Categories() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                       {category.menu?.name || '-'}
                     </td>
+                    
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        category.active
-                          ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400'
-                      }`}>
+                      <button
+                        onClick={() => handleToggleStatus(category)}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${
+                          category.active
+                            ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/30'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                        title={category.active ? 'Clic para desactivar' : 'Clic para activar'}
+                      >
                         {category.active ? 'Activa' : 'Inactiva'}
-                      </span>
+                      </button>
                     </td>
+
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                       {format(new Date(category.created_at), "d 'de' MMMM, yyyy", { locale: es })}
                     </td>
@@ -124,13 +149,6 @@ export default function Categories() {
                           title="Editar"
                         >
                           <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(category.id)}
-                          className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors"
-                          title="Eliminar"
-                        >
-                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>

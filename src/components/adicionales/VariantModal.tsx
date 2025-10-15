@@ -14,17 +14,17 @@ interface Props {
   onClose: () => void;
 }
 
-// Helper function to capitalize first letter and lowercase the rest
 const normalizeText = (text: string): string => {
   return text.trim().charAt(0).toUpperCase() + text.trim().slice(1).toLowerCase();
 };
+
 export default function VariantModal({ onClose }: Props) {
   const { selectedOption, createOption, updateOption, options } = useVariantOptionStore();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: selectedOption?.name || '',
-    additional_price: selectedOption?.base_price || 0,
+    base_price: selectedOption?.base_price || 0,
     active: selectedOption?.active ?? true,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -38,19 +38,17 @@ export default function VariantModal({ onClose }: Props) {
     } else if (normalizedName.length > 60) {
       newErrors.name = 'El nombre no puede exceder los 60 caracteres';
     } else {
-      // Check for duplicates (excluding current item when editing)
       const isDuplicate = options.some(option => 
         option.id !== selectedOption?.id && 
         option.name.toLowerCase() === normalizedName.toLowerCase()
       );
-      
       if (isDuplicate) {
         newErrors.name = 'Ya existe una variante con este nombre';
       }
     }
 
-    if (formData.additional_price < 0) {
-      newErrors.additional_price = 'El precio adicional no puede ser negativo';
+    if (formData.base_price < 0) {
+      newErrors.base_price = 'El precio no puede ser negativo';
     }
 
     setErrors(newErrors);
@@ -63,20 +61,20 @@ export default function VariantModal({ onClose }: Props) {
 
     try {
       setLoading(true);
-      // Normalize name before saving
       const normalizedName = normalizeText(formData.name);
       
       if (selectedOption) {
         await updateOption(selectedOption.id, {
-          ...formData,
           name: normalizedName,
+          base_price: formData.base_price,
+          active: formData.active,
         });
         toast({
           title: 'Variante actualizada',
           description: 'La variante se ha actualizado exitosamente',
         });
       } else {
-        await createOption(normalizedName, formData.additional_price);
+        await createOption(normalizedName, formData.base_price);
         toast({
           title: 'Variante creada',
           description: 'La variante se ha creado exitosamente',
@@ -98,11 +96,11 @@ export default function VariantModal({ onClose }: Props) {
     const value = e.target.value;
     setFormData(prev => ({ ...prev, name: value }));
     
-    // Clear name error when user starts typing
     if (errors.name) {
       setErrors(prev => ({ ...prev, name: '' }));
     }
   };
+
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -134,26 +132,26 @@ export default function VariantModal({ onClose }: Props) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="additional_price">Precio Adicional (MXN)</Label>
+            <Label htmlFor="base_price">Precio Base (MXN)</Label>
             <Input
               type="number"
-              id="additional_price"
-              value={formData.additional_price}
+              id="base_price"
+              value={formData.base_price}
               onChange={(e) => {
                 setFormData(prev => ({ 
                   ...prev, 
-                  additional_price: parseFloat(e.target.value) || 0
+                  base_price: parseFloat(e.target.value) || 0
                 }));
-                if (errors.additional_price) {
-                  setErrors(prev => ({ ...prev, additional_price: '' }));
+                if (errors.base_price) {
+                  setErrors(prev => ({ ...prev, base_price: '' }));
                 }
               }}
               min="0"
               step="0.50"
-              className={errors.additional_price ? 'border-red-500' : ''}
+              className={errors.base_price ? 'border-red-500' : ''}
             />
-            {errors.additional_price && (
-              <p className="text-sm text-red-500">{errors.additional_price}</p>
+            {errors.base_price && (
+              <p className="text-sm text-red-500">{errors.base_price}</p>
             )}
           </div>
 

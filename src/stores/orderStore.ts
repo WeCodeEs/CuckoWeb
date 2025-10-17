@@ -9,6 +9,7 @@ export interface OrderDetail {
   product_variant_id: number | null;
   quantity: number;
   unit_price: number;
+  subtotal: number;
   product: {
     name: string;
   };
@@ -147,6 +148,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
               product_variant_id,
               quantity,
               unit_price,
+              subtotal,
               product:products (name),
               product_variant:product_variants (
                 variant:variant_options (name)

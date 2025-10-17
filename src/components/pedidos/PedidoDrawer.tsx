@@ -57,7 +57,7 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                 <span style="max-width: 60%; word-wrap: break-word;">${detail.quantity}x ${detail.product.name}</span>
                 <span>${formatCurrency(detail.subtotal)}</span>
               </div>
-              ${detail.product.variant ? `<div style="padding-left: 12px; color: #666; font-size: 10px;">${detail.product.variant.name}</div>` : ''}
+              ${detail.product_variant && detail.product_variant?.variant ? `<div style="padding-left: 12px; color: #666; font-size: 10px;">${detail.product_variant?.variant.name}</div>` : ''}
             </div>
           `).join('')}
         </div>
@@ -254,9 +254,9 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                         <p className="text-gray-900 dark:text-white font-medium">
                           {detail.quantity}x {detail.product?.name || 'Producto'}
                         </p>
-                        {detail.product.variant && (
+                        {detail.product_variant?.variant && (
                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            Variante: {detail.product.variant?.name || 'Estándar'}
+                            Variante: {detail.product_variant?.variant?.name || 'Estándar'}
                           </p>
                         )}
                         {/* Check for ingredients and display them */}

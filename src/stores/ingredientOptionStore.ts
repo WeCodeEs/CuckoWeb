@@ -18,10 +18,10 @@ interface IngredientOptionState {
   fetchOptions: () => Promise<void>;
   createOption: (name: string, extra_price: number) => Promise<void>;
   updateOption: (id: number, data: Partial<IngredientOption>) => Promise<void>;
-  deleteOption: (id: number) => Promise<void>;
   toggleActive: (id: number, active: boolean) => Promise<void>;
   setSelectedOption: (option: IngredientOption | null) => void;
   setIsModalOpen: (isOpen: boolean) => void;
+  toggleCascadeStatus: (optionId: number, newStatus: boolean) => Promise<void>;
 }
 
 export const useIngredientOptionStore = create<IngredientOptionState>((set, get) => ({
@@ -57,7 +57,7 @@ export const useIngredientOptionStore = create<IngredientOptionState>((set, get)
 
       const { error } = await supabase
         .from('ingredient_options')
-        .insert([{ name, extra_price }])
+        .insert([{ name, extra_price, active: true }])
         .select()
         .single();
 
@@ -108,23 +108,28 @@ export const useIngredientOptionStore = create<IngredientOptionState>((set, get)
     }
   },
 
-  deleteOption: async (id: number) => {
+  toggleCascadeStatus: async (optionId: number, newStatus: boolean) => {
     try {
-      set({ loading: true, error: null });
-      
-      const { error } = await supabase
+      const { error: optionError } = await supabase
         .from('ingredient_options')
-        .delete()
-        .eq('id', id);
+        .update({ active: newStatus })
+        .eq('id', optionId);
+      if (optionError) throw optionError;
+      
+      const { error: linkError } = await supabase
+        .from('product_customizable_ingredients')
+        .update({ active: newStatus })
+        .eq('ingredient_option_id', optionId);
+      if (linkError) throw linkError;
 
-      if (error) throw error;
+      set((state) => ({
+        options: state.options.map(opt =>
+          opt.id === optionId ? { ...opt, active: newStatus } : opt
+        ),
+      }));
 
-      get().fetchOptions();
-    } catch (error: any) {
-      set({ 
-        error: error.message || 'Error al eliminar el ingrediente',
-        loading: false 
-      });
+    } catch(error: any) {
+      console.error("Error al cambiar el estado del ingrediente:", error);
       throw error;
     }
   },

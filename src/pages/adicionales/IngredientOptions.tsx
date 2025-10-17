@@ -1,8 +1,10 @@
 import React, { useEffect } from 'react';
-import { Plus, Pencil, Trash2, AlertCircle, Search } from 'lucide-react';
-import { useIngredientOptionStore } from '../../stores/ingredientOptionStore';
+import { Plus, Pencil, AlertCircle, Search } from 'lucide-react';
+import { useIngredientOptionStore, IngredientOption } from '../../stores/ingredientOptionStore';
+import { useToast } from '../../components/ui/use-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { formatCurrency } from '../../utils/formatCurrency';
 import SkeletonTable from '../../components/skeletons/SkeletonTable';
 
 export default function IngredientOptions() {
@@ -12,31 +14,38 @@ export default function IngredientOptions() {
     error,
     isModalOpen,
     fetchOptions,
-    deleteOption,
-    updateOption,
     setSelectedOption,
-    setIsModalOpen
+    setIsModalOpen,
+    toggleCascadeStatus
   } = useIngredientOptionStore();
 
   const [searchTerm, setSearchTerm] = React.useState('');
+  const { toast } = useToast(); // Se inicializa el hook
 
   useEffect(() => {
     fetchOptions();
   }, [fetchOptions]);
 
-  const handleEdit = (option: any) => {
+  const handleEdit = (option: IngredientOption) => {
     setSelectedOption(option);
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este ingrediente?')) {
-      await deleteOption(id);
+  const handleToggleActive = async (option: IngredientOption) => {
+    const newStatus = !option.active;
+    try {
+      await toggleCascadeStatus(option.id, newStatus);
+      toast({
+        title: 'Estado actualizado',
+        description: `Ingrediente ${newStatus ? 'activado' : 'desactivado'} exitosamente`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Error al actualizar el estado',
+      });
     }
-  };
-
-  const handleToggleActive = async (id: number, active: boolean) => {
-    await updateOption(id, { active: !active });
   };
 
   const filteredOptions = options.filter(option =>
@@ -99,6 +108,9 @@ export default function IngredientOptions() {
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Nombre
                   </th>
+                  <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Precio Extra
+                  </th>
                   <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Estado
                   </th>
@@ -119,14 +131,18 @@ export default function IngredientOptions() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                       {option.name}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-white">
+                      {formatCurrency(option.extra_price)}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <button
-                        onClick={() => handleToggleActive(option.id, option.active)}
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        onClick={() => handleToggleActive(option)}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${
                           option.active
-                            ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400'
+                            ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/30'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                         }`}
+                        title={option.active ? 'Clic para desactivar' : 'Clic para activar'}
                       >
                         {option.active ? 'Activo' : 'Inactivo'}
                       </button>
@@ -142,13 +158,6 @@ export default function IngredientOptions() {
                           title="Editar"
                         >
                           <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(option.id)}
-                          className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors"
-                          title="Eliminar"
-                        >
-                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>

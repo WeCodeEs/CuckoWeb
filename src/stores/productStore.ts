@@ -12,6 +12,7 @@ export interface Product {
   created_at: string;
   category?: {
     name: string;
+    active: boolean;
   };
   variants?: Array<{
     variant_option_id: number;
@@ -59,6 +60,7 @@ interface ProductState {
   setIsModalOpen: (isOpen: boolean) => void;
   uploadImage: (file: File) => Promise<string>;
   fetchProductVariants: (productId: number) => Promise<any[]>;
+  toggleProductStatus: (id: number, active: boolean) => Promise<void>;
 }
 
 export const useProductStore = create<ProductState>((set, get) => ({
@@ -70,7 +72,6 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
   uploadImage: async (file: File) => {
     try {
-      // ======================= LOGS AÑADIDOS AQUÍ =======================
       console.log('--- Iniciando carga de imagen ---');
       console.log('1. Archivo recibido:', file);
 
@@ -88,13 +89,11 @@ export const useProductStore = create<ProductState>((set, get) => ({
         });
 
       console.log('3. Respuesta de Supabase Storage (upload):', { data, uploadError });
-      // =================================================================
 
       if (uploadError) {
         throw uploadError;
       }
 
-      // ======================= LOGS AÑADIDOS AQUÍ =======================
       console.log('4. Obteniendo URL pública para la ruta:', filePath);
       const { data: { publicUrl } } = supabase.storage
         .from('menu_items')
@@ -102,11 +101,10 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
       console.log('5. URL pública obtenida:', publicUrl);
       console.log('--- Carga de imagen finalizada ---');
-      // =================================================================
 
       return publicUrl;
     } catch (error: any) {
-      console.error('💥 ERROR en uploadImage:', error);
+      console.error('ERROR en uploadImage:', error);
       throw new Error('Error al subir la imagen');
     }
   },
@@ -127,7 +125,8 @@ export const useProductStore = create<ProductState>((set, get) => ({
           active,
           created_at,
           category:categories (
-            name
+            name,
+            active 
           ),
           ingredients:product_customizable_ingredients (
             ingredient_option_id,
@@ -135,6 +134,15 @@ export const useProductStore = create<ProductState>((set, get) => ({
             ingredient_option:ingredient_options (
               name,
               extra_price,
+              active
+            )
+          ),
+          variants:product_variants (
+            variant_option_id,
+            additional_price,
+            active,
+            variant_option:variant_options (
+              name,
               active
             )
           )
@@ -160,7 +168,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         .select(`
           id,
           name,
-          additional_price,
+          base_price,
           active,
           product_variants!left (
             product_id,
@@ -396,6 +404,30 @@ export const useProductStore = create<ProductState>((set, get) => ({
         error: error.message || 'Error al eliminar el producto',
         loading: false 
       });
+      throw error;
+    }
+  },
+
+  toggleProductStatus: async (id: number, active: boolean) => {
+    try {
+      // 1. Actualiza la base de datos
+      const { error } = await supabase
+        .from('products')
+        .update({ active })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // 2. Actualiza el estado local (actualización optimista)
+      // Esto evita tener que recargar toda la lista de productos
+      set((state) => ({
+        products: state.products.map(p =>
+          p.id === id ? { ...p, active } : p
+        ),
+      }));
+    } catch (error: any) {
+      console.error("Error al cambiar el estado del producto:", error);
+      // Relanza el error para que el componente pueda manejarlo si es necesario
       throw error;
     }
   },

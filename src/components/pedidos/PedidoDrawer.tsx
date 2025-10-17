@@ -58,7 +58,6 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                 <span>${formatCurrency(detail.subtotal)}</span>
               </div>
               ${detail.product.variant ? `<div style="padding-left: 12px; color: #666; font-size: 10px;">${detail.product.variant.name}</div>` : ''}
-              ${detail.notes ? `<div style="padding-left: 12px; color: #666; font-size: 10px;">Nota: ${detail.notes}</div>` : ''}
             </div>
           `).join('')}
         </div>

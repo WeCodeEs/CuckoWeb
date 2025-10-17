@@ -230,9 +230,9 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                 <p className="text-gray-900 dark:text-white font-medium">
                   {order.user?.first_name} {order.user?.last_name}
                 </p>
-                {order.user?.faculty_id && (
+                {order.user?.faculty && (
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    Facultad {order.user.faculty_id}
+                    Facultad de {order.user.faculty}
                   </p>
                 )}
               </div>

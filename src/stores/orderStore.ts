@@ -197,9 +197,47 @@ export const useOrderStore = create<OrderStore>((set, get) => {
       try {
         set({ loading: true, error: null });
 
+        const current = get().orders.find(o => o.id === id) || null;
+        const now = new Date().toISOString();
+
+        const updateData: Record<string,any> = { status };
+
+        switch(status){
+          case 'Recibido': {
+            updateData.started_at = null;
+            updateData.ready_at = null;
+            updateData.delivered_at = null;
+            break;
+          }
+          case 'EnPreparacion': {
+            updateData.started_at = now;
+            updateData.ready_at = null;
+            updateData.delivered_at = null;
+            break;
+          }
+          case 'Listo': {
+            updateData.ready_at = now;
+            if(!current?.started_at){
+              updateData.started_at = now;
+            }
+            updateData.delivered_at = null;
+            break;
+          }
+          case 'Entregado': {
+            updateData.delivered_at = now;
+            if(!current?.ready_at) {
+              updateData.ready_at = now;
+            }
+            if(!current?.started_at) {
+              updateData.started_at = now;
+            }
+            break;
+          }
+        }
+
         const { data, error } = await supabase
           .from('orders')
-          .update({ status })
+          .update(updateData)
           .eq('id', id)
           .select();
 

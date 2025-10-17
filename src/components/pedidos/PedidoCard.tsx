@@ -120,8 +120,8 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
           {order.details.slice(0, 3).map((detail) => (
             <p key={detail.id} className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 line-clamp-1">
               <span className="font-medium">{detail.quantity}x</span> {detail.product.name}
-              {detail.product?.variant?.name && (
-                <span className="text-gray-500 dark:text-gray-400"> ({detail.product.variant.name})</span>
+              {detail.product_variant && detail.product_variant?.variant && (
+                <span className="text-gray-500 dark:text-gray-400"> ({detail.product_variant.variant.name})</span>
               )}
               {detail.ingredients && detail.ingredients.length > 0 && (
                 <span className="text-gray-500 dark:text-gray-400"> ({detail.ingredients.map(ing => ing.name).join(', ')})</span>

@@ -193,10 +193,13 @@ export default function Sidebar() {
 
   return (
     <div className={clsx(
-      "bg-primary-dark dark:bg-darkbg-darker text-white min-h-screen flex flex-col transition-all duration-300",
-      isSidebarCollapsed ? "w-20" : "w-64"
+      "bg-primary-dark dark:bg-darkbg-darker text-white min-h-screen flex flex-col transition-all duration-300 relative",
+      isSidebarCollapsed ? "w-16" : "w-64"
     )}>
-      <div className="bg-white dark:bg-darkbg-darker p-6 flex flex-col items-center">
+      <div className={clsx(
+        "bg-white dark:bg-darkbg-darker flex flex-col items-center transition-all duration-300",
+        isSidebarCollapsed ? "p-3" : "p-6"
+      )}>
         {!isSidebarCollapsed ? (
           <>
             <img
@@ -214,10 +217,22 @@ export default function Sidebar() {
           <img
             src="/assets/Isotipo.png"
             alt="Logo"
-            className="h-12 w-12 mb-4"
+            className="h-10 w-10"
           />
         )}
       </div>
+
+      <button
+        onClick={toggleSidebar}
+        className="absolute top-20 -right-3 bg-accent text-white p-1.5 rounded-full shadow-lg hover:bg-accent/90 transition-all duration-200 z-20"
+        title={isSidebarCollapsed ? 'Expandir sidebar' : 'Contraer sidebar'}
+      >
+        {isSidebarCollapsed ? (
+          <ChevronRight className="w-4 h-4" />
+        ) : (
+          <ChevronLeft className="w-4 h-4" />
+        )}
+      </button>
 
       <nav className="flex-1 p-4 space-y-1">
         {filteredRoutes.map(route => renderNavItem(route))}
@@ -231,26 +246,6 @@ export default function Sidebar() {
           </div>
         </div>
       )}
-
-      <div className="p-4">
-        <button
-          onClick={toggleSidebar}
-          className={clsx(
-            "w-full bg-accent/10 hover:bg-accent/20 text-accent p-3 rounded-xl transition-all duration-200 flex items-center gap-2",
-            isSidebarCollapsed && "justify-center"
-          )}
-          title={isSidebarCollapsed ? 'Expandir sidebar' : 'Minimizar sidebar'}
-        >
-          {isSidebarCollapsed ? (
-            <ChevronRight className="w-5 h-5" />
-          ) : (
-            <>
-              <ChevronLeft className="w-5 h-5" />
-              <span className="text-sm font-medium">Contraer</span>
-            </>
-          )}
-        </button>
-      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import React from 'react';
-import { Clock, Printer } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { Clock, CalendarClock, Printer } from 'lucide-react';
+import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Order } from '../../stores/orderStore';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -76,18 +76,42 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
       {...(enableDrag ? attributes : {})}
       {...(enableDrag ? listeners : {})}
       className={clsx(
-        "bg-white dark:bg-darkbg-lighter rounded-lg shadow-sm hover:shadow-md transition-all duration-200 border-l-4 cursor-pointer active:scale-[0.98]",
-        statusColors[order.status],
+        "cursor-pointer active:scale-[0.98]",
         {
           'opacity-50 shadow-xl z-50': isDragging,
           'transform-gpu will-change-transform': enableDrag,
           'touch-manipulation': !enableDrag,
-          'hover:scale-[1.02]': !isDragging,
         }
       )}
       onClick={onClick}
     >
-      <div className="p-3 sm:p-4">
+      {order.scheduled_delivery_time && (
+        <div className="w-[96%] mx-auto">
+          <div
+            className={clsx(
+              "flex items-center gap-2 px-3 py-1 rounded-t-lg rounded-b-none shadow-sm",
+              "bg-primary-light dark:bg-darkbg-lighter",
+              "text-white dark:text-white",
+              "shadow-primary-light/20 dark:shadow-dark"
+            )}
+          >
+            <CalendarClock className="w-4 h-4 text-white dark:text-primary-light" />
+            <span className="text-xs sm:text-sm font-medium">
+              Agendado para la(s) {format(new Date(order.scheduled_delivery_time as string), "HH:mm")}
+            </span>
+          </div>
+        </div>
+      )}
+
+      <div
+        className={clsx(
+          "p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-200 border-l-4",
+          statusColors[order.status],
+          "bg-white dark:bg-darkbg-lighter",
+          "rounded-lg",
+          { 'hover:scale-[1.02]': !isDragging }
+        )}
+      >
         <div className="flex items-start justify-between mb-2 sm:mb-3">
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
             #{order.id}

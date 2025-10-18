@@ -196,7 +196,7 @@ export default function Sidebar() {
       "bg-primary-dark dark:bg-darkbg-darker text-white min-h-screen flex flex-col transition-all duration-300",
       isSidebarCollapsed ? "w-20" : "w-64"
     )}>
-      <div className="bg-white dark:bg-darkbg-darker p-6 flex flex-col items-center relative">
+      <div className="bg-white dark:bg-darkbg-darker p-6 flex flex-col items-center">
         {!isSidebarCollapsed ? (
           <>
             <img
@@ -211,22 +211,12 @@ export default function Sidebar() {
             />
           </>
         ) : (
-          <div className="h-28 w-12 mb-4 flex items-center justify-center">
-            <Coffee className="w-8 h-8 text-accent" />
-          </div>
+          <img
+            src="/assets/Isotipo.png"
+            alt="Logo"
+            className="h-12 w-12 mb-4"
+          />
         )}
-
-        <button
-          onClick={toggleSidebar}
-          className="absolute -right-3 top-1/2 -translate-y-1/2 bg-accent text-white p-1.5 rounded-full shadow-lg hover:bg-accent/90 transition-colors z-10"
-          title={isSidebarCollapsed ? 'Expandir sidebar' : 'Minimizar sidebar'}
-        >
-          {isSidebarCollapsed ? (
-            <ChevronRight className="w-4 h-4" />
-          ) : (
-            <ChevronLeft className="w-4 h-4" />
-          )}
-        </button>
       </div>
 
       <nav className="flex-1 p-4 space-y-1">
@@ -241,6 +231,26 @@ export default function Sidebar() {
           </div>
         </div>
       )}
+
+      <div className="p-4">
+        <button
+          onClick={toggleSidebar}
+          className={clsx(
+            "w-full bg-accent/10 hover:bg-accent/20 text-accent p-3 rounded-xl transition-all duration-200 flex items-center gap-2",
+            isSidebarCollapsed && "justify-center"
+          )}
+          title={isSidebarCollapsed ? 'Expandir sidebar' : 'Minimizar sidebar'}
+        >
+          {isSidebarCollapsed ? (
+            <ChevronRight className="w-5 h-5" />
+          ) : (
+            <>
+              <ChevronLeft className="w-5 h-5" />
+              <span className="text-sm font-medium">Contraer</span>
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

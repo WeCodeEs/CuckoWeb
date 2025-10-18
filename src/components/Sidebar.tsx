@@ -222,30 +222,37 @@ export default function Sidebar() {
         )}
       </div>
 
-      <button
-        onClick={toggleSidebar}
-        className="absolute top-20 -right-3 bg-accent text-white p-1.5 rounded-full shadow-lg hover:bg-accent/90 transition-all duration-200 z-20"
-        title={isSidebarCollapsed ? 'Expandir sidebar' : 'Contraer sidebar'}
-      >
-        {isSidebarCollapsed ? (
-          <ChevronRight className="w-4 h-4" />
-        ) : (
-          <ChevronLeft className="w-4 h-4" />
-        )}
-      </button>
-
       <nav className="flex-1 p-4 space-y-1">
         {filteredRoutes.map(route => renderNavItem(route))}
       </nav>
 
-      {!isSidebarCollapsed && (
-        <div className="p-4 border-t border-white/10">
-          <div className="px-4 py-3 text-sm text-secondary-light">
-            <p className="font-medium">{user?.full_name}</p>
-            <p className="text-xs opacity-75">{user?.email}</p>
+      <div className="border-t border-white/10">
+        {!isSidebarCollapsed ? (
+          <div className="p-4 flex items-center justify-between">
+            <div className="px-4 py-3 text-sm text-secondary-light flex-1">
+              <p className="font-medium">{user?.full_name}</p>
+              <p className="text-xs opacity-75">{user?.email}</p>
+            </div>
+            <button
+              onClick={toggleSidebar}
+              className="bg-accent/10 hover:bg-accent/20 text-accent p-2 rounded-lg transition-all duration-200"
+              title="Contraer sidebar"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="p-3 flex justify-center">
+            <button
+              onClick={toggleSidebar}
+              className="bg-accent/10 hover:bg-accent/20 text-accent p-2 rounded-lg transition-all duration-200"
+              title="Expandir sidebar"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

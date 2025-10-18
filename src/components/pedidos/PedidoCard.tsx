@@ -105,11 +105,13 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
 
       <div
         className={clsx(
-          "p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-200 border-l-4",
+          "p-3 sm:p-4 shadow-sm transition-transform transition-shadow duration-200 border-l-4 transform",
           statusColors[order.status],
           "bg-white dark:bg-darkbg-lighter",
           "rounded-lg",
-          { 'hover:scale-[1.02]': !isDragging }
+          {
+            'hover:-translate-y-0.5 hover:shadow-lg hover:ring-1 hover:ring-primary/20 hover:z-10': !isDragging,
+          }
         )}
       >
         <div className="flex items-start justify-between mb-2 sm:mb-3">

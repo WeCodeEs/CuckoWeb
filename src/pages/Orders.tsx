@@ -70,7 +70,7 @@ export default function Orders() {
     error,
     selectedOrder,
     isDrawerOpen,
-    fetchOrders,
+    fetchOrdersToday,
     updateOrderStatus,
     setSelectedOrder,
     setIsDrawerOpen,
@@ -121,7 +121,7 @@ export default function Orders() {
   useEffect(() => {
     const initializeOrders = async () => {
       try {
-        await fetchOrders();
+        await fetchOrdersToday();
         subscribeToOrders();
 
         // Request notification permission
@@ -142,7 +142,7 @@ export default function Orders() {
     return () => {
       unsubscribeFromOrders();
     };
-  }, [fetchOrders, subscribeToOrders, unsubscribeFromOrders]);
+  }, [fetchOrdersToday, subscribeToOrders, unsubscribeFromOrders]);
 
   const handleOrderClick = (order: any) => {
     if (!activeId) {
@@ -302,7 +302,7 @@ export default function Orders() {
           </p>
           <p className="mt-2 text-sm text-red-600 dark:text-red-300">{error}</p>
           <button
-            onClick={() => fetchOrders()}
+            onClick={() => fetchOrdersToday()}
             className="mt-4 px-4 py-2 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900 transition-colors"
           >
             Reintentar

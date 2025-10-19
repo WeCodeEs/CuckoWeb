@@ -61,7 +61,8 @@ interface OrderStore {
   error: string | null;
   selectedOrder: Order | null;
   isDrawerOpen: boolean;
-  fetchOrders: () => Promise<void>;
+  fetchOrders: (opts: { startDate: Date; endDate: Date; typeFilter: OrderTypeFilter }) => Promise<void>;
+  fetchOrdersToday: () => Promise<void>;
   updateOrderStatus: (id: number, status: OrderStatus) => Promise<void>;
   sendPersonalNotification: (order: Order, title: string, body: string) => Promise<void>;
   fetchNotificationsByOrder: (orderId: number) => Promise<OrderNotification[]>;
@@ -108,7 +109,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
               console.error('Error handling new order notification:', error);
             }
           }
-          await get().fetchOrders();
+          await get().fetchOrdersToday();
         }
       )
       .subscribe((status) => {
@@ -134,7 +135,90 @@ export const useOrderStore = create<OrderStore>((set, get) => {
     selectedOrder: null,
     isDrawerOpen: false,
 
-    fetchOrders: async () => {
+    fetchOrders: async ({ startDate, endDate, typeFilter }) => {
+      try {
+        set({ loading: true, error: null });
+
+        let query = supabase
+          .from('orders')
+          .select(`
+            id,
+            user_uuid,
+            status,
+            total,
+            created_at,
+            started_at,
+            ready_at,
+            delivered_at,
+            updated_at,
+            scheduled_delivery_time,
+            user:users (
+              uuid,
+              first_name,
+              last_name,
+              faculty
+            ),
+            details:order_details (
+              id,
+              product_id,
+              product_variant_id,
+              quantity,
+              unit_price,
+              subtotal,
+              product:products (name),
+              product_variant:product_variants (
+                variant:variant_options (name)
+              ),
+              ingredients:order_detail_ingredients (
+                ingredient:ingredient_options (
+                  name,
+                  extra_price
+                )
+              )
+            )
+          `)
+          .gte('created_at', startDate.toISOString())
+          .lte('created_at', endDate.toISOString())
+          .order('created_at', { ascending: false });
+
+        if (typeFilter === 'Agendados') {
+          query = query.not('scheduled_delivery_time', 'is', null);
+        } else if (typeFilter === 'Inmediatos') {
+          query = query.is('scheduled_delivery_time', null);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        let transformedData = data;
+        if (transformedData) {
+          transformedData = transformedData.map((order: any) => {
+            if (order.details) {
+              order.details = order.details.map((detail: any) => {
+                if (detail.ingredients) {
+                  detail.ingredients = detail.ingredients.map((ing: any) => ({
+                    name: ing.ingredient.name,
+                    extra_price: ing.ingredient.extra_price
+                  }));
+                }
+                return detail;
+              });
+            }
+            return order;
+          });
+        }
+
+        set({ orders: (transformedData as Order[]) || [], loading: false });
+      } catch (error: any) {
+        console.error('Error fetching orders (history):', error);
+        set({
+          error: error.message || 'Error al cargar los pedidos',
+          loading: false
+        });
+      }
+    },
+
+    fetchOrdersToday: async () => {
       try {
         set({ loading: true, error: null });
 
@@ -262,7 +346,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
           throw new Error('No se pudo actualizar el pedido. Verifique que el pedido existe y que tiene permisos para modificarlo.');
         }
 
-        await get().fetchOrders();
+        await get().fetchOrdersToday();
       } catch (error: any) {
         console.error('Error updating order status:', error);
         set({

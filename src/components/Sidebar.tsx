@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   ClipboardList,
+  History,
   MenuSquare,
   Users,
   ChevronDown,
@@ -38,7 +39,14 @@ const routes: RouteWithSubRoutes[] = [
   { 
     path: '/pedidos', 
     name: 'Pedidos', 
-    icon: 'ClipboardList' 
+    icon: 'ClipboardList', 
+    subRoutes: [
+      { 
+        path: '/historico', 
+        name: 'Historial de Pedidos',
+        icon: 'History',
+      }     
+    ]
   },
   { 
     path: '/menus', 
@@ -87,6 +95,7 @@ const routes: RouteWithSubRoutes[] = [
 const iconComponents: { [key: string]: React.ComponentType<any> } = {
   LayoutDashboard,
   ClipboardList,
+  History,
   MenuSquare,
   Users,
   FolderTree,

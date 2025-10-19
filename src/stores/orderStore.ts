@@ -294,11 +294,31 @@ export const useOrderStore = create<OrderStore>((set, get) => {
 
     updateOrderStatus: async (id: number, status: OrderStatus) => {
       try {
-        set({ loading: true, error: null });
-
         const current = get().orders.find(o => o.id === id) || null;
-        const now = new Date().toISOString();
+        if (!current) {
+          throw new Error('Pedido no encontrado en memoria.');
+        }
 
+        if (current.status === status) {
+          return;
+        }
+
+        const STATUS_ORDER: Record<OrderStatus, number> = {
+          Recibido: 0,
+          EnPreparacion: 1,
+          Listo: 2,
+          Entregado: 3,
+        };
+
+        const currentRank = STATUS_ORDER[current.status];
+        const nextRank = STATUS_ORDER[status];
+
+        if (nextRank < currentRank) {
+          throw new Error('No puedes retroceder el estado del pedido.');
+        }
+
+        set({ loading: true });
+        const now = new Date().toISOString();
         const updateData: Record<string,any> = { status };
 
         switch(status){
@@ -349,10 +369,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
         await get().fetchOrdersToday();
       } catch (error: any) {
         console.error('Error updating order status:', error);
-        set({
-          error: error.message || 'Error al actualizar el estado del pedido',
-          loading: false
-        });
+        set({ loading: false });
         throw error;
       }
     },

@@ -156,22 +156,13 @@ export default function OrderHistory() {
                     A NOMBRE DE
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    FECHA
-                  </th>
-                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    CREACIÓN
-                  </th>
-                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    TIPO DE PEDIDO
+                    FECHA DE CREACIÓN
                   </th>
                   <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     HORA AGENDADA
                   </th>
                   <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     ESTADO
-                  </th>
-                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    ENTREGA
                   </th>
                   <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     TOTAL
@@ -184,9 +175,11 @@ export default function OrderHistory() {
               <tbody className="divide-y divide-gray-100 dark:divide-darkbg">
                 {filteredOrders.map((order) => {
                   const fullName = `${order.user?.first_name ?? ''} ${order.user?.last_name ?? ''}`.trim() || '-';
-                  const fecha = format(new Date(order.created_at), "d 'de' MMMM, yyyy", { locale: es });
+                  const fecha = format(new Date(order.created_at), "d 'de' MMMM, yyyy' a las 'HH:mm", { locale: es });
                   const creado = format(new Date(order.created_at), "HH:mm", { locale: es });
                   const agendado = order.scheduled_delivery_time ? format(new Date(order.scheduled_delivery_time), "HH:mm", { locale: es }) : null;
+                  const preparando = order.started_at ? format(new Date(order.started_at), "HH:mm", { locale: es }) : null;
+                  const listo = order.ready_at ? format(new Date(order.ready_at), "HH:mm", { locale: es }) : null;
                   const entregado = order.delivered_at ? format(new Date(order.delivered_at), "HH:mm", { locale: es }) : null;
                   const tipo = order.scheduled_delivery_time ? 'Agendado' : 'Inmediato';
                   return (
@@ -204,34 +197,19 @@ export default function OrderHistory() {
                         {fecha}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <span className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                          {creado}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
                         <span className={tipoBadge(order)}>
-                          {tipo}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <span className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                          {agendado ? agendado : '-'}
+                          {tipo === 'Inmediato' ? tipo : `Para las ${agendado}`}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <span className={statusBadge(order.status)}>
                           {order.status === 'Recibido'
-                            ? 'Recibido'
+                            ? `Recibido a las ${creado}`
                             : order.status === 'EnPreparacion'
-                            ? 'En Preparación'
+                            ? `En preparación a las ${preparando}`
                             : order.status === 'Listo'
-                            ? 'Listo'
-                            : 'Entregado'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <span className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                          {entregado ? entregado : '-'}
+                            ? `Listo a las ${listo}`
+                            : `Entregado a las ${entregado}`}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-primary dark:text-secondary">

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 
 export type OrderStatus = 'Recibido' | 'EnPreparacion' | 'Listo' | 'Entregado';
+export type NotificationType = 'NotificacionGeneral' | 'NotificacionPersonal' | 'PedidoRecibido' | 'PedidoEnPreparacion' | 'PedidoListo' | 'PedidoEntregado';
 
 export interface OrderDetail {
   id: number;
@@ -44,6 +45,16 @@ export interface Order {
   };
 }
 
+export interface OrderNotification {
+  id: number;
+  order_id: number | null;
+  user_uuid: string | null;
+  title: string;
+  message: string;
+  type: NotificationType;
+  created_at: string;
+}
+
 interface OrderStore {
   orders: Order[];
   loading: boolean;
@@ -52,6 +63,8 @@ interface OrderStore {
   isDrawerOpen: boolean;
   fetchOrders: () => Promise<void>;
   updateOrderStatus: (id: number, status: OrderStatus) => Promise<void>;
+  sendPersonalNotification: (order: Order, title: string, body: string) => Promise<void>;
+  fetchNotificationsByOrder: (orderId: number) => Promise<OrderNotification[]>;
   setSelectedOrder: (order: Order | null) => void;
   setIsDrawerOpen: (isOpen: boolean) => void;
   subscribeToOrders: () => void;
@@ -257,6 +270,69 @@ export const useOrderStore = create<OrderStore>((set, get) => {
           loading: false
         });
         throw error;
+      }
+    },
+
+    sendPersonalNotification: async (order: Order, title: string, body: string) => {
+      if (!order?.user_uuid) {
+        throw new Error('El pedido no tiene un usuario asociado.');
+      }
+      if (!title?.trim() || !body?.trim()) {
+        throw new Error('Título y cuerpo son requeridos.');
+      }
+
+      const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+      if (sessionErr) {
+        throw new Error('No fue posible procesar la solicitud');
+      }
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) {
+        throw new Error('No fue posible procesar la solicitud. Inicia sesión nuevamente.');
+      }
+
+      const { data: tokenResp, error: tokenFnErr } = await supabase.functions.invoke('fetch-user-push-token', {
+        body: { user_uuid: order.user_uuid },
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (tokenFnErr) {
+        throw new Error('No fue posible enviar la notificación al usuario.');
+      }
+      const pushToken: string | null = tokenResp?.data?.push_token ?? null;
+      if (!pushToken) {
+        throw new Error('El usuario no puede recibir notificaciones.');
+      }
+
+      console.log("PushToken:",pushToken);
+      const { data: sendResp, error: sendErr } = await supabase.functions.invoke('send-notification', {
+        body: {
+          type: 'NotificacionPersonal',
+          token: pushToken,
+          title,
+          body,
+          order_id: order.id,
+        },
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (sendErr || sendResp?.success !== true) {
+        throw new Error('No fue posible enviar la notificación al usuario.');
+      }
+    },
+
+    fetchNotificationsByOrder: async (orderId: number) => {
+      try {
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('id, order_id, user_uuid, title, message, type, created_at')
+          .eq('order_id', orderId)
+          .eq('type', 'NotificacionPersonal')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        return (data ?? []) as OrderNotification[];
+      } catch (err: any) {
+        console.error('Error fetching notifications:', err);
+        return [];
       }
     },
 

@@ -1,9 +1,11 @@
 import React from 'react';
-import { X, Printer, Clock, CheckCircle, Truck, Play } from 'lucide-react';
-import { Order, OrderStatus } from '../../stores/orderStore';
+import { X, Printer, Clock, CheckCircle, Truck, Play, Mail } from 'lucide-react';
+import { Order, OrderStatus, OrderNotification, useOrderStore } from '../../stores/orderStore';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import NotificationModal from './NotificationModal';
+
 
 interface Props {
   order: Order;
@@ -19,6 +21,19 @@ const statusOptions: { value: OrderStatus; label: string; icon: React.ComponentT
 ];
 
 export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) {
+  const { fetchNotificationsByOrder } = useOrderStore();
+  const [notifications, setNotifications] = React.useState<OrderNotification[]>([]);
+  const [showNotificationModal, setShowNotificationModal] = React.useState(false);
+
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const rows = await fetchNotificationsByOrder(order.id);
+      if (mounted) setNotifications(rows);
+    })();
+    return () => { mounted = false; };
+  }, [order.id, fetchNotificationsByOrder]);
+
   const handlePrint = () => {
     // Create an iframe for printing the order
     const iframe = document.createElement('iframe');
@@ -130,6 +145,14 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
           </h2>
           <div className="flex items-center gap-2 sm:gap-4">
             <button
+              onClick={() => setShowNotificationModal(true)}
+              className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-darkbg rounded-lg transition-colors touch-manipulation"
+              aria-label="Enviar notificación"
+              title="Enviar notificación"
+            >
+              <Mail className="w-5 h-5" />
+            </button>
+            <button
               onClick={handlePrint}
               className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-darkbg rounded-lg transition-colors touch-manipulation"
               aria-label="Imprimir pedido (80mm)"
@@ -146,7 +169,12 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
             </button>
           </div>
         </div>
-
+      {showNotificationModal && (
+        <NotificationModal
+          order={order}
+          onClose={() => setShowNotificationModal(false)}
+        />
+      )}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-darkbg">
           <div className="space-y-6">
             {/* Estado del Pedido */}
@@ -287,6 +315,43 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                 </span>
               </div>
             </div>
+            {/* Historial de notificaciones */}
+            {notifications.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Historial de notificaciones
+                </h3>
+                <div className="space-y-3">
+                  {notifications.map((n) => (
+                    <div
+                      key={n.id}
+                      className="bg-gray-50 dark:bg-darkbg rounded-lg p-4"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-gray-900 dark:text-white font-medium">
+                            {n.title}
+                          </p>
+                          {n.message && (
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                              {n.message}
+                            </p>
+                          )}
+                        </div>
+                        <p className="text-gray-900 dark:text-white font-medium flex-shrink-0">
+                          {format(new Date(n.created_at), 'HH:mm')}
+                        </p>
+                      </div>
+                      <div className="mt-2 text-left">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {format(new Date(n.created_at), "d 'de' MMMM 'de' yyyy'", { locale: es })}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

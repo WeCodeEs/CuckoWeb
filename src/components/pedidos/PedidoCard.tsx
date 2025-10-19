@@ -23,6 +23,13 @@ const statusColors = {
   Entregado: 'border-gray-500 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/10',
 };
 
+const badgeColors = {
+  Recibido: 'bg-blue-500 dark:bg-blue-600',
+  EnPreparacion: 'bg-orange-500 dark:bg-orange-600',
+  Listo: 'bg-green-500 dark:bg-green-600',
+  Entregado: 'bg-gray-500 dark:bg-gray-600',
+};
+
 const statusLabels = {
   Recibido: 'Recibido',
   EnPreparacion: 'En Preparación',
@@ -89,13 +96,14 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
         <div className="w-[96%] mx-auto">
           <div
             className={clsx(
-              "flex items-center gap-2 px-3 py-1 rounded-t-lg rounded-b-none shadow-sm",
+              "flex items-center gap-2 px-3 py-1 rounded-t-lg rounded-b-none",
               "bg-primary-light dark:bg-darkbg-lighter",
               "text-white dark:text-white",
-              "shadow-primary-light/20 dark:shadow-dark"
+              badgeColors[order.status],
+              "shadow-primary-light/20"
             )}
           >
-            <CalendarClock className="w-4 h-4 text-white dark:text-primary-light" />
+            <CalendarClock className="w-4 h-4 text-white dark:text-white" />
             <span className="text-xs sm:text-sm font-medium">
               Agendado para la(s) {format(new Date(order.scheduled_delivery_time as string), "HH:mm")}
             </span>

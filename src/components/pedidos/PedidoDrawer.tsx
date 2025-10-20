@@ -72,7 +72,12 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                 <span style="max-width: 60%; word-wrap: break-word;">${detail.quantity}x ${detail.product.name}</span>
                 <span>${formatCurrency(detail.subtotal)}</span>
               </div>
-              ${detail.product_variant && detail.product_variant?.variant ? `<div style="padding-left: 12px; color: #666; font-size: 10px;">${detail.product_variant?.variant.name}</div>` : ''}
+              ${detail.product_variant && detail.product_variant?.variant
+                ? `<div style="padding-left: 12px; color: #666; font-size: 10px;">${detail.product_variant?.variant.name}</div>`
+                : ''}
+              ${detail.ingredients && detail.ingredients.length
+                ? `<div style="padding-left: 12px; color: #666; font-size: 10px;"> ${detail.ingredients.map(ing => ing.name).join(', ')}</div>`
+                : ''}
             </div>
           `).join('')}
         </div>

@@ -97,7 +97,6 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
           <div
             className={clsx(
               "flex items-center gap-2 px-3 py-1 rounded-t-lg rounded-b-none",
-              "bg-primary-light dark:bg-darkbg-lighter",
               "text-white dark:text-white",
               badgeColors[order.status],
               "shadow-primary-light/20"

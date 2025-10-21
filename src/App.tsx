@@ -4,6 +4,7 @@ import MainLayout from './layouts/MainLayout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Orders from './pages/Orders';
+import OrdersHistory from './pages/OrdersHistory';
 import Products from './pages/Products';
 import Menus from './pages/Menus';
 import Categories from './pages/Categories';
@@ -43,6 +44,7 @@ function App() {
             }
           />
           <Route path="pedidos" element={<Orders />} />
+          <Route path="historico" element={<OrdersHistory />} />
           <Route path="productos" element={<Products />} />
           <Route path="menus" element={<Menus />} />
           <Route path="categorias" element={<Categories />} />

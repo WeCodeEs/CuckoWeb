@@ -1,11 +1,10 @@
 import React, { useEffect } from 'react';
 import { useOrderStore, OrderStatus } from '../stores/orderStore';
-import { supabase } from '../lib/supabase';
 import PedidoCard from '../components/pedidos/PedidoCard';
 import PedidoDrawer from '../components/pedidos/PedidoDrawer';
 import PrintPreviewModal from '../components/pedidos/PrintPreviewModal';
 import SkeletonKanbanCard from '../components/skeletons/SkeletonKanbanCard';
-import { Printer, Plus, Trash2 } from 'lucide-react';
+import { Printer } from 'lucide-react';
 import {
   DndContext,
   DragEndEvent,
@@ -19,25 +18,6 @@ import {
   useDroppable,
 } from '@dnd-kit/core';
 import { useToast } from '../components/ui/use-toast';
-import { generateMultipleTestOrders } from '../utils/testOrderGenerator';
-
-// Function to delete all orders
-const deleteAllOrders = async () => {
-  try {
-    // Delete all orders - CASCADE will handle order_details automatically
-    const { error } = await supabase
-      .from('orders')
-      .delete()
-      .neq('id', 0); // Delete all orders
-    
-    if (error) throw error;
-    
-    return { success: true };
-  } catch (error: any) {
-    console.error('Error deleting orders:', error);
-    throw error;
-  }
-};
 
 const columns: { status: OrderStatus; title: string }[] = [
   { status: 'Recibido', title: 'Recibidos' },
@@ -90,7 +70,7 @@ export default function Orders() {
     error,
     selectedOrder,
     isDrawerOpen,
-    fetchOrders,
+    fetchOrdersToday,
     updateOrderStatus,
     setSelectedOrder,
     setIsDrawerOpen,
@@ -141,7 +121,7 @@ export default function Orders() {
   useEffect(() => {
     const initializeOrders = async () => {
       try {
-        await fetchOrders();
+        await fetchOrdersToday();
         subscribeToOrders();
 
         // Request notification permission
@@ -162,7 +142,7 @@ export default function Orders() {
     return () => {
       unsubscribeFromOrders();
     };
-  }, [fetchOrders, subscribeToOrders, unsubscribeFromOrders]);
+  }, [fetchOrdersToday, subscribeToOrders, unsubscribeFromOrders]);
 
   const handleOrderClick = (order: any) => {
     if (!activeId) {
@@ -212,8 +192,12 @@ export default function Orders() {
                 <span style="max-width: 60%; word-wrap: break-word;">${detail.quantity}x ${detail.product.name}</span>
                 <span>$${detail.subtotal.toFixed(2)}</span>
               </div>
-              ${detail.product.variant ? `<div style="padding-left: 12px; color: #666; font-size: 10px;">${detail.product.variant.name}</div>` : ''}
-              ${detail.notes ? `<div style="padding-left: 12px; color: #666; font-size: 10px;">Nota: ${detail.notes}</div>` : ''}
+              ${detail.product_variant && detail.product_variant?.variant
+                ? `<div style="padding-left: 12px; color: #666; font-size: 10px;">${detail.product_variant?.variant.name}</div>`
+                : ''}
+              ${detail.ingredients && detail.ingredients.length
+                ? `<div style="padding-left: 12px; color: #666; font-size: 10px;"> ${detail.ingredients.map(ing => ing.name).join(', ')}</div>`
+                : ''}
             </div>
           `).join('')}
         </div>
@@ -318,7 +302,7 @@ export default function Orders() {
           </p>
           <p className="mt-2 text-sm text-red-600 dark:text-red-300">{error}</p>
           <button
-            onClick={() => fetchOrders()}
+            onClick={() => fetchOrdersToday()}
             className="mt-4 px-4 py-2 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900 transition-colors"
           >
             Reintentar
@@ -341,53 +325,6 @@ export default function Orders() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={async () => {
-                try {
-                  await generateMultipleTestOrders(1);
-                  toast({
-                    title: 'Pedidos de prueba creados',
-                    description: 'Se han creado 1 pedidos de prueba con datos reales',
-                  });
-                } catch (error: any) {
-                  toast({
-                    variant: 'destructive',
-                    title: 'Error',
-                    description: error.message || 'Error al crear pedidos de prueba',
-                  });
-                }
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary dark:text-secondary bg-white dark:bg-darkbg-lighter rounded-xl hover:bg-primary/5 dark:hover:bg-darkbg transition-colors border border-primary/20 dark:border-secondary/20"
-            >
-              <Plus className="w-4 h-4" />
-              Crear Pedidos de Prueba
-            </button>
-            <button
-              onClick={async () => {
-                if (window.confirm('¿Estás seguro de que deseas eliminar TODOS los pedidos? Esta acción no se puede deshacer.')) {
-                  try {
-                    await deleteAllOrders();
-                    await fetchOrders();
-                    toast({
-                      title: 'Pedidos eliminados',
-                      description: 'Todos los pedidos han sido eliminados exitosamente',
-                      className: "border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20",
-                    
-                    });
-                  } catch (error: any) {
-                    toast({
-                      variant: 'destructive',
-                      title: 'Error',
-                      description: error.message || 'Error al eliminar los pedidos',
-                    });
-                  }
-                }
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-              Eliminar Todos
-            </button>
             <button
               onClick={() => setShowPrintPreview(true)}
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary dark:text-secondary bg-white dark:bg-darkbg-lighter rounded-xl hover:bg-primary/5 dark:hover:bg-darkbg transition-colors border border-primary/20 dark:border-secondary/20"

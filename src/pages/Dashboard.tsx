@@ -28,6 +28,26 @@ import { generatePDFReport, generateExcelReport } from '../utils/reportGenerator
 
 const COLORS = ['#0B818F', '#139FAA', '#49BCCE', '#B3E1E4', '#F07122'];
 
+const CustomTooltip = ({ active, payload, label, labelFormatter, valueFormatter }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white dark:bg-darkbg-lighter border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3">
+        {label && (
+          <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+            {labelFormatter ? labelFormatter(label) : label}
+          </p>
+        )}
+        {payload.map((entry: any, index: number) => (
+          <p key={index} className="text-sm text-gray-700 dark:text-gray-300">
+            <span className="font-medium">{entry.name}:</span> {valueFormatter ? valueFormatter(entry.value) : entry.value}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function Dashboard() {
   const { 
     metrics, 
@@ -172,10 +192,10 @@ export default function Dashboard() {
               ) : metrics && metrics.recentSales.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={metrics.recentSales}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" className="dark:opacity-10" />
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
                     <XAxis
                       dataKey="date"
-                      tick={{ fontSize: 12, fill: '#666' }}
+                      tick={{ fontSize: 12 }}
                       tickFormatter={(value) => {
                         const date = new Date(value);
                         return date.toLocaleDateString('es-PE', {
@@ -183,33 +203,28 @@ export default function Dashboard() {
                           month: 'short'
                         });
                       }}
-                      axisLine={{ stroke: '#e5e5e5' }}
-                      className="dark:text-gray-400"
+                      className="dark:text-gray-300"
+                      stroke="#9ca3af"
                     />
                     <YAxis
-                      tick={{ fontSize: 12, fill: '#666' }}
+                      tick={{ fontSize: 12 }}
                       tickFormatter={(value) => `$${value}`}
-                      axisLine={{ stroke: '#e5e5e5' }}
-                      className="dark:text-gray-400"
+                      className="dark:text-gray-300"
+                      stroke="#9ca3af"
                     />
                     <Tooltip
-                      formatter={(value: number) => [`$${value}`, "Ventas"]}
-                      labelFormatter={(label) => {
-                        const date = new Date(label);
-                        return date.toLocaleDateString('es-PE', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        });
-                      }}
-                      contentStyle={{
-                        backgroundColor: 'white',
-                        border: '1px solid #e5e5e5',
-                        borderRadius: '8px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-                      }}
-                      className="dark:bg-darkbg-lighter dark:border-darkbg dark:text-white"
+                      content={<CustomTooltip
+                        labelFormatter={(label: string) => {
+                          const date = new Date(label);
+                          return date.toLocaleDateString('es-PE', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          });
+                        }}
+                        valueFormatter={(value: number) => `$${value}`}
+                      />}
                     />
                     <Bar
                       dataKey="total"
@@ -240,31 +255,26 @@ export default function Dashboard() {
                     layout="vertical"
                     margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" className="dark:opacity-10" />
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
                     <XAxis
                       type="number"
-                      tick={{ fontSize: 12, fill: '#666' }}
+                      tick={{ fontSize: 12 }}
                       tickFormatter={(value) => `$${value}`}
-                      axisLine={{ stroke: '#e5e5e5' }}
-                      className="dark:text-gray-400"
+                      className="dark:text-gray-300"
+                      stroke="#9ca3af"
                     />
                     <YAxis
                       type="category"
                       dataKey="name"
-                      tick={{ fontSize: 12, fill: '#666' }}
+                      tick={{ fontSize: 12 }}
                       width={150}
-                      axisLine={{ stroke: '#e5e5e5' }}
-                      className="dark:text-gray-400"
+                      className="dark:text-gray-300"
+                      stroke="#9ca3af"
                     />
                     <Tooltip
-                      formatter={(value: number) => [`$${value}`, "Total"]}
-                      contentStyle={{
-                        backgroundColor: 'white',
-                        border: '1px solid #e5e5e5',
-                        borderRadius: '8px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-                      }}
-                      className="dark:bg-darkbg-lighter dark:border-darkbg dark:text-white"
+                      content={<CustomTooltip
+                        valueFormatter={(value: number) => `$${value}`}
+                      />}
                     />
                     <Bar
                       dataKey="total"

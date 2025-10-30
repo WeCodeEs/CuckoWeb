@@ -10,16 +10,14 @@ import {
   FileSpreadsheet,
   Clock
 } from 'lucide-react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
   Cell
 } from 'recharts';
 import { useDashboardStore } from '../stores/dashboardStore';
@@ -174,19 +172,13 @@ export default function Dashboard() {
               ) : metrics && metrics.recentSales.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={metrics.recentSales}>
-                    <defs>
-                      <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#F07122" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#F07122" stopOpacity={0.2}/>
-                      </linearGradient>
-                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" className="dark:opacity-10" />
-                    <XAxis 
-                      dataKey="date" 
+                    <XAxis
+                      dataKey="date"
                       tick={{ fontSize: 12, fill: '#666' }}
                       tickFormatter={(value) => {
                         const date = new Date(value);
-                        return date.toLocaleDateString('es-PE', { 
+                        return date.toLocaleDateString('es-PE', {
                           day: '2-digit',
                           month: 'short'
                         });
@@ -194,13 +186,13 @@ export default function Dashboard() {
                       axisLine={{ stroke: '#e5e5e5' }}
                       className="dark:text-gray-400"
                     />
-                    <YAxis 
+                    <YAxis
                       tick={{ fontSize: 12, fill: '#666' }}
                       tickFormatter={(value) => `$${value}`}
                       axisLine={{ stroke: '#e5e5e5' }}
                       className="dark:text-gray-400"
                     />
-                    <Tooltip 
+                    <Tooltip
                       formatter={(value: number) => [`$${value}`, "Ventas"]}
                       labelFormatter={(label) => {
                         const date = new Date(label);
@@ -219,10 +211,10 @@ export default function Dashboard() {
                       }}
                       className="dark:bg-darkbg-lighter dark:border-darkbg dark:text-white"
                     />
-                    <Bar 
-                      dataKey="total" 
-                      fill="url(#barGradient)"
-                      radius={[4, 4, 0, 0]}
+                    <Bar
+                      dataKey="total"
+                      fill="#0B818F"
+                      radius={[8, 8, 0, 0]}
                     />
                   </BarChart>
                 </ResponsiveContainer>
@@ -243,30 +235,29 @@ export default function Dashboard() {
                 <div className="w-full h-full bg-slate-200/40 dark:bg-darkbg/40 rounded-lg animate-pulse" />
               ) : metrics && metrics.topProducts.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={metrics.topProducts}
-                      dataKey="total"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      label={({ name, percent }) => 
-                        `${name}: ${(percent * 100).toFixed(0)}%`
-                      }
-                      labelLine={{ stroke: '#666', className: 'dark:text-gray-400' }}
-                    >
-                      {metrics.topProducts.map((_, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={COLORS[index % COLORS.length]}
-                          strokeWidth={1}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      formatter={(value: number) => `$${value}`}
+                  <BarChart
+                    data={metrics.topProducts}
+                    layout="vertical"
+                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" className="dark:opacity-10" />
+                    <XAxis
+                      type="number"
+                      tick={{ fontSize: 12, fill: '#666' }}
+                      tickFormatter={(value) => `$${value}`}
+                      axisLine={{ stroke: '#e5e5e5' }}
+                      className="dark:text-gray-400"
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      tick={{ fontSize: 12, fill: '#666' }}
+                      width={150}
+                      axisLine={{ stroke: '#e5e5e5' }}
+                      className="dark:text-gray-400"
+                    />
+                    <Tooltip
+                      formatter={(value: number) => [`$${value}`, "Total"]}
                       contentStyle={{
                         backgroundColor: 'white',
                         border: '1px solid #e5e5e5',
@@ -275,7 +266,18 @@ export default function Dashboard() {
                       }}
                       className="dark:bg-darkbg-lighter dark:border-darkbg dark:text-white"
                     />
-                  </PieChart>
+                    <Bar
+                      dataKey="total"
+                      radius={[0, 8, 8, 0]}
+                    >
+                      {metrics.topProducts.map((_, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-500">

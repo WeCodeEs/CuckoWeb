@@ -160,8 +160,6 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         .sort((a, b) => b.total - a.total)
         .slice(0, 5);
 
-      console.log('Top Products Data:', topProducts);
-
       // Calculate peak hours
       const hourCounts = ordersData?.reduce((acc: { [key: number]: number }, order) => {
         const hour = new Date(order.created_at).getHours();
@@ -217,10 +215,6 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
           dayData.total += order.total || 0;
         }
       });
-
-      console.log('Daily Sales Data:', dailySales);
-      console.log('Date Range:', { startDate: dateRange.startDate, endDate: dateRange.endDate });
-      console.log('Days Diff:', daysDiff);
 
       set({
         metrics: {

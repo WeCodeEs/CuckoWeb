@@ -183,7 +183,7 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="bg-primary-dark dark:bg-darkbg-darker text-white w-64 min-h-screen flex flex-col transition-colors duration-200">
+    <div className="hidden md:flex bg-primary-dark dark:bg-darkbg-darker text-white w-64 h-screen flex-col transition-colors duration-200 flex-shrink-0">
       <div className="bg-white dark:bg-darkbg-darker p-6 flex flex-col items-center">
         <img 
           src={`${SUPABASE_URL}/storage/v1/object/sign/images/Logo_Vertical.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9iYjIwYTQ2OC0zZGUxLTQ4ZGMtOWY4Zi04ODUyNDRiNDIwYzEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvTG9nb19WZXJ0aWNhbC5qcGciLCJpYXQiOjE3NTk4Njk0ODQsImV4cCI6NDkxMzQ2OTQ4NH0.fVr0DAFBXQuW-38eQIqfCCAqNwo3mCdEo45tLJmohqM`}

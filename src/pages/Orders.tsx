@@ -46,17 +46,17 @@ function DroppableColumn({
     <div
       ref={enableDrop ? setNodeRef : undefined}
       aria-label={`${title} column`}
-      className={`flex-1 min-w-[280px] md:min-w-[300px] md:max-w-[400px] flex flex-col bg-gray-100 dark:bg-darkbg-darker rounded-xl p-3 md:p-4 transition-all duration-200 ${
+      className={`w-full md:flex-1 md:min-w-[300px] lg:max-w-[400px] flex flex-col bg-gray-100 dark:bg-darkbg-darker rounded-xl p-3 md:p-4 transition-all duration-200 ${
         isOver && enableDrop ? 'ring-2 ring-primary dark:ring-secondary ring-inset bg-gray-200 dark:bg-darkbg' : ''
       }`}
     >
       <h2 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-3 md:mb-4 flex items-center justify-between">
         <span>{title}</span>
-        <span className="text-xs bg-gray-200 dark:bg-darkbg px-2 py-1 rounded-full">
+        <span className="text-xs bg-gray-200 dark:bg-darkbg px-2 py-1 rounded-full text-gray-700 dark:text-gray-300">
           {React.Children.count(children)}
         </span>
       </h2>
-      <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-3 md:space-y-4 min-h-[200px] scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-darkbg">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-3 md:space-y-4 min-h-[200px] scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-darkbg pr-1">
         {children}
       </div>
     </div>
@@ -313,35 +313,34 @@ export default function Orders() {
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)] bg-gray-50 dark:bg-darkbg transition-colors duration-200">
-      <div className="h-full flex flex-col p-3 md:p-6">
-        <div className="mb-4 md:mb-6 flex flex-col md:flex-row md:items-center gap-3 md:gap-0 md:justify-between">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold text-primary-dark dark:text-white">
-              Pedidos
-            </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              Gestiona los pedidos del sistema
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowPrintPreview(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary dark:text-secondary bg-white dark:bg-darkbg-lighter rounded-xl hover:bg-primary/5 dark:hover:bg-darkbg transition-colors border border-primary/20 dark:border-secondary/20"
-            >
-              <Printer className="w-4 h-4" />
-              Prueba de Impresión
-            </button>
-          </div>
+    <div className="h-full flex flex-col">
+      <div className="flex-shrink-0 mb-4 md:mb-6 flex flex-col md:flex-row md:items-center gap-3 md:gap-0 md:justify-between">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-primary-dark dark:text-white">
+            Pedidos
+          </h1>
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Gestiona los pedidos del sistema
+          </p>
         </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowPrintPreview(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary dark:text-secondary bg-white dark:bg-darkbg-lighter rounded-xl hover:bg-primary/5 dark:hover:bg-darkbg transition-colors border border-primary/20 dark:border-secondary/20"
+          >
+            <Printer className="w-4 h-4" />
+            Prueba de Impresión
+          </button>
+        </div>
+      </div>
 
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="flex-1 flex flex-col md:flex-row gap-3 md:gap-6 min-h-0 overflow-x-auto">
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="flex-1 flex flex-col md:flex-row gap-3 md:gap-6 min-h-0 overflow-auto md:overflow-x-auto md:overflow-y-hidden">
             {columns.map(({ status, title }) => (
               <DroppableColumn 
                 key={status} 
@@ -371,21 +370,20 @@ export default function Orders() {
                 )}
               </DroppableColumn>
             ))}
-          </div>
+        </div>
 
-          <DragOverlay>
-            {activeId ? (
-              <PedidoCard
-                order={orders.find(o => o.id === activeId)!}
-                onClick={() => {}}
-                onPrint={() => {}}
-                isDragging
-                enableDrag={false}
-              />
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-      </div>
+        <DragOverlay>
+          {activeId ? (
+            <PedidoCard
+              order={orders.find(o => o.id === activeId)!}
+              onClick={() => {}}
+              onPrint={() => {}}
+              isDragging
+              enableDrag={false}
+            />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       {isDrawerOpen && selectedOrder && (
         <PedidoDrawer

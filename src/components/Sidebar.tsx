@@ -84,11 +84,17 @@ const routes: RouteWithSubRoutes[] = [
       }
     ]
   },
-  { 
-    path: '/usuarios', 
-    name: 'Usuarios', 
-    icon: 'Users', 
-    adminOnly: true 
+  {
+    path: '/staff',
+    name: 'Staff',
+    icon: 'Users',
+    adminOnly: true
+  },
+  {
+    path: '/usuarios',
+    name: 'Usuarios',
+    icon: 'Users',
+    adminOnly: true
   },
 ];
 

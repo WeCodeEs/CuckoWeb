@@ -8,7 +8,8 @@ import OrdersHistory from './pages/OrdersHistory';
 import Products from './pages/Products';
 import Menus from './pages/Menus';
 import Categories from './pages/Categories';
-import Usuarios from './pages/Usuarios';
+import Staff from './pages/Staff';
+import Users from './pages/Users';
 import VariantOptions from './pages/adicionales/VariantOptions';
 import IngredientOptions from './pages/adicionales/IngredientOptions';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -53,10 +54,18 @@ function App() {
             <Route path="ingredientes" element={<IngredientOptions />} />
           </Route>
           <Route
+            path="staff"
+            element={
+              <ProtectedRoute requireAdmin>
+                <Staff />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="usuarios"
             element={
               <ProtectedRoute requireAdmin>
-                <Usuarios />
+                <Users />
               </ProtectedRoute>
             }
           />

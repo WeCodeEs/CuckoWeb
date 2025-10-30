@@ -28,7 +28,7 @@ interface UpdateStaffUserData {
   active?: boolean;
 }
 
-interface UsuariosState {
+interface StaffState {
   usuarios: StaffUser[];
   loading: boolean;
   error: string | null;
@@ -46,7 +46,7 @@ interface UsuariosState {
   setIsModalOpen: (isOpen: boolean) => void;
 }
 
-export const useUsuariosStore = create<UsuariosState>((set, get) => ({
+export const useStaffStore = create<StaffState>((set, get) => ({
   usuarios: [],
   loading: false,
   error: null,

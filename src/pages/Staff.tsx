@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, AlertCircle, Search, UserPlus } from 'lucide-react';
-import { useUsuariosStore } from '../stores/usuariosStore';
-import UsuarioModal from '../components/usuarios/UsuarioModal';
+import { useStaffStore } from '../stores/staffStore';
+import StaffModal from '../components/staff/UsuarioModal';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import clsx from 'clsx';
 import SkeletonTable from '../components/skeletons/SkeletonTable';
 
-export default function Usuarios() {
+export default function Staff() {
   const { 
     usuarios,
     loading,
@@ -21,7 +21,7 @@ export default function Usuarios() {
     setRoleFilter,
     setSelectedUser,
     setIsModalOpen
-  } = useUsuariosStore();
+  } = useStaffStore();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
@@ -101,15 +101,15 @@ export default function Usuarios() {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-primary-dark dark:text-white">Usuarios</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-300">Gestiona los usuarios del sistema</p>
+          <h1 className="text-2xl font-bold text-primary-dark dark:text-white">Staff</h1>
+          <p className="text-sm text-gray-600 dark:text-gray-300">Gestiona el personal del sistema</p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
           className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary dark:bg-secondary rounded-xl hover:bg-primary-dark dark:hover:bg-secondary/90 transition-colors shadow-lg shadow-primary/20 dark:shadow-secondary/20"
         >
           <Plus className="w-4 h-4" />
-          Nuevo Usuario
+          Nuevo Miembro
         </button>
       </div>
 
@@ -250,7 +250,7 @@ export default function Usuarios() {
         </div>
       )}
 
-      {isModalOpen && <UsuarioModal onClose={() => setIsModalOpen(false)} />}
+      {isModalOpen && <StaffModal onClose={() => setIsModalOpen(false)} />}
 
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

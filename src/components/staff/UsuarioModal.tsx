@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
-import { useUsuariosStore } from '../../stores/usuariosStore';
+import { useStaffStore } from '../../stores/staffStore';
 
 const strongPassword = (p: string) =>
   typeof p === 'string'
@@ -14,7 +14,7 @@ interface Props {
 }
 
 export default function UsuarioModal({ onClose }: Props) {
-  const { selectedUser, createUsuario, updateUsuario } = useUsuariosStore();
+  const { selectedUser, createUsuario, updateUsuario } = useStaffStore();
   const [formData, setFormData] = useState({
     full_name: selectedUser?.full_name || '',
     email: selectedUser?.email || '',

@@ -171,8 +171,8 @@ export default function Dashboard() {
             <div className="h-[300px]">
               {loading ? (
                 <div className="w-full h-full bg-slate-200/40 dark:bg-darkbg/40 rounded-lg animate-pulse" />
-              ) : metrics ? (
-                <ResponsiveContainer width="100%\" height="100%">
+              ) : metrics && metrics.recentSales.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={metrics.recentSales}>
                     <defs>
                       <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
@@ -226,7 +226,11 @@ export default function Dashboard() {
                     />
                   </BarChart>
                 </ResponsiveContainer>
-              ) : null}
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-500">
+                  <p>No hay datos de ventas en el rango seleccionado</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -237,8 +241,8 @@ export default function Dashboard() {
             <div className="h-[300px]">
               {loading ? (
                 <div className="w-full h-full bg-slate-200/40 dark:bg-darkbg/40 rounded-lg animate-pulse" />
-              ) : metrics ? (
-                <ResponsiveContainer width="100%\" height="100%">
+              ) : metrics && metrics.topProducts.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={metrics.topProducts}
@@ -273,7 +277,11 @@ export default function Dashboard() {
                     />
                   </PieChart>
                 </ResponsiveContainer>
-              ) : null}
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-500">
+                  <p>No hay datos de productos en el rango seleccionado</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

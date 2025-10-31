@@ -25,10 +25,13 @@ export interface OrderDetail {
   }>;
 }
 
+export type PaymentStatus = 'pending_payment' | 'paid' | 'payment_failed' | 'canceled';
+
 export interface Order {
   id: number;
   user_uuid: string;
   status: OrderStatus;
+  payment_status: PaymentStatus;
   total: number;
   created_at: string;
   started_at: string | null;
@@ -177,6 +180,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
               )
             )
           `)
+          .eq('payment_status', 'paid')
           .gte('created_at', startDate.toISOString())
           .lte('created_at', endDate.toISOString())
           .order('created_at', { ascending: false });
@@ -260,6 +264,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
               )
             )
           `)
+          .eq('payment_status', 'paid')
           .order('created_at', { ascending: false });
 
         if (error) throw error;

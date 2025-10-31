@@ -395,24 +395,11 @@ export const useOrderStore = create<OrderStore>((set, get) => {
       if (!accessToken) {
         throw new Error('No fue posible procesar la solicitud. Inicia sesión nuevamente.');
       }
-
-      const { data: tokenResp, error: tokenFnErr } = await supabase.functions.invoke('fetch-user-push-token', {
-        body: { user_uuid: order.user_uuid },
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (tokenFnErr) {
-        throw new Error('No fue posible enviar la notificación al usuario.');
-      }
-      const pushToken: string | null = tokenResp?.data?.push_token ?? null;
-      if (!pushToken) {
-        throw new Error('El usuario no puede recibir notificaciones.');
-      }
-
-      console.log("PushToken:",pushToken);
+      
       const { data: sendResp, error: sendErr } = await supabase.functions.invoke('send-notification', {
         body: {
           type: 'NotificacionPersonal',
-          token: pushToken,
+          user_uuid: order.user_uuid,
           title,
           body,
           order_id: order.id,

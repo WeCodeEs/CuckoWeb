@@ -125,23 +125,40 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         .from('order_details')
         .select(`
           quantity,
+          subtotal,
+          product_id,
           product:products(name),
-          unit_price
+          order:orders!inner(created_at)
         `)
-        .gte('created_at', dateRange.startDate.toISOString())
-        .lte('created_at', dateRange.endDate.toISOString())
-        .order('quantity', { ascending: false })
-        .limit(5);
+        .gte('order.created_at', dateRange.startDate.toISOString())
+        .lte('order.created_at', dateRange.endDate.toISOString());
 
       if (topProductsError) throw topProductsError;
 
-      const topProducts = topProductsData
-        .map(item => ({
-          name: item.product?.name || 'Unknown Product',
-          quantity: item.quantity || 0,
-          total: (item.quantity || 0) * (item.unit_price || 0)
-        }))
-        .sort((a, b) => b.total - a.total);
+      const productMap = new Map<number, { name: string; quantity: number; total: number }>();
+
+      topProductsData?.forEach(item => {
+        const productId = item.product_id;
+        const productName = item.product?.name || 'Unknown Product';
+        const quantity = item.quantity || 0;
+        const subtotal = item.subtotal || 0;
+
+        if (productMap.has(productId)) {
+          const existing = productMap.get(productId)!;
+          existing.quantity += quantity;
+          existing.total += subtotal;
+        } else {
+          productMap.set(productId, {
+            name: productName,
+            quantity,
+            total: subtotal
+          });
+        }
+      });
+
+      const topProducts = Array.from(productMap.values())
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 5);
 
       // Calculate peak hours
       const hourCounts = ordersData?.reduce((acc: { [key: number]: number }, order) => {
@@ -178,13 +195,18 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         .slice(0, 5);
 
       // Calculate daily sales
-      const dailySales = Array.from({ length: 7 }, (_, i) => {
-        const date = subDays(dateRange.endDate, i);
+      const startDay = startOfDay(dateRange.startDate);
+      const endDay = startOfDay(dateRange.endDate);
+      const daysDiff = Math.ceil((endDay.getTime() - startDay.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+      const dailySales = Array.from({ length: daysDiff }, (_, i) => {
+        const date = new Date(startDay);
+        date.setDate(startDay.getDate() + i);
         return {
           date: format(date, 'yyyy-MM-dd'),
           total: 0
         };
-      }).reverse();
+      });
 
       ordersData?.forEach(order => {
         const orderDate = format(new Date(order.created_at), 'yyyy-MM-dd');

@@ -144,7 +144,7 @@ export default function PrintTicket({ order, isTest = false }: Props) {
               </div>
             )}
             {detail.ingredients && detail.ingredients.length > 0 && (
-              <div style={{ paddingLeft: 12, color: '#000', fontSize: 11 }}>
+              <div style={{ paddingLeft: 12, color: 'black', fontSize: 11, fontWeight: 'normal' }}>
                 {detail.ingredients.map(ing => ing.name).join(', ')}
               </div>
             )}

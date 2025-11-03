@@ -144,8 +144,8 @@ export default function PrintTicket({ order, isTest = false }: Props) {
               </div>
             )}
             {detail.ingredients && detail.ingredients.length > 0 && (
-              <div style={{ paddingLeft: 12, color: '#666', fontSize: 10 }}>
-                Personalización: {detail.ingredients.map(ing => ing.name).join(', ')}
+              <div style={{ paddingLeft: 12, color: 'black', fontSize: 11, fontWeight: 'normal' }}>
+                {detail.ingredients.map(ing => ing.name).join(', ')}
               </div>
             )}
           </div>

@@ -196,7 +196,7 @@ export default function Orders() {
                 ? `<div style="padding-left: 12px; color: #000; font-size: 11px;">Variante: ${detail.product_variant?.variant.name}</div>`
                 : ''}
               ${detail.ingredients && detail.ingredients.length
-                ? `<div style="padding-left: 12px; color: #666; font-size: 10px;"> ${detail.ingredients.map(ing => ing.name).join(', ')}</div>`
+                ? `<div style="padding-left: 12px; color: #000; font-size: 11px;">${detail.ingredients.map(ing => ing.name).join(', ')}</div>`
                 : ''}
             </div>
           `).join('')}
@@ -225,6 +225,7 @@ export default function Orders() {
               font-family: 'Courier New', monospace;
               font-size: 11px;
               line-height: 1.2;
+              color: #000;
             }
             * {
               box-sizing: border-box;

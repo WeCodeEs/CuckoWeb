@@ -135,7 +135,7 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
             </button>
             <div className="flex items-center text-xs sm:text-sm text-gray-500 dark:text-gray-400">
               <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
-              <span className="truncate max-w-[80px] sm:max-w-none">{timeAgo}</span>
+              <span className="whitespace-nowrap">{timeAgo}</span>
             </div>
           </div>
         </div>

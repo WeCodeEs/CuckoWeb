@@ -121,11 +121,11 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
           }
         )}
       >
-        <div className="flex items-start justify-between mb-2 sm:mb-3">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-            #{order.id}
-          </h3>
-          <div className="flex items-center gap-2">
+        <div className="mb-2 sm:mb-3">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+              #{order.id}
+            </h3>
             <button
               onClick={handlePrintClick}
               className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-secondary hover:bg-gray-100 dark:hover:bg-darkbg rounded-lg transition-colors"
@@ -133,10 +133,10 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
             >
               <Printer className="w-4 h-4" />
             </button>
-            <div className="flex items-center text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-              <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
-              <span className="whitespace-nowrap">{timeAgo}</span>
-            </div>
+          </div>
+          <div className="flex items-center text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
+            <span>{timeAgo}</span>
           </div>
         </div>
 

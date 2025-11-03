@@ -12,7 +12,10 @@ import {
   Coffee,
   HeartPlus,
   Blend,
-  Soup
+  Soup,
+  UserRoundCog,
+  IdCard,
+  IdCardLanyard,
 } from 'lucide-react';
 import { Route } from '../types';
 import { useAuthStore } from '../stores/authStore';
@@ -71,6 +74,7 @@ const routes: RouteWithSubRoutes[] = [
     
     name: 'Adicionales',
     icon: 'HeartPlus',
+    path: '/adicionales',
     subRoutes: [
       {
         path: '/adicionales/variantes',
@@ -86,7 +90,13 @@ const routes: RouteWithSubRoutes[] = [
   },
   { 
     path: '/usuarios', 
-    name: 'Usuarios', 
+    name: 'Staff', 
+    icon: 'IdCardLanyard', 
+    adminOnly: true 
+  },
+  { 
+    path: '/alumnos', 
+    name: 'Alumnos', 
     icon: 'Users', 
     adminOnly: true 
   },
@@ -103,6 +113,9 @@ const iconComponents: { [key: string]: React.ComponentType<any> } = {
   HeartPlus,
   Blend,
   Soup,
+  UserRoundCog,
+  IdCard,
+  IdCardLanyard,
 };
 
 export default function Sidebar() {

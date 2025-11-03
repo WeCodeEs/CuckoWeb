@@ -76,7 +76,7 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                 ? `<div style="padding-left: 12px; color: #000; font-size: 11px;">Variante: ${detail.product_variant?.variant.name}</div>`
                 : ''}
               ${detail.ingredients && detail.ingredients.length
-                ? `<div style="padding-left: 12px; color: #666; font-size: 10px;"> ${detail.ingredients.map(ing => ing.name).join(', ')}</div>`
+                ? `<div style="padding-left: 12px; color: #000; font-size: 11px;"> ${detail.ingredients.map(ing => ing.name).join(', ')}</div>`
                 : ''}
             </div>
           `).join('')}

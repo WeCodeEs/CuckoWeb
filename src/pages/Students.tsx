@@ -6,7 +6,32 @@ import { es } from 'date-fns/locale';
 import clsx from 'clsx';
 import SkeletonTable from '../components/skeletons/SkeletonTable';
 import GeneralNotificationModal from '../components/GeneralNotificationModal';
+
 type SortOrder = 'recent' | 'oldest' | 'az' | 'za';
+
+const getFacultyColors = (faculty: string | null) => {
+  switch (faculty) {
+    case 'Ingeniería':
+      return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
+    case 'Negocios':
+      return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300';
+    case 'Comunicación':
+      return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300';
+    case 'Medicina':
+      return 'bg-blue-50 text-blue-900 dark:bg-gray-700 dark:text-gray-100';
+    case 'Derecho':
+      return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300';
+    case 'Psicología':
+      return 'bg-pink-100 text-pink-800 dark:bg-pink-900/20 dark:text-pink-300';
+    case 'Turismo':
+      return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300';
+    case 'Diseño':
+      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
+    case 'Sin escuela':
+    default:
+      return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+  }
+};
 
 export default function Students() {
   const { 
@@ -22,13 +47,12 @@ export default function Students() {
   } = useStudentStore();
 
   const [sortOrder, setSortOrder] = useState<SortOrder>('recent');
-  const [isModalOpen, setIsModalOpen] = useState(false); // MODIFICADO: Estado para el modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     fetchAlumnos();
   }, [fetchAlumnos]);
 
-  // MODIFICADO: El handler ahora abre el modal
   const handleAnuncioClick = () => {
     setIsModalOpen(true);
   };
@@ -170,15 +194,14 @@ export default function Students() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                       {user.email || '-'}
                     </td>
-                    <td className="px-6 py-4 text-center whitespace-nowrowrap text-sm text-gray-600 dark:text-gray-300">
+                    <td className="px-6 py-4 text-center whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                       {user.phone || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                      {/* MODIFICADO: Se aplica la función de color dinámicamente */}
                       <span className={clsx(
                         'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                        user.faculty
-                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300'
+                        getFacultyColors(user.faculty || 'Sin escuela')
                       )}>
                         {user.faculty || 'Sin escuela'} 
                       </span>

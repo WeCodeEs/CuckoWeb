@@ -139,13 +139,13 @@ export default function PrintTicket({ order, isTest = false }: Props) {
               <span>{formatCurrency(detail.subtotal)}</span>
             </div>
             {detail.product.variant && (
-              <div style={{ paddingLeft: 12, color: '#666', fontSize: 10 }}>
+              <div style={{ paddingLeft: 12, color: '#000', fontSize: 11 }}>
                 Variante: {detail.product.variant.name || 'Estándar'}
               </div>
             )}
             {detail.ingredients && detail.ingredients.length > 0 && (
-              <div style={{ paddingLeft: 12, color: '#666', fontSize: 10 }}>
-                Personalización: {detail.ingredients.map(ing => ing.name).join(', ')}
+              <div style={{ paddingLeft: 12, color: 'black', fontSize: 11, fontWeight: 'normal' }}>
+                {detail.ingredients.map(ing => ing.name).join(', ')}
               </div>
             )}
           </div>

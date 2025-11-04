@@ -91,11 +91,14 @@ export const useOrderStore = create<OrderStore>((set, get) => {
         async (payload) => {
           if (payload.eventType === 'INSERT') {
             try {
-              if ('Audio' in window && document.hasFocus()) {
+              // Play sound regardless of window focus
+              if ('Audio' in window) {
                 const audio = new Audio('/assets/new-order.mp3');
-                audio.volume = 0.5;
+                audio.volume = 0.7;
                 await audio.play().catch(e => console.log('Audio play failed:', e));
               }
+
+              // Show notification regardless of window focus
               if ('Notification' in window && Notification.permission === 'granted') {
                 new Notification('Nuevo Pedido', {
                   body: `Pedido #${payload.new.id} recibido`,

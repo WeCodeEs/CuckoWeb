@@ -37,12 +37,16 @@ export default function PrintPreviewModal({ onClose }: Props) {
               font-family: 'Courier New', monospace;
               font-size: 11px;
               line-height: 1.2;
+              color: #000;
             }
             * {
               box-sizing: border-box;
             }
             .print-ticket {
               width: 80mm !important;
+            }
+            div {
+              color: inherit;
             }
           </style>
         </head>

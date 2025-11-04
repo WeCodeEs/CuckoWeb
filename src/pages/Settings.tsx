@@ -70,159 +70,151 @@ export default function Settings() {
   const confirmationContent = getConfirmationContent();
 
   return (
-    <div className="min-h-screen flex justify-center px-4 py-8 bg-gray-50 dark:bg-darkbg">
-      <div className="w-full max-w-5xl space-y-8">
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Configuración de Cafetería</h1>
-          <p className="text-gray-600 dark:text-gray-300">Gestiona los ajustes generales del sistema</p>
+    <div className="p-6 space-y-6 max-w-4xl">
+      <div>
+        <h1 className="text-2xl font-bold text-primary-dark dark:text-white">Configuración de Cafetería</h1>
+        <p className="text-sm text-gray-600 dark:text-gray-300">Gestiona los ajustes generales del sistema</p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="bg-white dark:bg-darkbg-lighter rounded-xl shadow-soft dark:shadow-dark p-6">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-primary/10 dark:bg-secondary/10 rounded-lg">
+                <SettingsIcon className="w-6 h-6 text-primary dark:text-secondary" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                  Estado de la Cafetería
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+                  Controla si la cafetería está abierta o cerrada para recibir pedidos
+                </p>
+                <span
+                  className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                    isOpen
+                      ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400'
+                      : 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-400'
+                  }`}
+                >
+                  {isOpen ? 'Abierto' : 'Cerrado'}
+                </span>
+              </div>
+            </div>
+            <Switch
+              checked={isOpen}
+              onChange={(newValue) => handleToggleRequest('isOpen', newValue)}
+            />
+          </div>
         </div>
 
-        <div className="grid gap-6">
-          <div className="bg-white dark:bg-darkbg-lighter rounded-2xl shadow-lg dark:shadow-dark p-8 border border-gray-100 dark:border-darkbg-lighter transition-all hover:shadow-xl">
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-              <div className="flex items-start gap-5 flex-1">
-                <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 dark:from-secondary/10 dark:to-secondary/5 rounded-2xl">
-                  <SettingsIcon className="w-7 h-7 text-primary dark:text-secondary" />
-                </div>
-                <div className="flex-1 space-y-3">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    Estado de la Cafetería
-                  </h2>
-                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                    Controla si la cafetería está abierta o cerrada para recibir pedidos
-                  </p>
-                  <div>
-                    <span
-                      className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold shadow-sm ${
-                        isOpen
-                          ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 border border-green-200 dark:border-green-800'
-                          : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400 border border-red-200 dark:border-red-800'
-                      }`}
-                    >
-                      {isOpen ? 'Abierto' : 'Cerrado'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <Switch
-                checked={isOpen}
-                onChange={(newValue) => handleToggleRequest('isOpen', newValue)}
+        <div className="bg-white dark:bg-darkbg-lighter rounded-xl shadow-soft dark:shadow-dark p-6">
+          <div className="flex items-start gap-4 mb-6">
+            <div className="p-3 bg-primary/10 dark:bg-secondary/10 rounded-lg">
+              <Clock className="w-6 h-6 text-primary dark:text-secondary" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                Horario de Operación
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Define el horario de apertura y cierre de la cafetería
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Hora de Apertura
+              </label>
+              <input
+                type="time"
+                value={openingTime}
+                onChange={(e) => setOpeningTime(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary bg-white dark:bg-darkbg text-gray-900 dark:text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Hora de Cierre
+              </label>
+              <input
+                type="time"
+                value={closingTime}
+                onChange={(e) => setClosingTime(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary bg-white dark:bg-darkbg text-gray-900 dark:text-white"
               />
             </div>
           </div>
+        </div>
 
-          <div className="bg-white dark:bg-darkbg-lighter rounded-2xl shadow-lg dark:shadow-dark p-8 border border-gray-100 dark:border-darkbg-lighter transition-all hover:shadow-xl">
-            <div className="flex items-start gap-5 mb-8">
-              <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 dark:from-secondary/10 dark:to-secondary/5 rounded-2xl">
-                <Clock className="w-7 h-7 text-primary dark:text-secondary" />
-              </div>
-              <div className="flex-1">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  Horario de Operación
-                </h2>
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                  Define el horario de apertura y cierre de la cafetería
-                </p>
-              </div>
+        <div className="bg-white dark:bg-darkbg-lighter rounded-xl shadow-soft dark:shadow-dark p-6">
+          <div className="flex items-start gap-4 mb-6">
+            <div className="p-3 bg-primary/10 dark:bg-secondary/10 rounded-lg">
+              <Wrench className="w-6 h-6 text-primary dark:text-secondary" />
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
-              <div className="space-y-3">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  Hora de Apertura
-                </label>
-                <input
-                  type="time"
-                  value={openingTime}
-                  onChange={(e) => setOpeningTime(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/30 dark:focus:ring-secondary/30 focus:border-primary dark:focus:border-secondary bg-white dark:bg-darkbg text-gray-900 dark:text-white transition-all shadow-sm"
-                />
-              </div>
-
-              <div className="space-y-3">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  Hora de Cierre
-                </label>
-                <input
-                  type="time"
-                  value={closingTime}
-                  onChange={(e) => setClosingTime(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/30 dark:focus:ring-secondary/30 focus:border-primary dark:focus:border-secondary bg-white dark:bg-darkbg text-gray-900 dark:text-white transition-all shadow-sm"
-                />
-              </div>
+            <div className="flex-1">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                Opciones del Sistema
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Configura las funcionalidades del sistema
+              </p>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-darkbg-lighter rounded-2xl shadow-lg dark:shadow-dark p-8 border border-gray-100 dark:border-darkbg-lighter transition-all hover:shadow-xl">
-            <div className="flex items-start gap-5 mb-8">
-              <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 dark:from-secondary/10 dark:to-secondary/5 rounded-2xl">
-                <Wrench className="w-7 h-7 text-primary dark:text-secondary" />
-              </div>
-              <div className="flex-1">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  Opciones del Sistema
-                </h2>
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                  Configura las funcionalidades del sistema
+          <div className="space-y-4">
+            <div className="flex items-start justify-between py-3 border-b border-gray-100 dark:border-darkbg last:border-0">
+              <div className="flex-1 pr-4">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                  Modo Mantenimiento
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Activa el modo mantenimiento para realizar actualizaciones sin afectar el servicio
                 </p>
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2 ${
+                    maintenanceMode
+                      ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-400'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400'
+                  }`}
+                >
+                  {maintenanceMode ? 'Activo' : 'Inactivo'}
+                </span>
               </div>
+              <Switch
+                checked={maintenanceMode}
+                onChange={(newValue) => handleToggleRequest('maintenanceMode', newValue)}
+              />
             </div>
 
-            <div className="space-y-6">
-              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 pb-6 border-b border-gray-200 dark:border-darkbg">
-                <div className="flex-1 space-y-3">
-                  <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                    Modo Mantenimiento
+            <div className="flex items-start justify-between py-3">
+              <div className="flex-1 pr-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                    Pedidos Agendados
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                    Activa el modo mantenimiento para realizar actualizaciones sin afectar el servicio
-                  </p>
-                  <div>
-                    <span
-                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm ${
-                        maintenanceMode
-                          ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700'
-                      }`}
-                    >
-                      {maintenanceMode ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </div>
                 </div>
-                <Switch
-                  checked={maintenanceMode}
-                  onChange={(newValue) => handleToggleRequest('maintenanceMode', newValue)}
-                />
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Permite a los clientes programar pedidos para una fecha y hora específica
+                </p>
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2 ${
+                    scheduledOrdersEnabled
+                      ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400'
+                  }`}
+                >
+                  {scheduledOrdersEnabled ? 'Habilitado' : 'Deshabilitado'}
+                </span>
               </div>
-
-              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 pt-2">
-                <div className="flex-1 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-primary dark:text-secondary" />
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                      Pedidos Agendados
-                    </h3>
-                  </div>
-                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                    Permite a los clientes programar pedidos para una fecha y hora específica
-                  </p>
-                  <div>
-                    <span
-                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm ${
-                        scheduledOrdersEnabled
-                          ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 border border-green-200 dark:border-green-800'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700'
-                      }`}
-                    >
-                      {scheduledOrdersEnabled ? 'Habilitado' : 'Deshabilitado'}
-                    </span>
-                  </div>
-                </div>
-                <Switch
-                  checked={scheduledOrdersEnabled}
-                  onChange={(newValue) => handleToggleRequest('scheduledOrders', newValue)}
-                />
-              </div>
+              <Switch
+                checked={scheduledOrdersEnabled}
+                onChange={(newValue) => handleToggleRequest('scheduledOrders', newValue)}
+              />
             </div>
           </div>
         </div>

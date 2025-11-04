@@ -30,6 +30,7 @@ export default function Settings() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [bannerToDelete, setBannerToDelete] = useState<number | null>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   const handleToggleRequest = (type: ConfirmationType, newValue: boolean) => {
     setConfirmationType(type);
@@ -93,6 +94,7 @@ export default function Settings() {
     });
 
     setBanners(newBanners);
+    setCurrentSlide(targetIndex);
   };
 
   const handleConfirm = () => {
@@ -108,8 +110,12 @@ export default function Settings() {
         break;
       case 'deleteBanner':
         if (bannerToDelete !== null) {
-          setBanners(banners.filter(banner => banner.id !== bannerToDelete));
+          const newBanners = banners.filter(banner => banner.id !== bannerToDelete);
+          setBanners(newBanners);
           setBannerToDelete(null);
+          if (currentSlide >= newBanners.length) {
+            setCurrentSlide(Math.max(0, newBanners.length - 1));
+          }
         }
         break;
     }
@@ -380,10 +386,10 @@ export default function Settings() {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                  Banners configurados ({banners.length})
+                  Vista previa del banner
                 </h3>
                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {banners.filter(b => b.active).length} activos
+                  {banners.length} banner{banners.length !== 1 ? 's' : ''} configurado{banners.length !== 1 ? 's' : ''} ({banners.filter(b => b.active).length} activo{banners.filter(b => b.active).length !== 1 ? 's' : ''})
                 </span>
               </div>
 
@@ -398,77 +404,111 @@ export default function Settings() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {banners.map((banner, index) => (
-                    <div
-                      key={banner.id}
-                      className={`relative rounded-lg overflow-hidden border-2 transition-all ${
-                        banner.active
-                          ? 'border-green-500 dark:border-green-600'
-                          : 'border-gray-300 dark:border-darkbg opacity-60'
-                      }`}
-                    >
-                      <div className="relative">
-                        <img
-                          src={banner.imageUrl}
-                          alt={`Banner ${banner.order}`}
-                          className="w-full h-32 object-cover"
+                <div className="space-y-4">
+                  <div className="relative rounded-2xl overflow-hidden">
+                    <div className="relative aspect-[3/1] bg-gray-200 dark:bg-darkbg">
+                      <img
+                        src={banners[currentSlide].imageUrl}
+                        alt={`Banner ${banners[currentSlide].order}`}
+                        className="w-full h-full object-cover"
+                      />
+                      {!banners[currentSlide].active && (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                          <span className="text-white text-lg font-semibold">Banner Inactivo</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+                      {banners.map((banner, index) => (
+                        <button
+                          key={banner.id}
+                          onClick={() => setCurrentSlide(index)}
+                          className={`w-2 h-2 rounded-full transition-all ${
+                            index === currentSlide
+                              ? 'bg-primary dark:bg-secondary w-6'
+                              : 'bg-gray-400 dark:bg-gray-600'
+                          }`}
+                          aria-label={`Ver banner ${index + 1}`}
                         />
-                        {!banner.active && (
-                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                            <span className="text-white text-sm font-medium">Inactivo</span>
-                          </div>
-                        )}
-                        <div className="absolute top-2 left-2 bg-black/70 text-white text-xs font-bold px-2 py-1 rounded">
-                          #{banner.order}
-                        </div>
-                      </div>
+                      ))}
+                    </div>
+                  </div>
 
-                      <div className="p-3 bg-white dark:bg-darkbg-lighter">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => handleMoveBanner(banner.id, 'up')}
-                              disabled={index === 0}
-                              className="p-1 hover:bg-gray-100 dark:hover:bg-darkbg rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                              title="Mover arriba"
-                            >
-                              <ChevronUp className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                            </button>
-                            <button
-                              onClick={() => handleMoveBanner(banner.id, 'down')}
-                              disabled={index === banners.length - 1}
-                              className="p-1 hover:bg-gray-100 dark:hover:bg-darkbg rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                              title="Mover abajo"
-                            >
-                              <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                            </button>
-                          </div>
-
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => handleToggleBanner(banner.id)}
-                              className="p-1 hover:bg-gray-100 dark:hover:bg-darkbg rounded transition-colors"
-                              title={banner.active ? 'Desactivar' : 'Activar'}
-                            >
-                              {banner.active ? (
-                                <Eye className="w-4 h-4 text-green-600 dark:text-green-500" />
-                              ) : (
-                                <EyeOff className="w-4 h-4 text-gray-400" />
-                              )}
-                            </button>
-                            <button
-                              onClick={() => handleDeleteBannerRequest(banner.id)}
-                              className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                              title="Eliminar"
-                            >
-                              <Trash2 className="w-4 h-4 text-red-600 dark:text-red-500" />
-                            </button>
-                          </div>
-                        </div>
+                  <div className="bg-gray-50 dark:bg-darkbg rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                          Banner #{banners[currentSlide].order}
+                        </span>
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                            banners[currentSlide].active
+                              ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400'
+                              : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-400'
+                          }`}
+                        >
+                          {banners[currentSlide].active ? 'Activo' : 'Inactivo'}
+                        </span>
                       </div>
                     </div>
-                  ))}
+
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleMoveBanner(banners[currentSlide].id, 'up')}
+                          disabled={currentSlide === 0}
+                          className="px-3 py-1.5 bg-white dark:bg-darkbg-lighter text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-darkbg disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-xs font-medium flex items-center gap-1"
+                          title="Mover arriba"
+                        >
+                          <ChevronUp className="w-3.5 h-3.5" />
+                          Subir
+                        </button>
+                        <button
+                          onClick={() => handleMoveBanner(banners[currentSlide].id, 'down')}
+                          disabled={currentSlide === banners.length - 1}
+                          className="px-3 py-1.5 bg-white dark:bg-darkbg-lighter text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-darkbg disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-xs font-medium flex items-center gap-1"
+                          title="Mover abajo"
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                          Bajar
+                        </button>
+                      </div>
+
+                      <div className="flex-1"></div>
+
+                      <button
+                        onClick={() => handleToggleBanner(banners[currentSlide].id)}
+                        className={`px-3 py-1.5 rounded-lg transition-colors text-xs font-medium flex items-center gap-1 ${
+                          banners[currentSlide].active
+                            ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-900/30'
+                            : 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/30'
+                        }`}
+                        title={banners[currentSlide].active ? 'Desactivar' : 'Activar'}
+                      >
+                        {banners[currentSlide].active ? (
+                          <>
+                            <EyeOff className="w-3.5 h-3.5" />
+                            Desactivar
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="w-3.5 h-3.5" />
+                            Activar
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteBannerRequest(banners[currentSlide].id)}
+                        className="px-3 py-1.5 bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/30 transition-colors text-xs font-medium flex items-center gap-1"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

@@ -9,6 +9,7 @@ import Products from './pages/Products';
 import Menus from './pages/Menus';
 import Categories from './pages/Categories';
 import Usuarios from './pages/Usuarios';
+import Configuration from './pages/Configuration';
 import VariantOptions from './pages/adicionales/VariantOptions';
 import IngredientOptions from './pages/adicionales/IngredientOptions';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -57,6 +58,14 @@ function App() {
             element={
               <ProtectedRoute requireAdmin>
                 <Usuarios />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="configuracion"
+            element={
+              <ProtectedRoute requireAdmin>
+                <Configuration />
               </ProtectedRoute>
             }
           />

@@ -12,7 +12,8 @@ import {
   Coffee,
   HeartPlus,
   Blend,
-  Soup
+  Soup,
+  Cog
 } from 'lucide-react';
 import { Route } from '../types';
 import { useAuthStore } from '../stores/authStore';
@@ -90,6 +91,12 @@ const routes: RouteWithSubRoutes[] = [
     icon: 'Users', 
     adminOnly: true 
   },
+  { 
+    path: '/configuracion', 
+    name: 'Configuración', 
+    icon: 'Cog', 
+    adminOnly: true 
+  },
 ];
 
 const iconComponents: { [key: string]: React.ComponentType<any> } = {
@@ -103,6 +110,7 @@ const iconComponents: { [key: string]: React.ComponentType<any> } = {
   HeartPlus,
   Blend,
   Soup,
+  Cog,
 };
 
 export default function Sidebar() {

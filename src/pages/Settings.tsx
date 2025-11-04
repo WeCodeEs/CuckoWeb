@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Clock, Settings as SettingsIcon, Wrench, Calendar } from 'lucide-react';
 import Switch from '../components/ui/switch';
+import ConfirmationModal from '../components/ConfirmationModal';
+
+type ConfirmationType = 'isOpen' | 'maintenanceMode' | 'scheduledOrders' | null;
 
 export default function Settings() {
   const [isOpen, setIsOpen] = useState(true);
@@ -8,6 +11,63 @@ export default function Settings() {
   const [closingTime, setClosingTime] = useState('20:00');
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [scheduledOrdersEnabled, setScheduledOrdersEnabled] = useState(true);
+
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [confirmationType, setConfirmationType] = useState<ConfirmationType>(null);
+  const [pendingValue, setPendingValue] = useState<boolean>(false);
+
+  const handleToggleRequest = (type: ConfirmationType, newValue: boolean) => {
+    setConfirmationType(type);
+    setPendingValue(newValue);
+    setShowConfirmation(true);
+  };
+
+  const handleConfirm = () => {
+    switch (confirmationType) {
+      case 'isOpen':
+        setIsOpen(pendingValue);
+        break;
+      case 'maintenanceMode':
+        setMaintenanceMode(pendingValue);
+        break;
+      case 'scheduledOrders':
+        setScheduledOrdersEnabled(pendingValue);
+        break;
+    }
+  };
+
+  const getConfirmationContent = () => {
+    switch (confirmationType) {
+      case 'isOpen':
+        return {
+          title: pendingValue ? '¿Abrir la cafetería?' : '¿Cerrar la cafetería?',
+          message: pendingValue
+            ? 'La cafetería comenzará a recibir pedidos nuevamente.'
+            : 'La cafetería dejará de recibir pedidos temporalmente.',
+        };
+      case 'maintenanceMode':
+        return {
+          title: pendingValue ? '¿Activar modo mantenimiento?' : '¿Desactivar modo mantenimiento?',
+          message: pendingValue
+            ? 'El sistema entrará en modo mantenimiento. Algunas funcionalidades podrían verse afectadas.'
+            : 'El sistema volverá a su funcionamiento normal.',
+        };
+      case 'scheduledOrders':
+        return {
+          title: pendingValue ? '¿Habilitar pedidos agendados?' : '¿Deshabilitar pedidos agendados?',
+          message: pendingValue
+            ? 'Los clientes podrán programar pedidos para fechas futuras.'
+            : 'Los clientes no podrán programar pedidos para fechas futuras.',
+        };
+      default:
+        return {
+          title: '¿Confirmar cambio?',
+          message: '¿Estás seguro de que deseas realizar este cambio?',
+        };
+    }
+  };
+
+  const confirmationContent = getConfirmationContent();
 
   return (
     <div className="p-6 space-y-6 max-w-4xl">
@@ -41,7 +101,10 @@ export default function Settings() {
                 </span>
               </div>
             </div>
-            <Switch checked={isOpen} onChange={setIsOpen} />
+            <Switch
+              checked={isOpen}
+              onChange={(newValue) => handleToggleRequest('isOpen', newValue)}
+            />
           </div>
         </div>
 
@@ -121,7 +184,10 @@ export default function Settings() {
                   {maintenanceMode ? 'Activo' : 'Inactivo'}
                 </span>
               </div>
-              <Switch checked={maintenanceMode} onChange={setMaintenanceMode} />
+              <Switch
+                checked={maintenanceMode}
+                onChange={(newValue) => handleToggleRequest('maintenanceMode', newValue)}
+              />
             </div>
 
             <div className="flex items-start justify-between py-3">
@@ -145,11 +211,22 @@ export default function Settings() {
                   {scheduledOrdersEnabled ? 'Habilitado' : 'Deshabilitado'}
                 </span>
               </div>
-              <Switch checked={scheduledOrdersEnabled} onChange={setScheduledOrdersEnabled} />
+              <Switch
+                checked={scheduledOrdersEnabled}
+                onChange={(newValue) => handleToggleRequest('scheduledOrders', newValue)}
+              />
             </div>
           </div>
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={showConfirmation}
+        onClose={() => setShowConfirmation(false)}
+        onConfirm={handleConfirm}
+        title={confirmationContent.title}
+        message={confirmationContent.message}
+      />
     </div>
   );
 }

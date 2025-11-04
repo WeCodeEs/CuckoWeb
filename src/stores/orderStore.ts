@@ -89,24 +89,27 @@ export const useOrderStore = create<OrderStore>((set, get) => {
           table: 'orders' 
         }, 
         async (payload) => {
-          if (payload.eventType === 'INSERT') {
+          if (payload.eventType === 'UPDATE') {
             try {
-              // Play sound regardless of window focus
-              if ('Audio' in window) {
-                const audio = new Audio('/assets/new-order.mp3');
-                audio.volume = 0.7;
-                await audio.play().catch(e => console.log('Audio play failed:', e));
-              }
+              const { new: newRow, old: oldRow } = payload;
+              if (newRow.status === 'Recibido' && oldRow.status !== 'Recibido') {
+                // Play sound regardless of window focus
+                if ('Audio' in window) {
+                  const audio = new Audio('/assets/new-order.mp3');
+                  audio.volume = 0.7;
+                  await audio.play().catch(e => console.log('Audio play failed:', e));
+                }
 
-              // Show notification regardless of window focus
-              if ('Notification' in window && Notification.permission === 'granted') {
-                new Notification('Nuevo Pedido', {
-                  body: `Pedido #${payload.new.id} recibido`,
-                  icon: '/vite.svg',
-                  tag: 'new-order',
-                  requireInteraction: false,
-                  silent: false
-                });
+                // Show notification regardless of window focus
+                if ('Notification' in window && Notification.permission === 'granted') {
+                  new Notification('Nuevo Pedido', {
+                    body: `Pedido #${payload.new.id} recibido`,
+                    icon: '/vite.svg',
+                    tag: 'new-order',
+                    requireInteraction: false,
+                    silent: false
+                  });
+                }
               }
             } catch (error) {
               console.error('Error handling new order notification:', error);

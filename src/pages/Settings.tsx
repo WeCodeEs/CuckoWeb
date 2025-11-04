@@ -70,7 +70,7 @@ export default function Settings() {
   const confirmationContent = getConfirmationContent();
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl">
+    <div className="p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-primary-dark dark:text-white">Configuración de Cafetería</h1>
         <p className="text-sm text-gray-600 dark:text-gray-300">Gestiona los ajustes generales del sistema</p>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
+import {
+  LayoutDashboard,
   ClipboardList,
   History,
   MenuSquare,
@@ -12,7 +12,8 @@ import {
   Coffee,
   HeartPlus,
   Blend,
-  Soup
+  Soup,
+  Settings
 } from 'lucide-react';
 import { Route } from '../types';
 import { useAuthStore } from '../stores/authStore';
@@ -84,11 +85,17 @@ const routes: RouteWithSubRoutes[] = [
       }
     ]
   },
-  { 
-    path: '/usuarios', 
-    name: 'Usuarios', 
-    icon: 'Users', 
-    adminOnly: true 
+  {
+    path: '/usuarios',
+    name: 'Usuarios',
+    icon: 'Users',
+    adminOnly: true
+  },
+  {
+    path: '/configuracion',
+    name: 'Configuración',
+    icon: 'Settings',
+    adminOnly: true
   },
 ];
 
@@ -103,6 +110,7 @@ const iconComponents: { [key: string]: React.ComponentType<any> } = {
   HeartPlus,
   Blend,
   Soup,
+  Settings,
 };
 
 export default function Sidebar() {

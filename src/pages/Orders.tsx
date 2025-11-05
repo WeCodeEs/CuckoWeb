@@ -194,16 +194,16 @@ export default function Orders() {
         
         <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 8px 0; margin-bottom: 8px;">
           ${order.details.map(detail => `
-            <div style="font-size: 12px; margin-bottom: 4px;">
+            <div style="font-size: 14px; margin-bottom: 4px;">
               <div style="display: flex; justify-content: space-between;">
                 <span style="max-width: 60%; word-wrap: break-word;">${detail.quantity}x ${detail.product.name}</span>
                 <span>$${detail.subtotal.toFixed(2)}</span>
               </div>
               ${detail.product_variant && detail.product_variant?.variant
-                ? `<div style="padding-left: 12px; color: #000; font-size: 12px;">Variante: ${detail.product_variant?.variant.name}</div>`
+                ? `<div style="padding-left: 12px; color: #000; font-size: 14px;">Variante: ${detail.product_variant?.variant.name}</div>`
                 : ''}
               ${detail.ingredients && detail.ingredients.length
-                ? `<div style="padding-left: 12px; color: #000; font-size: 12px;">${detail.ingredients.map(ing => ing.name).join(', ')}</div>`
+                ? `<div style="padding-left: 12px; color: #000; font-size: 14px;">${detail.ingredients.map(ing => ing.name).join(', ')}</div>`
                 : ''}
             </div>
           `).join('')}

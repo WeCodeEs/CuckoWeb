@@ -145,7 +145,7 @@ export default function PrintTicket({ order, isTest = false }: Props) {
         {displayOrder.details.map((detail, index) => (
           <div
             key={index}
-            style={{ fontSize: 12, marginBottom: 4 }}
+            style={{ fontSize: 14, marginBottom: 4 }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ maxWidth: '60%', wordWrap: 'break-word' }}>
@@ -154,12 +154,12 @@ export default function PrintTicket({ order, isTest = false }: Props) {
               <span>{formatCurrency(detail.subtotal)}</span>
             </div>
             {detail.product.variant && (
-              <div style={{ paddingLeft: 12, color: '#000', fontSize: 12 }}>
+              <div style={{ paddingLeft: 12, color: '#000', fontSize: 14 }}>
                 Variante: {detail.product.variant.name || 'Estándar'}
               </div>
             )}
             {detail.ingredients && detail.ingredients.length > 0 && (
-              <div style={{ paddingLeft: 12, color: 'black', fontSize: 12, fontWeight: 'normal' }}>
+              <div style={{ paddingLeft: 12, color: 'black', fontSize: 14, fontWeight: 'normal' }}>
                 {detail.ingredients.map(ing => ing.name).join(', ')}
               </div>
             )}

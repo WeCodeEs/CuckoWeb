@@ -343,30 +343,42 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                 Información del Cliente
               </h3>
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkbg dark:to-darkbg-darker rounded-xl p-5 shadow-sm border border-gray-200 dark:border-darkbg">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-gray-900 dark:text-white font-semibold text-base">
-                    {order.user?.first_name} {order.user?.last_name}
-                  </p>
+              <div className="bg-white dark:bg-darkbg-lighter rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-dark dark:from-secondary dark:to-secondary-dark flex items-center justify-center text-white font-semibold text-sm shadow-md">
+                        {order.user?.first_name?.[0]}{order.user?.last_name?.[0]}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-gray-900 dark:text-white font-semibold text-base truncate">
+                          {order.user?.first_name} {order.user?.last_name}
+                        </p>
+                        {order.user?.faculty && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                            Facultad de {order.user.faculty}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                   {order.user?.phone && (
                     <a
-                      href={`https://api.whatsapp.com/send?phone=${order.user.phone}&text=Hola`}
+                      href={`https://api.whatsapp.com/send?phone=${order.user.phone}&text=Hola,%20te%20contacto%20desde%20la%20cafetería%20respecto%20a%20tu%20pedido%20%23${order.order_number}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-shrink-0 p-2 bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white rounded-lg transition-colors shadow-sm hover:shadow-md"
+                      className="flex-shrink-0 group relative"
                       aria-label="Contactar por WhatsApp"
-                      title="Contactar por WhatsApp"
                     >
-                      <MessageCircle className="w-5 h-5" />
+                      <div className="p-2.5 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-lg transition-all duration-200 hover:shadow-md">
+                        <MessageCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                      </div>
+                      <span className="absolute -bottom-8 right-0 bg-gray-900 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                        Contactar
+                      </span>
                     </a>
                   )}
                 </div>
-                {order.user?.faculty && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 flex items-center gap-2">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary dark:bg-secondary"></span>
-                    Facultad de {order.user.faculty}
-                  </p>
-                )}
               </div>
             </div>
 

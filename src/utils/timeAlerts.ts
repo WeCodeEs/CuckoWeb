@@ -19,9 +19,22 @@ export function getScheduledOrderAlert(scheduledTime: string | null): TimeAlert 
   const diffMs = scheduled.getTime() - now.getTime();
   const minutesRemaining = Math.floor(diffMs / 1000 / 60);
 
-  // If time has passed or is more than 30 minutes away, no alert
-  if (diffMs < 0 || minutesRemaining > 30) {
+  // If more than 30 minutes away, no alert
+  if (minutesRemaining > 30) {
     return null;
+  }
+
+  // OVERDUE: Time has passed
+  if (diffMs < 0) {
+    const minutesLate = Math.abs(minutesRemaining);
+    return {
+      level: 'critical',
+      minutesRemaining,
+      className: 'alert-red',
+      badgeText: `¡RETRASADO ${minutesLate} min!`,
+      badgeColor: 'bg-red-600',
+      iconAnimation: 'spin-urgent'
+    };
   }
 
   // Critical: Less than 5 minutes

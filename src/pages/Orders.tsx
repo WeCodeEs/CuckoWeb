@@ -365,6 +365,45 @@ export default function Orders() {
                 ) : (
                   orders
                     .filter((order) => order.status === status)
+                    .sort((a, b) => {
+                      // For "Recibido" status: sort by urgency
+                      if (status === 'Recibido') {
+                        const aHasScheduled = !!a.scheduled_delivery_time;
+                        const bHasScheduled = !!b.scheduled_delivery_time;
+
+                        // Both have scheduled times
+                        if (aHasScheduled && bHasScheduled) {
+                          const now = new Date().getTime();
+                          const aTime = new Date(a.scheduled_delivery_time!).getTime();
+                          const bTime = new Date(b.scheduled_delivery_time!).getTime();
+
+                          const aMinutesUntil = Math.floor((aTime - now) / 60000);
+                          const bMinutesUntil = Math.floor((bTime - now) / 60000);
+
+                          // Both are urgent (within 30 min or overdue) - sort by closest time
+                          if (aMinutesUntil <= 30 && bMinutesUntil <= 30) {
+                            return aTime - bTime; // Earliest first
+                          }
+
+                          // One is urgent, one is not - urgent comes first
+                          if (aMinutesUntil <= 30) return -1;
+                          if (bMinutesUntil <= 30) return 1;
+
+                          // Neither urgent - sort by scheduled time
+                          return aTime - bTime;
+                        }
+
+                        // Non-scheduled come before scheduled (immediate orders priority)
+                        if (!aHasScheduled && bHasScheduled) return -1;
+                        if (aHasScheduled && !bHasScheduled) return 1;
+
+                        // Both non-scheduled - oldest first
+                        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+                      }
+
+                      // For other statuses - maintain store order
+                      return 0;
+                    })
                     .map((order) => (
                       <PedidoCard
                         key={order.id}

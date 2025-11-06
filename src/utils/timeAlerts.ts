@@ -13,15 +13,17 @@ export interface TimeAlert {
 export function getScheduledOrderAlert(
   scheduledTime: string | null,
   orderStatus?: OrderStatus,
+  readyAt?: string | null,
   deliveredAt?: string | null
 ): TimeAlert | null {
   if (!scheduledTime) {
     return null;
   }
 
-  // Special handling for delivered orders
-  if (orderStatus === 'Entregado' && deliveredAt) {
-    return getDeliveredOrderAlert(scheduledTime, deliveredAt);
+  // Special handling for orders that are ready or delivered
+  // We calculate delay based on when it reached "Listo" (ready_at), not when delivered
+  if ((orderStatus === 'Listo' || orderStatus === 'Entregado') && readyAt) {
+    return getReadyOrderAlert(scheduledTime, readyAt, orderStatus);
   }
 
   const now = new Date();
@@ -109,31 +111,35 @@ export function getScheduledOrderAlert(
 }
 
 /**
- * Get alert information for delivered orders with scheduled time
- * Shows neutral informative badge without colors or animations
+ * Get alert information for orders that reached "Listo" status with scheduled time
+ * Calculates delay based on ready_at (when it was marked as ready), not delivered_at
+ * This properly measures business performance, not customer pickup delays
+ * Shows neutral informative badge without active alert colors or animations
  */
-export function getDeliveredOrderAlert(
+export function getReadyOrderAlert(
   scheduledTime: string,
-  deliveredAt: string
+  readyAt: string,
+  orderStatus: OrderStatus
 ): TimeAlert {
   const scheduled = new Date(scheduledTime);
-  const delivered = new Date(deliveredAt);
-  const diffMs = delivered.getTime() - scheduled.getTime();
+  const ready = new Date(readyAt);
+  const diffMs = ready.getTime() - scheduled.getTime();
   const minutesDiff = Math.floor(diffMs / 1000 / 60);
 
-  // Delivered on time or early
+  // Ready on time or early
   if (minutesDiff <= 0) {
+    const statusText = orderStatus === 'Entregado' ? 'Entregado' : 'Listo';
     return {
       level: 'delivered',
       minutesRemaining: minutesDiff,
       className: '',
-      badgeText: 'Entregado a tiempo',
+      badgeText: `${statusText} a tiempo`,
       badgeColor: 'bg-gray-500 dark:bg-gray-600',
       iconAnimation: ''
     };
   }
 
-  // Delivered late
+  // Ready late - format delay text
   let delayText: string;
   if (minutesDiff >= 60) {
     const hours = Math.floor(minutesDiff / 60);
@@ -147,11 +153,12 @@ export function getDeliveredOrderAlert(
     delayText = `${minutesDiff} min`;
   }
 
+  const statusText = orderStatus === 'Entregado' ? 'Entregado' : 'Listo';
   return {
     level: 'delivered',
     minutesRemaining: minutesDiff,
     className: '',
-    badgeText: `Entregado con ${delayText} de retraso`,
+    badgeText: `${statusText} con ${delayText} de retraso`,
     badgeColor: 'bg-gray-500 dark:bg-gray-600',
     iconAnimation: ''
   };

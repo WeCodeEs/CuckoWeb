@@ -49,6 +49,7 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
     ? getScheduledOrderAlert(
         order.scheduled_delivery_time,
         order.status,
+        order.ready_at,
         order.delivered_at
       )
     : null;

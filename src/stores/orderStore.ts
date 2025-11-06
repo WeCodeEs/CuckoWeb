@@ -12,17 +12,17 @@ function sortOrders(orders: Order[]): Order[] {
       const aHasScheduled = !!a.scheduled_delivery_time;
       const bHasScheduled = !!b.scheduled_delivery_time;
 
-      // Both have scheduled times - sort by scheduled time (earliest first)
-      if (aHasScheduled && bHasScheduled) {
-        return new Date(a.scheduled_delivery_time!).getTime() - new Date(b.scheduled_delivery_time!).getTime();
-      }
-
-      // Scheduled orders come before non-scheduled
-      if (aHasScheduled && !bHasScheduled) return -1;
-      if (!aHasScheduled && bHasScheduled) return 1;
+      // Non-scheduled orders come first (immediate orders have priority)
+      if (!aHasScheduled && bHasScheduled) return -1;
+      if (aHasScheduled && !bHasScheduled) return 1;
 
       // Both are non-scheduled - sort by created_at (oldest first)
-      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      if (!aHasScheduled && !bHasScheduled) {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+
+      // Both have scheduled times - sort by scheduled time (earliest first)
+      return new Date(a.scheduled_delivery_time!).getTime() - new Date(b.scheduled_delivery_time!).getTime();
     }
 
     // For other statuses, sort by created_at (newest first for default behavior)

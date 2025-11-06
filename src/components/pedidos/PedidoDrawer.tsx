@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Printer, Clock, CheckCircle, Truck, Play, Mail, CalendarClock, AlertCircle, MessageCircle } from 'lucide-react';
+import { X, Printer, Clock, CheckCircle, Truck, Play, Mail, CalendarClock, AlertCircle, MessageSquareShare } from 'lucide-react';
 import { Order, OrderStatus, OrderNotification, useOrderStore } from '../../stores/orderStore';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { format } from 'date-fns';
@@ -343,24 +343,17 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                 Información del Cliente
               </h3>
-              <div className="bg-white dark:bg-darkbg-lighter rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="bg-gradient-to-br from-green-50/50 to-green-100/30 dark:from-green-900/10 dark:to-green-900/5 rounded-xl p-5 shadow-sm border border-green-200/50 dark:border-green-800/30">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-dark dark:from-secondary dark:to-secondary-dark flex items-center justify-center text-white font-semibold text-sm shadow-md">
-                        {order.user?.first_name?.[0]}{order.user?.last_name?.[0]}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-gray-900 dark:text-white font-semibold text-base truncate">
-                          {order.user?.first_name} {order.user?.last_name}
-                        </p>
-                        {order.user?.faculty && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                            Facultad de {order.user.faculty}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                    <p className="text-gray-900 dark:text-white font-semibold text-base mb-1">
+                      {order.user?.first_name} {order.user?.last_name}
+                    </p>
+                    {order.user?.faculty && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Facultad de {order.user.faculty}
+                      </p>
+                    )}
                   </div>
                   {order.user?.phone && (
                     <a
@@ -370,8 +363,8 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                       className="flex-shrink-0 group relative"
                       aria-label="Contactar por WhatsApp"
                     >
-                      <div className="p-2.5 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-lg transition-all duration-200 hover:shadow-md">
-                        <MessageCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                      <div className="p-2.5 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 border border-green-300 dark:border-green-700 rounded-lg transition-all duration-200 hover:shadow-md">
+                        <MessageSquareShare className="w-5 h-5 text-green-700 dark:text-green-400" />
                       </div>
                       <span className="absolute -bottom-8 right-0 bg-gray-900 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
                         Contactar

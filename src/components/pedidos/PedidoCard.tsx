@@ -140,26 +140,27 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
           </div>
         </div>
 
-        {/* Customer Name */}
-        {order.user && (
-          <div className="mb-2 sm:mb-3">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              {order.user.first_name} {order.user.last_name}
-            </p>
-          </div>
-        )}
-
-        <div className="space-y-1 sm:space-y-2">
+        {/* Products - Now with more prominence */}
+        <div className="space-y-1.5 sm:space-y-2 mb-3">
           {order.details.slice(0, 3).map((detail) => (
-            <p key={detail.id} className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 line-clamp-1">
-              <span className="font-medium">{detail.quantity}x</span> {detail.product.name}
-              {detail.product_variant && detail.product_variant?.variant && (
-                <span className="text-gray-500 dark:text-gray-400"> ({detail.product_variant.variant.name})</span>
+            <div key={detail.id} className="line-clamp-2">
+              <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                <span className="font-bold">{detail.quantity}x</span> {detail.product.name}
+              </p>
+              {(detail.product_variant?.variant || (detail.ingredients && detail.ingredients.length > 0)) && (
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                  {detail.product_variant?.variant && (
+                    <span>{detail.product_variant.variant.name}</span>
+                  )}
+                  {detail.ingredients && detail.ingredients.length > 0 && (
+                    <span>
+                      {detail.product_variant?.variant && ' • '}
+                      {detail.ingredients.map(ing => ing.name).join(', ')}
+                    </span>
+                  )}
+                </p>
               )}
-              {detail.ingredients && detail.ingredients.length > 0 && (
-                <span className="text-gray-500 dark:text-gray-400"> ({detail.ingredients.map(ing => ing.name).join(', ')})</span>
-              )}
-            </p>
+            </div>
           ))}
           {order.details.length > 3 && (
             <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 italic">
@@ -167,6 +168,15 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
             </p>
           )}
         </div>
+
+        {/* Customer Name - Now secondary */}
+        {order.user && (
+          <div className="mb-2 sm:mb-3">
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              {order.user.first_name} {order.user.last_name}
+            </p>
+          </div>
+        )}
 
         <div className="flex items-center justify-between mt-3 sm:mt-4 gap-2">
           <div className="text-base sm:text-lg font-semibold text-primary dark:text-secondary">

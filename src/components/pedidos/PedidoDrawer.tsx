@@ -286,68 +286,6 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
               </select>
             </div>
 
-            {/* Timeline del Pedido */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
-                Cronología del Pedido
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-900/20 dark:to-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-800 shadow-sm">
-                  <div className="bg-blue-500 dark:bg-blue-600 rounded-full p-2 mt-0.5">
-                    <Clock className="w-4 h-4 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">Pedido Recibido</p>
-                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                      {format(new Date(order.created_at), "d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
-                    </p>
-                  </div>
-                </div>
-
-                {order.started_at && (
-                  <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-orange-50 to-orange-100/50 dark:from-orange-900/20 dark:to-orange-900/10 rounded-xl border border-orange-200 dark:border-orange-800 shadow-sm">
-                    <div className="bg-orange-500 dark:bg-orange-600 rounded-full p-2 mt-0.5">
-                      <Play className="w-4 h-4 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-orange-900 dark:text-orange-200">Preparación Iniciada</p>
-                      <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
-                        {format(new Date(order.started_at), "d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {order.ready_at && (
-                  <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-green-50 to-green-100/50 dark:from-green-900/20 dark:to-green-900/10 rounded-xl border border-green-200 dark:border-green-800 shadow-sm">
-                    <div className="bg-green-500 dark:bg-green-600 rounded-full p-2 mt-0.5">
-                      <CheckCircle className="w-4 h-4 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-green-900 dark:text-green-200">Pedido Listo</p>
-                      <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-                        {format(new Date(order.ready_at), "d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {order.delivered_at && (
-                  <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-800/20 dark:to-gray-800/10 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                    <div className="bg-gray-500 dark:bg-gray-600 rounded-full p-2 mt-0.5">
-                      <Truck className="w-4 h-4 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-200">Pedido Entregado</p>
-                      <p className="text-xs text-gray-700 dark:text-gray-300 mt-1">
-                        {format(new Date(order.delivered_at), "d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
             {/* Información del Cliente */}
             <div>
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
@@ -416,6 +354,69 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                 </span>
               </div>
             </div>
+
+            {/* Timeline del Pedido */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
+                Cronología del Pedido
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-900/20 dark:to-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-800 shadow-sm">
+                  <div className="bg-blue-500 dark:bg-blue-600 rounded-full p-2 mt-0.5">
+                    <Clock className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">Pedido Recibido</p>
+                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                      {format(new Date(order.created_at), "d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
+                    </p>
+                  </div>
+                </div>
+
+                {order.started_at && (
+                  <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-orange-50 to-orange-100/50 dark:from-orange-900/20 dark:to-orange-900/10 rounded-xl border border-orange-200 dark:border-orange-800 shadow-sm">
+                    <div className="bg-orange-500 dark:bg-orange-600 rounded-full p-2 mt-0.5">
+                      <Play className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-orange-900 dark:text-orange-200">Preparación Iniciada</p>
+                      <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
+                        {format(new Date(order.started_at), "d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {order.ready_at && (
+                  <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-green-50 to-green-100/50 dark:from-green-900/20 dark:to-green-900/10 rounded-xl border border-green-200 dark:border-green-800 shadow-sm">
+                    <div className="bg-green-500 dark:bg-green-600 rounded-full p-2 mt-0.5">
+                      <CheckCircle className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-green-900 dark:text-green-200">Pedido Listo</p>
+                      <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                        {format(new Date(order.ready_at), "d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {order.delivered_at && (
+                  <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-800/20 dark:to-gray-800/10 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <div className="bg-gray-500 dark:bg-gray-600 rounded-full p-2 mt-0.5">
+                      <Truck className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-200">Pedido Entregado</p>
+                      <p className="text-xs text-gray-700 dark:text-gray-300 mt-1">
+                        {format(new Date(order.delivered_at), "d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Historial de notificaciones */}
             {notifications.length > 0 && (
               <div>

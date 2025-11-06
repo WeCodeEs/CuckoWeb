@@ -172,8 +172,8 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
         <div className="space-y-1.5 sm:space-y-2 mb-3">
           {order.details.slice(0, 3).map((detail) => (
             <div key={detail.id}>
-              <p className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                <span className="font-semibold">{detail.quantity}x</span> {detail.product.name}
+              <p className="text-base sm:text-lg text-gray-900 dark:text-white">
+                {detail.quantity}x {detail.product.name}
               </p>
               {(detail.product_variant?.variant || (detail.ingredients && detail.ingredients.length > 0)) && (
                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5">

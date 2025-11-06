@@ -1,4 +1,5 @@
-export type AlertLevel = 'none' | 'info' | 'warning' | 'urgent' | 'critical';
+export type AlertLevel = 'none' | 'info' | 'warning' | 'urgent' | 'critical' | 'delivered';
+export type OrderStatus = 'Recibido' | 'EnPreparacion' | 'Listo' | 'Entregado';
 
 export interface TimeAlert {
   level: AlertLevel;
@@ -9,9 +10,18 @@ export interface TimeAlert {
   iconAnimation: string;
 }
 
-export function getScheduledOrderAlert(scheduledTime: string | null): TimeAlert | null {
+export function getScheduledOrderAlert(
+  scheduledTime: string | null,
+  orderStatus?: OrderStatus,
+  deliveredAt?: string | null
+): TimeAlert | null {
   if (!scheduledTime) {
     return null;
+  }
+
+  // Special handling for delivered orders
+  if (orderStatus === 'Entregado' && deliveredAt) {
+    return getDeliveredOrderAlert(scheduledTime, deliveredAt);
   }
 
   const now = new Date();
@@ -94,6 +104,55 @@ export function getScheduledOrderAlert(scheduledTime: string | null): TimeAlert 
     className: '',
     badgeText: 'Preparar pronto',
     badgeColor: 'bg-blue-500',
+    iconAnimation: ''
+  };
+}
+
+/**
+ * Get alert information for delivered orders with scheduled time
+ * Shows neutral informative badge without colors or animations
+ */
+export function getDeliveredOrderAlert(
+  scheduledTime: string,
+  deliveredAt: string
+): TimeAlert {
+  const scheduled = new Date(scheduledTime);
+  const delivered = new Date(deliveredAt);
+  const diffMs = delivered.getTime() - scheduled.getTime();
+  const minutesDiff = Math.floor(diffMs / 1000 / 60);
+
+  // Delivered on time or early
+  if (minutesDiff <= 0) {
+    return {
+      level: 'delivered',
+      minutesRemaining: minutesDiff,
+      className: '',
+      badgeText: 'Entregado a tiempo',
+      badgeColor: 'bg-gray-500 dark:bg-gray-600',
+      iconAnimation: ''
+    };
+  }
+
+  // Delivered late
+  let delayText: string;
+  if (minutesDiff >= 60) {
+    const hours = Math.floor(minutesDiff / 60);
+    const remainingMinutes = minutesDiff % 60;
+    if (remainingMinutes === 0) {
+      delayText = `${hours}h`;
+    } else {
+      delayText = `${hours}h ${remainingMinutes}min`;
+    }
+  } else {
+    delayText = `${minutesDiff} min`;
+  }
+
+  return {
+    level: 'delivered',
+    minutesRemaining: minutesDiff,
+    className: '',
+    badgeText: `Entregado con ${delayText} de retraso`,
+    badgeColor: 'bg-gray-500 dark:bg-gray-600',
     iconAnimation: ''
   };
 }

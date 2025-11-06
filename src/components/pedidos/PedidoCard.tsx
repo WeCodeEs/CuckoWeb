@@ -62,9 +62,13 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
     return () => clearInterval(interval);
   }, []);
 
-  // Get alert info for scheduled orders in Recibido status
-  const alertInfo = order.status === 'Recibido' && order.scheduled_delivery_time
-    ? getScheduledOrderAlert(order.scheduled_delivery_time)
+  // Get alert info for scheduled orders in all statuses
+  const alertInfo = order.scheduled_delivery_time
+    ? getScheduledOrderAlert(
+        order.scheduled_delivery_time,
+        order.status,
+        order.delivered_at
+      )
     : null;
 
   // Determine which timestamp to show based on status

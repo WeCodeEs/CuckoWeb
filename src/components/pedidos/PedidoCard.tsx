@@ -143,7 +143,7 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
         {/* Products - Now with more prominence */}
         <div className="space-y-1.5 sm:space-y-2 mb-3">
           {order.details.slice(0, 3).map((detail) => (
-            <div key={detail.id} className="line-clamp-2">
+            <div key={detail.id}>
               <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
                 <span className="font-bold">{detail.quantity}x</span> {detail.product.name}
               </p>
@@ -154,7 +154,7 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
                   )}
                   {detail.ingredients && detail.ingredients.length > 0 && (
                     <span>
-                      {detail.product_variant?.variant && ' • '}
+                      {detail.product_variant?.variant && ', '}
                       {detail.ingredients.map(ing => ing.name).join(', ')}
                     </span>
                   )}
@@ -169,17 +169,16 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
           )}
         </div>
 
-        {/* Customer Name - Now secondary */}
-        {order.user && (
-          <div className="mb-2 sm:mb-3">
-            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+        {/* Bottom section with price and customer name */}
+        <div className="flex items-center justify-between mt-3 sm:mt-4 gap-2">
+          {/* Customer Name - Bottom left with ellipsis */}
+          {order.user && (
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate flex-1 min-w-0">
               {order.user.first_name} {order.user.last_name}
             </p>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between mt-3 sm:mt-4 gap-2">
-          <div className="text-base sm:text-lg font-semibold text-primary dark:text-secondary">
+          )}
+          {/* Price */}
+          <div className="text-base sm:text-lg font-semibold text-primary dark:text-secondary flex-shrink-0">
             {formatCurrency(order.total)}
           </div>
         </div>

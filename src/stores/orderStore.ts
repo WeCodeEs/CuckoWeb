@@ -67,7 +67,8 @@ export interface Order {
     uuid: string;
     first_name: string;
     last_name: string;
-    faculty?: string; 
+    faculty?: string;
+    phone?: string;
   };
 }
 
@@ -188,7 +189,8 @@ export const useOrderStore = create<OrderStore>((set, get) => {
               uuid,
               first_name,
               last_name,
-              faculty
+              faculty,
+              phone
             ),
             details:order_details (
               id,
@@ -274,7 +276,8 @@ export const useOrderStore = create<OrderStore>((set, get) => {
               uuid,
               first_name,
               last_name,
-              faculty
+              faculty,
+              phone
             ),
             details:order_details (
               id,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Printer, Clock, CheckCircle, Truck, Play, Mail, CalendarClock, AlertCircle } from 'lucide-react';
+import { X, Printer, Clock, CheckCircle, Truck, Play, Mail, CalendarClock, AlertCircle, MessageCircle } from 'lucide-react';
 import { Order, OrderStatus, OrderNotification, useOrderStore } from '../../stores/orderStore';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { format } from 'date-fns';
@@ -344,9 +344,23 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                 Información del Cliente
               </h3>
               <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkbg dark:to-darkbg-darker rounded-xl p-5 shadow-sm border border-gray-200 dark:border-darkbg">
-                <p className="text-gray-900 dark:text-white font-semibold text-base">
-                  {order.user?.first_name} {order.user?.last_name}
-                </p>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-gray-900 dark:text-white font-semibold text-base">
+                    {order.user?.first_name} {order.user?.last_name}
+                  </p>
+                  {order.user?.phone && (
+                    <a
+                      href={`https://api.whatsapp.com/send?phone=521${order.user.phone}&text=Hola`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-shrink-0 p-2 bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white rounded-lg transition-colors shadow-sm hover:shadow-md"
+                      aria-label="Contactar por WhatsApp"
+                      title="Contactar por WhatsApp"
+                    >
+                      <MessageCircle className="w-5 h-5" />
+                    </a>
+                  )}
+                </div>
                 {order.user?.faculty && (
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 flex items-center gap-2">
                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary dark:bg-secondary"></span>

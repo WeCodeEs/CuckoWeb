@@ -350,7 +350,7 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                   </p>
                   {order.user?.phone && (
                     <a
-                      href={`https://api.whatsapp.com/send?phone=52${order.user.phone}&text=Hola`}
+                      href={`https://api.whatsapp.com/send?phone=${order.user.phone}&text=Hola`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex-shrink-0 p-2 bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white rounded-lg transition-colors shadow-sm hover:shadow-md"

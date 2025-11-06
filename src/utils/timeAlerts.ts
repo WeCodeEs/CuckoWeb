@@ -27,11 +27,25 @@ export function getScheduledOrderAlert(scheduledTime: string | null): TimeAlert 
   // OVERDUE: Time has passed
   if (diffMs < 0) {
     const minutesLate = Math.abs(minutesRemaining);
+    let delayText: string;
+
+    if (minutesLate >= 60) {
+      const hours = Math.floor(minutesLate / 60);
+      const remainingMinutes = minutesLate % 60;
+      if (remainingMinutes === 0) {
+        delayText = `${hours}h`;
+      } else {
+        delayText = `${hours}h ${remainingMinutes}min`;
+      }
+    } else {
+      delayText = `${minutesLate} min`;
+    }
+
     return {
       level: 'critical',
       minutesRemaining,
       className: 'alert-red',
-      badgeText: `¡RETRASADO ${minutesLate} min!`,
+      badgeText: `¡RETRASADO ${delayText}!`,
       badgeColor: 'bg-red-600',
       iconAnimation: 'spin-urgent'
     };

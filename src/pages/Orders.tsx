@@ -5,6 +5,7 @@ import PedidoDrawer from '../components/pedidos/PedidoDrawer';
 import PrintPreviewModal from '../components/pedidos/PrintPreviewModal';
 import SkeletonKanbanCard from '../components/skeletons/SkeletonKanbanCard';
 import { Printer } from 'lucide-react';
+import { format } from 'date-fns';
 import {
   DndContext,
   DragEndEvent,
@@ -172,11 +173,17 @@ export default function Orders() {
     const printContent = `
       <div style="width: 80mm; padding: 8px; font-family: monospace;">
         <div style="text-align: center; margin-bottom: 8px;">
-          <h1 style="font-size: 18px; margin: 0 0 4px 0; font-weight: bold;">CuckooEats</h1>
-          <p style="font-size: 12px; margin: 0;">Pedido #${order.id}</p>
+          <h1 style="font-size: 22px; margin: 0 0 4px 0; font-weight: bold;">CuckooEats</h1>
+          <p style="font-size: 24px; margin: 4px 0; font-weight: bold;">Pedido #${order.id}</p>
+          ${order.scheduled_delivery_time ? `
+            <div style="font-size: 18px; margin: 8px 0; font-weight: bold; padding: 6px; border: 2px solid #000; border-radius: 4px;">
+              <p style="margin: 0 0 2px 0;">PEDIDO AGENDADO</p>
+              <p style="margin: 0; font-size: 16px;">Para la(s) ${format(new Date(order.scheduled_delivery_time), 'HH:mm')}</p>
+            </div>
+          ` : ''}
         </div>
-        
-        <div style="font-size: 11px; margin-bottom: 8px;">
+
+        <div style="font-size: 13px; margin-bottom: 8px;">
           <p style="margin: 0;">Fecha: ${new Date(order.created_at).toLocaleString('es-PE')}</p>
           <p style="margin: 0;">Cliente: ${order.user ? `${order.user.first_name} ${order.user.last_name}` : 'Cliente'}</p>
           <p style="margin: 0;">Estado: ${order.status}</p>
@@ -187,22 +194,22 @@ export default function Orders() {
         
         <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 8px 0; margin-bottom: 8px;">
           ${order.details.map(detail => `
-            <div style="font-size: 11px; margin-bottom: 4px;">
+            <div style="font-size: 14px; margin-bottom: 4px;">
               <div style="display: flex; justify-content: space-between;">
                 <span style="max-width: 60%; word-wrap: break-word;">${detail.quantity}x ${detail.product.name}</span>
                 <span>$${detail.subtotal.toFixed(2)}</span>
               </div>
               ${detail.product_variant && detail.product_variant?.variant
-                ? `<div style="padding-left: 12px; color: #000; font-size: 11px;">Variante: ${detail.product_variant?.variant.name}</div>`
+                ? `<div style="padding-left: 12px; color: #000; font-size: 14px;">Variante: ${detail.product_variant?.variant.name}</div>`
                 : ''}
               ${detail.ingredients && detail.ingredients.length
-                ? `<div style="padding-left: 12px; color: #000; font-size: 11px;">${detail.ingredients.map(ing => ing.name).join(', ')}</div>`
+                ? `<div style="padding-left: 12px; color: #000; font-size: 14px;">${detail.ingredients.map(ing => ing.name).join(', ')}</div>`
                 : ''}
             </div>
           `).join('')}
         </div>
-        
-        <div style="font-size: 14px; text-align: right; font-weight: bold; margin-bottom: 8px;">
+
+        <div style="font-size: 16px; text-align: right; font-weight: bold; margin-bottom: 8px;">
           Total: $${order.total.toFixed(2)}
         </div>
       </div>
@@ -358,6 +365,45 @@ export default function Orders() {
                 ) : (
                   orders
                     .filter((order) => order.status === status)
+                    .sort((a, b) => {
+                      // For "Recibido" status: sort by urgency
+                      if (status === 'Recibido') {
+                        const aHasScheduled = !!a.scheduled_delivery_time;
+                        const bHasScheduled = !!b.scheduled_delivery_time;
+
+                        // Both have scheduled times
+                        if (aHasScheduled && bHasScheduled) {
+                          const now = new Date().getTime();
+                          const aTime = new Date(a.scheduled_delivery_time!).getTime();
+                          const bTime = new Date(b.scheduled_delivery_time!).getTime();
+
+                          const aMinutesUntil = Math.floor((aTime - now) / 60000);
+                          const bMinutesUntil = Math.floor((bTime - now) / 60000);
+
+                          // Both are urgent (within 30 min or overdue) - sort by closest time
+                          if (aMinutesUntil <= 30 && bMinutesUntil <= 30) {
+                            return aTime - bTime; // Earliest first
+                          }
+
+                          // One is urgent, one is not - urgent comes first
+                          if (aMinutesUntil <= 30) return -1;
+                          if (bMinutesUntil <= 30) return 1;
+
+                          // Neither urgent - sort by scheduled time
+                          return aTime - bTime;
+                        }
+
+                        // Non-scheduled come before scheduled (immediate orders priority)
+                        if (!aHasScheduled && bHasScheduled) return -1;
+                        if (aHasScheduled && !bHasScheduled) return 1;
+
+                        // Both non-scheduled - oldest first
+                        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+                      }
+
+                      // For other statuses - maintain store order
+                      return 0;
+                    })
                     .map((order) => (
                       <PedidoCard
                         key={order.id}

@@ -59,4 +59,83 @@
   .scrollbar-thumb-darkbg::-webkit-scrollbar-thumb {
     background-color: rgb(31 41 55);
   }
+
+  /* Pulsing animations for scheduled order alerts */
+  @keyframes pulse-yellow {
+    0%, 100% {
+      border-color: rgb(234 179 8);
+      box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.4);
+    }
+    50% {
+      border-color: rgb(250 204 21);
+      box-shadow: 0 0 0 4px rgba(234, 179, 8, 0.2);
+    }
+  }
+
+  @keyframes pulse-orange {
+    0%, 100% {
+      border-color: rgb(249 115 22);
+      box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.5);
+    }
+    50% {
+      border-color: rgb(251 146 60);
+      box-shadow: 0 0 0 6px rgba(249, 115, 22, 0.3);
+    }
+  }
+
+  @keyframes pulse-red {
+    0%, 100% {
+      border-color: rgb(239 68 68);
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
+    }
+    50% {
+      border-color: rgb(248 113 113);
+      box-shadow: 0 0 0 8px rgba(239, 68, 68, 0.4);
+    }
+  }
+
+  @keyframes spin-slow {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes spin-fast {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .alert-yellow {
+    animation: pulse-yellow 2s ease-in-out infinite;
+    border-width: 3px;
+  }
+
+  .alert-orange {
+    animation: pulse-orange 1.5s ease-in-out infinite;
+    border-width: 3px;
+  }
+
+  .alert-red {
+    animation: pulse-red 1s ease-in-out infinite;
+    border-width: 4px;
+  }
+
+  .spin-slow {
+    animation: spin-slow 3s linear infinite;
+  }
+
+  .spin-fast {
+    animation: spin-fast 1.5s linear infinite;
+  }
+
+  .spin-urgent {
+    animation: spin-fast 0.8s linear infinite;
+  }
 }

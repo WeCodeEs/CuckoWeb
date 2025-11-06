@@ -4,6 +4,32 @@ import { supabase } from '../lib/supabase';
 export type OrderStatus = 'Recibido' | 'EnPreparacion' | 'Listo' | 'Entregado';
 export type NotificationType = 'NotificacionGeneral' | 'NotificacionPersonal' | 'PedidoRecibido' | 'PedidoEnPreparacion' | 'PedidoListo' | 'PedidoEntregado';
 
+// Helper function to sort orders with custom logic
+function sortOrders(orders: Order[]): Order[] {
+  return orders.sort((a, b) => {
+    // Only apply custom sorting for "Recibido" status
+    if (a.status === 'Recibido' && b.status === 'Recibido') {
+      const aHasScheduled = !!a.scheduled_delivery_time;
+      const bHasScheduled = !!b.scheduled_delivery_time;
+
+      // Non-scheduled orders come first (immediate orders have priority)
+      if (!aHasScheduled && bHasScheduled) return -1;
+      if (aHasScheduled && !bHasScheduled) return 1;
+
+      // Both are non-scheduled - sort by created_at (oldest first)
+      if (!aHasScheduled && !bHasScheduled) {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+
+      // Both have scheduled times - sort by scheduled time (earliest first)
+      return new Date(a.scheduled_delivery_time!).getTime() - new Date(b.scheduled_delivery_time!).getTime();
+    }
+
+    // For other statuses, sort by created_at (newest first for default behavior)
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+}
+
 export interface OrderDetail {
   id: number;
   product_id: number;
@@ -214,7 +240,10 @@ export const useOrderStore = create<OrderStore>((set, get) => {
           });
         }
 
-        set({ orders: (transformedData as Order[]) || [], loading: false });
+        // Sort orders with custom logic
+        const sortedOrders = sortOrders(transformedData as Order[] || []);
+
+        set({ orders: sortedOrders, loading: false });
       } catch (error: any) {
         console.error('Error fetching orders (history):', error);
         set({
@@ -288,7 +317,10 @@ export const useOrderStore = create<OrderStore>((set, get) => {
           });
         }
 
-        set({ orders: transformedData as Order[] || [], loading: false });
+        // Sort orders with custom logic for "Recibido" status
+        const sortedOrders = sortOrders(transformedData as Order[] || []);
+
+        set({ orders: sortedOrders, loading: false });
       } catch (error: any) {
         console.error('Error fetching orders:', error);
         set({

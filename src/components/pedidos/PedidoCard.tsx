@@ -67,6 +67,7 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
     ? getScheduledOrderAlert(
         order.scheduled_delivery_time,
         order.status,
+        order.ready_at,
         order.delivered_at
       )
     : null;

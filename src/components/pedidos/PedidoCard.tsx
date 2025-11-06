@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, CalendarClock, Printer } from 'lucide-react';
+import { Clock, CalendarClock, Printer, Timer } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Order } from '../../stores/orderStore';
 import { formatCurrency } from '../../utils/formatCurrency';
+import { getScheduledOrderAlert } from '../../utils/timeAlerts';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
@@ -52,14 +53,19 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
     userSelect: 'none',
   } : {};
 
-  // Update time every 30 seconds
+  // Update time every minute for alerts
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(Date.now());
-    }, 30000); // Update every 30 seconds
+    }, 60000); // Update every minute
 
     return () => clearInterval(interval);
   }, []);
+
+  // Get alert info for scheduled orders in Recibido status
+  const alertInfo = order.status === 'Recibido' && order.scheduled_delivery_time
+    ? getScheduledOrderAlert(order.scheduled_delivery_time)
+    : null;
 
   // Determine which timestamp to show based on status
   const getRelevantTimestamp = () => {
@@ -109,14 +115,25 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
             className={clsx(
               "flex items-center gap-2 px-3 py-1 rounded-t-lg rounded-b-none",
               "text-white dark:text-white",
-              badgeColors[order.status],
+              alertInfo ? alertInfo.badgeColor : badgeColors[order.status],
               "shadow-primary-light/20"
             )}
           >
-            <CalendarClock className="w-4 h-4 text-white dark:text-white" />
-            <span className="text-xs sm:text-sm font-medium">
-              Agendado para la(s) {format(new Date(order.scheduled_delivery_time as string), "HH:mm")}
-            </span>
+            {alertInfo ? (
+              <>
+                <Timer className={clsx("w-4 h-4 text-white dark:text-white", alertInfo.iconAnimation)} />
+                <span className="text-xs sm:text-sm font-bold">
+                  {alertInfo.badgeText} - Entrega: {format(new Date(order.scheduled_delivery_time as string), "HH:mm")}
+                </span>
+              </>
+            ) : (
+              <>
+                <CalendarClock className="w-4 h-4 text-white dark:text-white" />
+                <span className="text-xs sm:text-sm font-medium">
+                  Agendado para la(s) {format(new Date(order.scheduled_delivery_time as string), "HH:mm")}
+                </span>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -124,7 +141,7 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
       <div
         className={clsx(
           "p-3 sm:p-4 shadow-sm transition-transform transition-shadow duration-200 border-l-4 transform",
-          statusColors[order.status],
+          alertInfo ? alertInfo.className : statusColors[order.status],
           "bg-white dark:bg-darkbg-lighter",
           "rounded-lg",
           {

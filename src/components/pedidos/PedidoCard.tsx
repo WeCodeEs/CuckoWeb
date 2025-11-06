@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Clock, CalendarClock, Printer } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -38,6 +38,8 @@ const statusLabels = {
 };
 
 export default function PedidoCard({ order, onClick, onPrint, isDragging = false, enableDrag = true }: Props) {
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: order.id,
     disabled: !enableDrag,
@@ -49,6 +51,15 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
     WebkitUserSelect: 'none',
     userSelect: 'none',
   } : {};
+
+  // Update time every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 30000); // Update every 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Determine which timestamp to show based on status
   const getRelevantTimestamp = () => {

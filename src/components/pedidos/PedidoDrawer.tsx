@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Printer, Clock, CheckCircle, Truck, Play, Mail, CalendarClock, AlertCircle, MessageSquareShare } from 'lucide-react';
+import { X, Printer, Clock, CheckCircle, Truck, Play, Mail, CalendarClock, AlertCircle, ArrowUpRight } from 'lucide-react';
 import { Order, OrderStatus, OrderNotification, useOrderStore } from '../../stores/orderStore';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { format } from 'date-fns';
@@ -343,35 +343,29 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                 Información del Cliente
               </h3>
-              <div className="bg-gradient-to-br from-green-50/50 to-green-100/30 dark:from-green-900/10 dark:to-green-900/5 rounded-xl p-5 shadow-sm border border-green-200/50 dark:border-green-800/30">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-gray-900 dark:text-white font-semibold text-base mb-1">
-                      {order.user?.first_name} {order.user?.last_name}
-                    </p>
-                    {order.user?.faculty && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Facultad de {order.user.faculty}
-                      </p>
-                    )}
-                  </div>
-                  {order.user?.phone && (
-                    <a
-                      href={`https://api.whatsapp.com/send?phone=${order.user.phone}&text=Hola,%20te%20contacto%20desde%20la%20cafetería%20respecto%20a%20tu%20pedido%20%23${order.order_number}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-shrink-0 group relative"
-                      aria-label="Contactar por WhatsApp"
-                    >
-                      <div className="p-2.5 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 border border-green-300 dark:border-green-700 rounded-lg transition-all duration-200 hover:shadow-md">
-                        <MessageSquareShare className="w-5 h-5 text-green-700 dark:text-green-400" />
-                      </div>
-                      <span className="absolute -bottom-8 right-0 bg-gray-900 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                        Contactar
-                      </span>
-                    </a>
-                  )}
-                </div>
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkbg dark:to-darkbg-darker rounded-xl p-5 shadow-sm border border-gray-200 dark:border-darkbg">
+                {order.user?.phone ? (
+                  <a
+                    href={`https://api.whatsapp.com/send?phone=${order.user.phone}&text=Hola,%20te%20contacto%20desde%20la%20cafetería%20respecto%20a%20tu%20pedido%20%23${order.order_number}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-gray-900 dark:text-white font-semibold text-base hover:text-primary dark:hover:text-secondary transition-colors group mb-1"
+                    aria-label="Contactar por WhatsApp"
+                  >
+                    {order.user?.first_name} {order.user?.last_name}
+                    <ArrowUpRight className="w-4 h-4 opacity-60 group-hover:opacity-100 transition-opacity" />
+                  </a>
+                ) : (
+                  <p className="text-gray-900 dark:text-white font-semibold text-base mb-1">
+                    {order.user?.first_name} {order.user?.last_name}
+                  </p>
+                )}
+                {order.user?.faculty && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary dark:bg-secondary"></span>
+                    Facultad de {order.user.faculty}
+                  </p>
+                )}
               </div>
             </div>
 

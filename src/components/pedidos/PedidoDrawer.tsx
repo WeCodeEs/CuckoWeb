@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Printer, Clock, CheckCircle, Truck, Play, Mail, CalendarClock, AlertCircle } from 'lucide-react';
+import { X, Printer, Clock, CheckCircle, Truck, Play, Mail, CalendarClock, AlertCircle, ExternalLink } from 'lucide-react';
 import { Order, OrderStatus, OrderNotification, useOrderStore } from '../../stores/orderStore';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { format } from 'date-fns';
@@ -344,11 +344,24 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                 Información del Cliente
               </h3>
               <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkbg dark:to-darkbg-darker rounded-xl p-5 shadow-sm border border-gray-200 dark:border-darkbg">
-                <p className="text-gray-900 dark:text-white font-semibold text-base">
-                  {order.user?.first_name} {order.user?.last_name}
-                </p>
+                {order.user?.phone ? (
+                  <a
+                    href={`https://api.whatsapp.com/send?phone=${order.user.phone}&text=Hola,%20te%20contacto%20desde%20la%20cafetería%20respecto%20a%20tu%20pedido%20%23${order.order_number}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-gray-900 dark:text-white font-semibold text-base hover:text-primary dark:hover:text-secondary transition-colors group mb-1 underline decoration-gray-400 dark:decoration-gray-600 hover:decoration-primary dark:hover:decoration-secondary underline-offset-2"
+                    aria-label="Contactar por WhatsApp"
+                  >
+                    {order.user?.first_name} {order.user?.last_name}
+                    <ExternalLink className="w-4 h-4 opacity-60 group-hover:opacity-100 transition-opacity" />
+                  </a>
+                ) : (
+                  <p className="text-gray-900 dark:text-white font-semibold text-base mb-1">
+                    {order.user?.first_name} {order.user?.last_name}
+                  </p>
+                )}
                 {order.user?.faculty && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 flex items-center gap-2">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary dark:bg-secondary"></span>
                     Facultad de {order.user.faculty}
                   </p>

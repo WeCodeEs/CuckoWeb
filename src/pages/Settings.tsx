@@ -1,20 +1,48 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Clock, Settings as SettingsIcon, Wrench, Calendar } from 'lucide-react';
 import Switch from '../components/ui/switch';
 import ConfirmationModal from '../components/ConfirmationModal';
 import Banners from './Banners';
+import { useSettingsStore } from '../stores/settingsStore';
+import { useToast } from '../components/ui/use-toast';
+
 type ConfirmationType = 'isOpen' | 'maintenanceMode' | 'scheduledOrders' | null;
 
 export default function Settings() {
-  const [isOpen, setIsOpen] = useState(true);
-  const [openingTime, setOpeningTime] = useState('08:00');
-  const [closingTime, setClosingTime] = useState('20:00');
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [scheduledOrdersEnabled, setScheduledOrdersEnabled] = useState(true);
+  const {
+    isOpen,
+    openingTime,
+    closingTime,
+    maintenanceMode,
+    scheduledOrdersEnabled,
+    isLoading,
+    error,
+    fetchSettings,
+    updateSettings,
+    setLocalOpeningTime,
+    setLocalClosingTime,
+  } = useSettingsStore();
+
+  const { toast } = useToast();
 
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationType, setConfirmationType] = useState<ConfirmationType>(null);
   const [pendingValue, setPendingValue] = useState<boolean>(false);
+
+  const [draftOpening, setDraftOpening] = useState(openingTime);
+  const [draftClosing, setDraftClosing] = useState(closingTime);
+  const [savingHours, setSavingHours] = useState(false);
+
+  useEffect(() => { setDraftOpening(openingTime); }, [openingTime]);
+  useEffect(() => { setDraftClosing(closingTime); }, [closingTime]);
+
+  // Habilita botón solo si hubo cambios
+  const isDirtyHours = draftOpening !== openingTime || draftClosing !== closingTime;
+
+  useEffect(() => {
+    // Carga inicial de configuraciones
+    fetchSettings().catch(() => {});
+  }, [fetchSettings]);
 
   const handleToggleRequest = (type: ConfirmationType, newValue: boolean) => {
     setConfirmationType(type);
@@ -22,22 +50,48 @@ export default function Settings() {
     setShowConfirmation(true);
   };
 
-  const handleConfirm = () => {
-    switch (confirmationType) {
-      case 'isOpen':
-        setIsOpen(pendingValue);
-        break;
-      case 'maintenanceMode':
-        setMaintenanceMode(pendingValue);
-        break;
-      case 'scheduledOrders':
-        setScheduledOrdersEnabled(pendingValue);
-        break;
+  const handleConfirm = async () => {
+    try {
+      switch (confirmationType) {
+        case 'isOpen':
+          await updateSettings({ is_open: pendingValue });
+          break;
+        case 'maintenanceMode':
+          await updateSettings({ is_in_maintenance: pendingValue });
+          break;
+        case 'scheduledOrders':
+          await updateSettings({ allow_scheduled_orders: pendingValue });
+          break;
+      }
+      toast({ title: 'Actualizado', description: 'Cambio aplicado correctamente.' });
+    } catch {
+      toast({ title: 'Error', description: 'No se pudo aplicar el cambio.' });
+    } finally {
+      setShowConfirmation(false);
     }
-    setShowConfirmation(false); 
   };
 
-  const getConfirmationContent = () => {
+  const onSaveHours = async () => {
+    try {
+      setSavingHours(true);
+      await updateSettings({
+        opening_time: draftOpening, // "HH:mm"
+        closing_time: draftClosing, // "HH:mm"
+      });
+      setLocalOpeningTime(draftOpening);
+      setLocalClosingTime(draftClosing);
+      toast({ title: 'Horario actualizado' });
+    } catch (e: any) {
+      toast({
+        title: 'Error al actualizar',
+        description: e?.message ?? 'El horario no se ha actualizado.',
+      });
+    } finally {
+      setSavingHours(false);
+    }
+  };
+
+  const confirmationContent = (() => {
     switch (confirmationType) {
       case 'isOpen':
         return {
@@ -57,8 +111,8 @@ export default function Settings() {
         return {
           title: pendingValue ? '¿Habilitar pedidos agendados?' : '¿Deshabilitar pedidos agendados?',
           message: pendingValue
-            ? 'Los clientes podrán programar pedidos para fechas futuras.'
-            : 'Los clientes no podrán programar pedidos para fechas futuras.',
+            ? 'Los clientes podrán programar pedidos para horarios futuros.'
+            : 'Los clientes no podrán programar pedidos para horarios futuros.',
         };
       default:
         return {
@@ -66,15 +120,19 @@ export default function Settings() {
           message: '¿Estás seguro de que deseas realizar este cambio?',
         };
     }
-  };
-
-  const confirmationContent = getConfirmationContent();
+  })();
 
   return (
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-primary-dark dark:text-white">Configuración de Cafetería</h1>
         <p className="text-sm text-gray-600 dark:text-gray-300">Gestiona los ajustes generales del sistema</p>
+        {isLoading && (
+          <p className="text-sm text-gray-500 mt-2">Cargando configuración…</p>
+        )}
+        {error && (
+          <p className="text-sm text-red-600 mt-2">Error: {error}</p>
+        )}
       </div>
 
       <div className="space-y-4">
@@ -110,19 +168,34 @@ export default function Settings() {
         </div>
 
         <div className="bg-white dark:bg-darkbg-lighter rounded-xl shadow-soft dark:shadow-dark p-6">
-          <div className="flex items-start gap-4 mb-6">
-            <div className="p-3 bg-primary/10 dark:bg-secondary/10 rounded-lg">
-              <Clock className="w-6 h-6 text-primary dark:text-secondary" />
+          <div className="flex items-start justify-between mb-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-primary/10 dark:bg-secondary/10 rounded-lg">
+                <Clock className="w-6 h-6 text-primary dark:text-secondary" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                  Horario de Operación
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Define el horario de apertura y cierre de la cafetería
+                </p>
+              </div>
             </div>
-            <div className="flex-1">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-                Horario de Operación
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                Define el horario de apertura y cierre de la cafetería
-              </p>
-            </div>
+
+            <button
+              onClick={onSaveHours}
+              disabled={!isDirtyHours || savingHours}
+              className={`inline-flex items-center px-4 py-2 rounded-lg transition 
+                ${(!isDirtyHours || savingHours)
+                  ? 'bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-not-allowed'
+                  : 'bg-primary text-white dark:bg-secondary hover:opacity-90'}`}
+              aria-disabled={!isDirtyHours || savingHours}
+            >
+              {savingHours ? 'Guardando…' : 'Guardar horario'}
+            </button>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -130,8 +203,8 @@ export default function Settings() {
               </label>
               <input
                 type="time"
-                value={openingTime}
-                onChange={(e) => setOpeningTime(e.target.value)}
+                value={draftOpening}
+                onChange={(e) => setDraftOpening(e.target.value)}
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary bg-white dark:bg-darkbg text-gray-900 dark:text-white"
               />
             </div>
@@ -141,8 +214,8 @@ export default function Settings() {
               </label>
               <input
                 type="time"
-                value={closingTime}
-                onChange={(e) => setClosingTime(e.target.value)}
+                value={draftClosing}
+                onChange={(e) => setDraftClosing(e.target.value)}
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary bg-white dark:bg-darkbg text-gray-900 dark:text-white"
               />
             </div>
@@ -196,7 +269,7 @@ export default function Settings() {
                   </h3>
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Permite a los clientes programar pedidos para una fecha y hora específica
+                  Permite a los clientes programar pedidos para una hora específica en el día actual.
                 </p>
                 <span
                   className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2 ${

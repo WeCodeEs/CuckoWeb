@@ -346,7 +346,7 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
               <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkbg dark:to-darkbg-darker rounded-xl p-5 shadow-sm border border-gray-200 dark:border-darkbg">
                 {order.user?.phone ? (
                   <a
-                    href={`https://api.whatsapp.com/send?phone=${order.user.phone}&text=Hola,%20te%20contacto%20desde%20la%20cafetería%20respecto%20a%20tu%20pedido%20%23${order.order_number}`}
+                    href={`https://api.whatsapp.com/send?phone=${order.user.phone}&text=Hola,%20te%20contactamos%20desde%20Cuckoo%20respecto%20a%20tu%20pedido%20%23${order.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 text-gray-900 dark:text-white font-semibold text-base hover:text-primary dark:hover:text-secondary transition-colors group mb-1 underline decoration-gray-400 dark:decoration-gray-600 hover:decoration-primary dark:hover:decoration-secondary underline-offset-2"

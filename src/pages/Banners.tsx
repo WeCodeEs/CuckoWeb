@@ -81,7 +81,7 @@ export default function Banners() {
 
     const reorderedBanners = newBanners.map((banner, idx) => ({
       ...banner,
-      order: idx + 1,
+      sort_order: idx + 1,
     }));
 
     try {
@@ -222,7 +222,7 @@ export default function Banners() {
                     <div className="relative aspect-[3/1] bg-gray-200 dark:bg-darkbg">
                       <img
                         src={banners[currentSlide].image_url}
-                        alt={`Banner ${banners[currentSlide].order}`}
+                        alt={`Banner ${banners[currentSlide].sort_order}`}
                         className="w-full h-full object-cover"
                       />
                       {!banners[currentSlide].active && (
@@ -252,7 +252,7 @@ export default function Banners() {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                          Banner #{banners[currentSlide].order}
+                          Banner #{banners[currentSlide].sort_order}
                         </span>
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${

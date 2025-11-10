@@ -5,13 +5,13 @@ export interface Banner {
   id: number;
   image_url: string; 
   active: boolean;
-  order: number;
+  sort_order: number; 
   created_at?: string;
 }
 
 type BannerAction =
-  | { action: 'CREATE'; imageUrl: string; order: number }
-  | { action: 'UPDATE_ORDER'; banners: Pick<Banner, 'id' | 'order'>[] }
+  | { action: 'CREATE'; imageUrl: string; sort_order: number }
+  | { action: 'UPDATE_ORDER'; banners: Array<{ id: number; sort_order: number }> }
   | { action: 'UPDATE_STATUS'; id: number; active: boolean }
   | { action: 'DELETE'; id: number; imageUrl: string };
 
@@ -37,10 +37,10 @@ export const useBannersStore = create<BannersState>((set, get) => ({
       const { data, error } = await supabase
         .from('banners')
         .select('*')
-        .order('order', { ascending: true });
+        .order('sort_order', { ascending: true });
 
       if (error) throw error;
-      set({ banners: data || [], loadingBanners: false });
+      set({ banners: (data as Banner[]) || [], loadingBanners: false });
     } catch (error: any) {
       console.error('Error fetching banners:', error);
       set({ error: error.message, loadingBanners: false });
@@ -67,16 +67,18 @@ export const useBannersStore = create<BannersState>((set, get) => ({
       const imageUrl = publicUrlData.publicUrl;
 
       const currentBanners = get().banners;
-      const newOrder = currentBanners.length > 0 ? Math.max(...currentBanners.map(b => b.order)) + 1 : 1;
+      const newOrder = currentBanners.length > 0 ? Math.max(...currentBanners.map(b => b.sort_order)) + 1 : 1;
 
-      const { error: functionError } = await supabase.functions.invoke('manage-banner', {
+      console.warn("imageUrl: ", imageUrl);
+      const { error: functionError } = await supabase.functions.invoke('manage-banners', {
         body: {
           action: 'CREATE',
           imageUrl: imageUrl,
-          order: newOrder
+          sort_order: newOrder
         } as BannerAction
       });
 
+      console.warn("functionError: ", functionError);
       if (functionError) throw functionError;
 
       await get().fetchBanners();
@@ -92,9 +94,9 @@ export const useBannersStore = create<BannersState>((set, get) => ({
     set({ banners }); 
 
     try {
-      const orderPayload = banners.map(b => ({ id: b.id, order: b.order }));
+      const orderPayload = banners.map(b => ({ id: b.id, sort_order: b.sort_order }));
 
-      const { error: functionError } = await supabase.functions.invoke('manage-banner', {
+      const { error: functionError } = await supabase.functions.invoke('manage-banners', {
         body: {
           action: 'UPDATE_ORDER',
           banners: orderPayload
@@ -119,7 +121,7 @@ export const useBannersStore = create<BannersState>((set, get) => ({
     }));
 
     try {
-      const { error: functionError } = await supabase.functions.invoke('manage-banner', {
+      const { error: functionError } = await supabase.functions.invoke('manage-banners', {
         body: {
           action: 'UPDATE_STATUS',
           id: banner.id,
@@ -147,12 +149,12 @@ export const useBannersStore = create<BannersState>((set, get) => ({
     }));
 
     try {
-      const { error: functionError } = await supabase.functions.invoke('manage-banner', {
+      const { error: functionError } = await supabase.functions.invoke('manage-banners', {
         body: {
           action: 'DELETE',
           id: banner.id,
-          imageUrl: banner.image_url 
-        } as BannerAction
+          imageUrl: banner.image_url, 
+        } as BannerAction,
       });
 
       if (functionError) throw functionError;

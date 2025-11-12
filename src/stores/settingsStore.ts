@@ -136,6 +136,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         updateData.close_minute = minute;
       }
 
+      updateData.updated_at = new Date().toISOString();
+
       const { error: updateErr } = await supabase
         .from('store_details')
         .update(updateData)

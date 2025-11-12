@@ -4,6 +4,32 @@ import { supabase } from '../lib/supabase';
 export type OrderStatus = 'Recibido' | 'EnPreparacion' | 'Listo' | 'Entregado';
 export type NotificationType = 'NotificacionGeneral' | 'NotificacionPersonal' | 'PedidoRecibido' | 'PedidoEnPreparacion' | 'PedidoListo' | 'PedidoEntregado';
 
+// Helper function to sort orders with custom logic
+function sortOrders(orders: Order[]): Order[] {
+  return orders.sort((a, b) => {
+    // Only apply custom sorting for "Recibido" status
+    if (a.status === 'Recibido' && b.status === 'Recibido') {
+      const aHasScheduled = !!a.scheduled_delivery_time;
+      const bHasScheduled = !!b.scheduled_delivery_time;
+
+      // Non-scheduled orders come first (immediate orders have priority)
+      if (!aHasScheduled && bHasScheduled) return -1;
+      if (aHasScheduled && !bHasScheduled) return 1;
+
+      // Both are non-scheduled - sort by created_at (oldest first)
+      if (!aHasScheduled && !bHasScheduled) {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+
+      // Both have scheduled times - sort by scheduled time (earliest first)
+      return new Date(a.scheduled_delivery_time!).getTime() - new Date(b.scheduled_delivery_time!).getTime();
+    }
+
+    // For other statuses, sort by created_at (newest first for default behavior)
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+}
+
 export interface OrderDetail {
   id: number;
   product_id: number;
@@ -25,10 +51,13 @@ export interface OrderDetail {
   }>;
 }
 
+export type PaymentStatus = 'pending_payment' | 'paid' | 'payment_failed' | 'canceled';
+
 export interface Order {
   id: number;
   user_uuid: string;
   status: OrderStatus;
+  payment_status: PaymentStatus;
   total: number;
   created_at: string;
   started_at: string | null;
@@ -41,7 +70,8 @@ export interface Order {
     uuid: string;
     first_name: string;
     last_name: string;
-    faculty?: string; 
+    faculty?: string;
+    phone?: string;
   };
 }
 
@@ -89,24 +119,27 @@ export const useOrderStore = create<OrderStore>((set, get) => {
           table: 'orders' 
         }, 
         async (payload) => {
-          if (payload.eventType === 'INSERT') {
+          if (payload.eventType === 'UPDATE') {
             try {
-              // Play sound regardless of window focus
-              if ('Audio' in window) {
-                const audio = new Audio('/assets/new-order.mp3');
-                audio.volume = 0.7;
-                await audio.play().catch(e => console.log('Audio play failed:', e));
-              }
+              const { new: newRow, old: oldRow } = payload;
+              if (newRow.status === 'Recibido' && oldRow.status !== 'Recibido') {
+                // Play sound regardless of window focus
+                if ('Audio' in window) {
+                  const audio = new Audio('/assets/new-order.mp3');
+                  audio.volume = 0.7;
+                  await audio.play().catch(e => console.log('Audio play failed:', e));
+                }
 
-              // Show notification regardless of window focus
-              if ('Notification' in window && Notification.permission === 'granted') {
-                new Notification('Nuevo Pedido', {
-                  body: `Pedido #${payload.new.id} recibido`,
-                  icon: '/vite.svg',
-                  tag: 'new-order',
-                  requireInteraction: false,
-                  silent: false
-                });
+                // Show notification regardless of window focus
+                if ('Notification' in window && Notification.permission === 'granted') {
+                  new Notification('Nuevo Pedido', {
+                    body: `Pedido #${payload.new.id} recibido`,
+                    icon: '/vite.svg',
+                    tag: 'new-order',
+                    requireInteraction: false,
+                    silent: false
+                  });
+                }
               }
             } catch (error) {
               console.error('Error handling new order notification:', error);
@@ -159,7 +192,8 @@ export const useOrderStore = create<OrderStore>((set, get) => {
               uuid,
               first_name,
               last_name,
-              faculty
+              faculty,
+              phone
             ),
             details:order_details (
               id,
@@ -180,6 +214,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
               )
             )
           `)
+          .eq('payment_status', 'paid')
           .gte('created_at', startDate.toISOString())
           .lte('created_at', endDate.toISOString())
           .order('created_at', { ascending: false });
@@ -211,7 +246,10 @@ export const useOrderStore = create<OrderStore>((set, get) => {
           });
         }
 
-        set({ orders: (transformedData as Order[]) || [], loading: false });
+        // Sort orders with custom logic
+        const sortedOrders = sortOrders(transformedData as Order[] || []);
+
+        set({ orders: sortedOrders, loading: false });
       } catch (error: any) {
         console.error('Error fetching orders (history):', error);
         set({
@@ -242,7 +280,8 @@ export const useOrderStore = create<OrderStore>((set, get) => {
               uuid,
               first_name,
               last_name,
-              faculty
+              faculty,
+              phone
             ),
             details:order_details (
               id,
@@ -263,6 +302,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
               )
             )
           `)
+          .eq('payment_status', 'paid')
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -285,7 +325,10 @@ export const useOrderStore = create<OrderStore>((set, get) => {
           });
         }
 
-        set({ orders: transformedData as Order[] || [], loading: false });
+        // Sort orders with custom logic for "Recibido" status
+        const sortedOrders = sortOrders(transformedData as Order[] || []);
+
+        set({ orders: sortedOrders, loading: false });
       } catch (error: any) {
         console.error('Error fetching orders:', error);
         set({

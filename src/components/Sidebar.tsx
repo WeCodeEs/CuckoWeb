@@ -13,6 +13,9 @@ import {
   HeartPlus,
   Blend,
   Soup,
+  UserRoundCog,
+  IdCard,
+  IdCardLanyard,
   Settings
 } from 'lucide-react';
 import { Route } from '../types';
@@ -72,6 +75,7 @@ const routes: RouteWithSubRoutes[] = [
     
     name: 'Adicionales',
     icon: 'HeartPlus',
+    path: '/adicionales',
     subRoutes: [
       {
         path: '/adicionales/variantes',
@@ -85,11 +89,17 @@ const routes: RouteWithSubRoutes[] = [
       }
     ]
   },
-  {
-    path: '/usuarios',
-    name: 'Usuarios',
-    icon: 'Users',
-    adminOnly: true
+  { 
+    path: '/usuarios', 
+    name: 'Staff', 
+    icon: 'IdCardLanyard', 
+    adminOnly: true 
+  },
+  { 
+    path: '/alumnos', 
+    name: 'Alumnos', 
+    icon: 'Users', 
+    adminOnly: true 
   },
   {
     path: '/configuracion',
@@ -110,6 +120,9 @@ const iconComponents: { [key: string]: React.ComponentType<any> } = {
   HeartPlus,
   Blend,
   Soup,
+  UserRoundCog,
+  IdCard,
+  IdCardLanyard,
   Settings,
 };
 

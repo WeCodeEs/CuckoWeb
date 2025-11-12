@@ -330,7 +330,7 @@ export default function Banners() {
       </div>
 
       <ConfirmationModal
-        isOpen={showConfirmation && confirmationType === 'deleteBanner'}
+        isOpen={showConfirmation}
         onClose={() => setShowConfirmation(false)}
         onConfirm={handleConfirmDelete}
         title="¿Eliminar banner?"

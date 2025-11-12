@@ -294,7 +294,7 @@ export default function Settings() {
       </div>
 
       <ConfirmationModal
-        isOpen={showConfirmation && confirmationType !== 'deleteBanner'}
+        isOpen={showConfirmation}
         onClose={() => setShowConfirmation(false)}
         onConfirm={handleConfirm}
         title={confirmationContent.title}

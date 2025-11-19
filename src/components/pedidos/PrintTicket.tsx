@@ -80,28 +80,13 @@ export default function PrintTicket({ order, isTest = false }: Props) {
       style={{ width: '80mm', padding: '8px', fontFamily: 'monospace' }}
     >
       <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-        <h1 style={{ fontSize: 22, margin: '0 0 4px 0', fontWeight: 'bold' }}>CuckooEats</h1>
-        <p style={{ fontSize: 24, margin: '4px 0', fontWeight: 'bold' }}>
+        <h1 style={{ fontSize: 18, margin: '0 0 4px 0', fontWeight: 'bold' }}>CuckooEats</h1>
+        <p style={{ fontSize: 12, margin: 0 }}>
           {isTest ? 'PRUEBA DE IMPRESIÓN' : `Pedido #${displayOrder.id}`}
         </p>
-        {!isTest && displayOrder.scheduled_delivery_time && (
-          <div style={{
-            fontSize: 18,
-            margin: '8px 0',
-            fontWeight: 'bold',
-            padding: '6px',
-            border: '2px solid #000',
-            borderRadius: '4px'
-          }}>
-            <p style={{ margin: '0 0 2px 0' }}>PEDIDO AGENDADO</p>
-            <p style={{ margin: 0, fontSize: 16 }}>
-              Para la(s) {format(new Date(displayOrder.scheduled_delivery_time), 'HH:mm')}
-            </p>
-          </div>
-        )}
       </div>
 
-      <div style={{ fontSize: 13, marginBottom: 8 }}>
+      <div style={{ fontSize: 11, marginBottom: 8 }}>
         <p style={{ margin: 0 }}>
           Fecha:{' '}
           {format(new Date(displayOrder.created_at), 'dd/MM/yyyy HH:mm', {
@@ -145,7 +130,7 @@ export default function PrintTicket({ order, isTest = false }: Props) {
         {displayOrder.details.map((detail, index) => (
           <div
             key={index}
-            style={{ fontSize: 14, marginBottom: 4 }}
+            style={{ fontSize: 11, marginBottom: 4 }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ maxWidth: '60%', wordWrap: 'break-word' }}>
@@ -154,13 +139,13 @@ export default function PrintTicket({ order, isTest = false }: Props) {
               <span>{formatCurrency(detail.subtotal)}</span>
             </div>
             {detail.product.variant && (
-              <div style={{ paddingLeft: 12, color: '#000', fontSize: 14 }}>
+              <div style={{ paddingLeft: 12, color: '#666', fontSize: 10 }}>
                 Variante: {detail.product.variant.name || 'Estándar'}
               </div>
             )}
             {detail.ingredients && detail.ingredients.length > 0 && (
-              <div style={{ paddingLeft: 12, color: 'black', fontSize: 14, fontWeight: 'normal' }}>
-                {detail.ingredients.map(ing => ing.name).join(', ')}
+              <div style={{ paddingLeft: 12, color: '#666', fontSize: 10 }}>
+                Personalización: {detail.ingredients.map(ing => ing.name).join(', ')}
               </div>
             )}
           </div>
@@ -169,7 +154,7 @@ export default function PrintTicket({ order, isTest = false }: Props) {
 
       <div
         style={{
-          fontSize: 16,
+          fontSize: 14,
           textAlign: 'right',
           fontWeight: 'bold',
           marginBottom: 8,

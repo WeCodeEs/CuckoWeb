@@ -8,16 +8,18 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragOverlay,
 } from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import ConfirmationModal from '../components/ConfirmationModal';
 import BannerCard from '../components/BannerCard';
 import BannerPreviewModal from '../components/BannerPreviewModal';
+import BannerReorderNotification from '../components/BannerReorderNotification';
 import { useBannersStore, Banner } from '../stores/bannersStore';
 import { useToast } from '../components/ui/use-toast';
 
@@ -29,6 +31,8 @@ export default function Banners() {
   const [bannerToDelete, setBannerToDelete] = useState<Banner | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [previewBanner, setPreviewBanner] = useState<Banner | null>(null);
+  const [showReorderNotification, setShowReorderNotification] = useState(false);
+  const [activeDragId, setActiveDragId] = useState<number | null>(null);
 
   const {
     banners,
@@ -44,7 +48,7 @@ export default function Banners() {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -123,8 +127,13 @@ export default function Banners() {
     setShowConfirmation(false);
   };
 
+  const handleDragStart = (event: any) => {
+    setActiveDragId(event.active.id);
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveDragId(null);
 
     if (over && active.id !== over.id) {
       const oldIndex = banners.findIndex((banner) => banner.id === active.id);
@@ -138,7 +147,7 @@ export default function Banners() {
 
       try {
         await updateBannersOrder(updatedBanners);
-        toast({ title: 'Éxito', description: 'Orden actualizado correctamente.' });
+        setShowReorderNotification(true);
       } catch (error: any) {
         toast({
           variant: 'destructive',
@@ -147,6 +156,10 @@ export default function Banners() {
         });
       }
     }
+  };
+
+  const handleDragCancel = () => {
+    setActiveDragId(null);
   };
 
   const handlePreview = (banner: Banner) => {
@@ -288,11 +301,13 @@ export default function Banners() {
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
+                  onDragStart={handleDragStart}
                   onDragEnd={handleDragEnd}
+                  onDragCancel={handleDragCancel}
                 >
                   <SortableContext
                     items={banners.map((b) => b.id)}
-                    strategy={verticalListSortingStrategy}
+                    strategy={rectSortingStrategy}
                   >
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {banners.map((banner) => (
@@ -306,6 +321,18 @@ export default function Banners() {
                       ))}
                     </div>
                   </SortableContext>
+                  <DragOverlay>
+                    {activeDragId ? (
+                      <div className="opacity-80">
+                        <BannerCard
+                          banner={banners.find((b) => b.id === activeDragId)!}
+                          onToggle={() => {}}
+                          onDelete={() => {}}
+                          onPreview={() => {}}
+                        />
+                      </div>
+                    ) : null}
+                  </DragOverlay>
                 </DndContext>
               )
             )}
@@ -340,6 +367,11 @@ export default function Banners() {
           onNavigate={handleNavigatePreview}
         />
       )}
+
+      <BannerReorderNotification
+        show={showReorderNotification}
+        onClose={() => setShowReorderNotification(false)}
+      />
     </>
   );
 }

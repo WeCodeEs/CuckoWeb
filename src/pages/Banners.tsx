@@ -26,8 +26,7 @@ import { useToast } from '../components/ui/use-toast';
 export default function Banners() {
   const { toast } = useToast();
 
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [bannerToDelete, setBannerToDelete] = useState<Banner | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [previewBanner, setPreviewBanner] = useState<Banner | null>(null);
@@ -60,31 +59,22 @@ export default function Banners() {
     fetchBanners();
   }, [fetchBanners]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
-      setSelectedFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleAddBanner = async () => {
-    if (selectedFile) {
+      setIsUploading(true);
       try {
-        await addBanner(selectedFile);
-        setImagePreview(null);
-        setSelectedFile(null);
+        await addBanner(file);
         toast({ title: 'Éxito', description: 'Banner agregado correctamente.' });
+        e.target.value = '';
       } catch (error: any) {
         toast({
           variant: 'destructive',
           title: 'Error',
           description: error.message || 'No se pudo agregar el banner.',
         });
+      } finally {
+        setIsUploading(false);
       }
     }
   };
@@ -218,43 +208,19 @@ export default function Banners() {
                 onChange={handleFileChange}
                 className="hidden"
                 id="banner-upload"
+                disabled={isUploading}
               />
               <label
                 htmlFor="banner-upload"
-                className="px-4 py-2 bg-primary dark:bg-secondary text-white rounded-lg cursor-pointer hover:bg-primary-dark dark:hover:bg-secondary/80 transition-colors text-sm font-medium"
+                className={`px-4 py-2 bg-primary dark:bg-secondary text-white rounded-lg transition-colors text-sm font-medium ${
+                  isUploading
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'cursor-pointer hover:bg-primary-dark dark:hover:bg-secondary/80'
+                }`}
               >
-                Seleccionar imagen
+                {isUploading ? 'Subiendo...' : 'Seleccionar imagen'}
               </label>
             </div>
-
-            {imagePreview && (
-              <div className="mt-6 space-y-4">
-                <div className="relative rounded-lg overflow-hidden border border-gray-200 dark:border-darkbg">
-                  <img
-                    src={imagePreview}
-                    alt="Vista previa"
-                    className="w-full h-48 object-cover"
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleAddBanner}
-                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                  >
-                    Agregar banner
-                  </button>
-                  <button
-                    onClick={() => {
-                      setImagePreview(null);
-                      setSelectedFile(null);
-                    }}
-                    className="px-4 py-2 bg-gray-200 dark:bg-darkbg text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-darkbg/80 transition-colors text-sm font-medium"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
 
           <div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Image, Upload, Trash2, ChevronUp, ChevronDown, Eye, EyeOff } from 'lucide-react';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { useBannersStore, Banner } from '../stores/bannersStore'; 
@@ -22,6 +22,20 @@ export default function Banners() {
     toggleBannerStatus,
     deleteBanner,
   } = useBannersStore();
+
+  const hasBanners = !loadingBanners && !bannerError && banners.length > 0;
+  const safeIndex = hasBanners ? Math.min(currentSlide, banners.length - 1) : 0;
+  const currentBanner: Banner | null = hasBanners ? banners[safeIndex] : null;
+
+  useEffect(() => {
+    if (banners.length === 0) {
+      if (currentSlide !== 0) setCurrentSlide(0);
+      return;
+    }
+    if (currentSlide > banners.length - 1) {
+      setCurrentSlide(banners.length - 1);
+    }
+  }, [banners.length]);
 
   useEffect(() => {
     fetchBanners();
@@ -216,16 +230,16 @@ export default function Banners() {
                 </p>
               </div>
             ) : (
-              !loadingBanners && banners.length > 0 && (
+              !loadingBanners && banners.length > 0 && currentBanner && (
                 <div className="space-y-4">
                   <div className="relative rounded-2xl overflow-hidden">
                     <div className="relative aspect-[3/1] bg-gray-200 dark:bg-darkbg">
                       <img
-                        src={banners[currentSlide].image_url}
-                        alt={`Banner ${banners[currentSlide].sort_order}`}
+                        src={currentBanner.image_url}
+                        alt={`Banner ${currentBanner.sort_order}`}
                         className="w-full h-full object-cover"
                       />
-                      {!banners[currentSlide].active && (
+                      {!currentBanner.active && (
                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                           <span className="text-white text-lg font-semibold">Banner Inactivo</span>
                         </div>
@@ -238,7 +252,7 @@ export default function Banners() {
                           key={banner.id}
                           onClick={() => setCurrentSlide(index)}
                           className={`w-2 h-2 rounded-full transition-all ${
-                            index === currentSlide
+                            index === safeIndex
                               ? 'bg-primary dark:bg-secondary w-6'
                               : 'bg-gray-400 dark:bg-gray-600'
                           }`}
@@ -252,16 +266,16 @@ export default function Banners() {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                          Banner #{banners[currentSlide].sort_order}
+                          Banner #{currentBanner.sort_order}
                         </span>
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                            banners[currentSlide].active
+                            currentBanner.active
                               ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400'
                               : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-400'
                           }`}
                         >
-                          {banners[currentSlide].active ? 'Activo' : 'Inactivo'}
+                          {currentBanner.active ? 'Activo' : 'Inactivo'}
                         </span>
                       </div>
                     </div>
@@ -269,8 +283,8 @@ export default function Banners() {
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1">
                         <button
-                          onClick={() => handleMoveBanner(banners[currentSlide].id, 'up')}
-                          disabled={currentSlide === 0}
+                          onClick={() => handleMoveBanner(currentBanner.id, 'up')}
+                          disabled={safeIndex === 0}
                           className="px-3 py-1.5 bg-white dark:bg-darkbg-lighter text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-darkbg disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-xs font-medium flex items-center gap-1"
                           title="Mover arriba"
                         >
@@ -278,8 +292,8 @@ export default function Banners() {
                           Subir
                         </button>
                         <button
-                          onClick={() => handleMoveBanner(banners[currentSlide].id, 'down')}
-                          disabled={currentSlide === banners.length - 1}
+                          onClick={() => handleMoveBanner(currentBanner.id, 'down')}
+                          disabled={safeIndex === banners.length - 1}
                           className="px-3 py-1.5 bg-white dark:bg-darkbg-lighter text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-darkbg disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-xs font-medium flex items-center gap-1"
                           title="Mover abajo"
                         >
@@ -291,15 +305,15 @@ export default function Banners() {
                       <div className="flex-1"></div>
 
                       <button
-                        onClick={() => handleToggleBanner(banners[currentSlide])}
+                        onClick={() => handleToggleBanner(currentBanner)}
                         className={`px-3 py-1.5 rounded-lg transition-colors text-xs font-medium flex items-center gap-1 ${
-                          banners[currentSlide].active
+                          currentBanner.active
                             ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-900/30'
                             : 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/30'
                         }`}
-                        title={banners[currentSlide].active ? 'Desactivar' : 'Activar'}
+                        title={currentBanner.active ? 'Desactivar' : 'Activar'}
                       >
-                        {banners[currentSlide].active ? (
+                        {currentBanner.active ? (
                           <>
                             <EyeOff className="w-3.5 h-3.5" />
                             Desactivar
@@ -313,7 +327,7 @@ export default function Banners() {
                       </button>
 
                       <button
-                        onClick={() => handleDeleteBannerRequest(banners[currentSlide])}
+                        onClick={() => handleDeleteBannerRequest(currentBanner)}
                         className="px-3 py-1.5 bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/30 transition-colors text-xs font-medium flex items-center gap-1"
                         title="Eliminar"
                       >

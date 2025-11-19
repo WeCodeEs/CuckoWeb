@@ -288,16 +288,21 @@ export default function Banners() {
                     </div>
                   </SortableContext>
                   <DragOverlay>
-                    {activeDragId ? (
-                      <div className="opacity-80">
-                        <BannerCard
-                          banner={banners.find((b) => b.id === activeDragId)!}
-                          onToggle={() => {}}
-                          onDelete={() => {}}
-                          onPreview={() => {}}
-                        />
-                      </div>
-                    ) : null}
+                    {(() => {
+                      const activeBanner = activeDragId
+                        ? banners.find((b) => b.id === activeDragId)
+                        : null;
+                      return activeBanner ? (
+                        <div className="opacity-80">
+                          <BannerCard
+                            banner={activeBanner}
+                            onToggle={() => {}}
+                            onDelete={() => {}}
+                            onPreview={() => {}}
+                          />
+                        </div>
+                      ) : null;
+                    })()}
                   </DragOverlay>
                 </DndContext>
               )

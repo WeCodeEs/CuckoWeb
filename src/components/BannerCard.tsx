@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Trash2, GripVertical } from 'lucide-react';
+import { Eye, EyeOff, Trash2 } from 'lucide-react';
 import { Banner } from '../stores/bannersStore';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -43,9 +43,11 @@ export default function BannerCard({ banner, onToggle, onDelete, onPreview }: Ba
     >
       <div className="relative aspect-[3/1] bg-gray-100 dark:bg-darkbg">
         <img
+          {...attributes}
+          {...listeners}
           src={banner.image_url}
           alt={`Banner ${banner.sort_order}`}
-          className="w-full h-full object-cover cursor-pointer"
+          className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
           onClick={() => onPreview(banner)}
         />
         {!banner.active && (
@@ -69,14 +71,6 @@ export default function BannerCard({ banner, onToggle, onDelete, onPreview }: Ba
             {banner.active ? 'Activo' : 'Inactivo'}
           </span>
         </div>
-        <button
-          {...attributes}
-          {...listeners}
-          className="absolute top-2 right-2 p-2 bg-white/90 dark:bg-darkbg/90 rounded-lg hover:bg-white dark:hover:bg-darkbg cursor-grab active:cursor-grabbing shadow-lg transition-colors"
-          title="Arrastrar para reordenar"
-        >
-          <GripVertical className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-        </button>
       </div>
 
       <div className="p-3 space-y-2">

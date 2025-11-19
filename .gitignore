@@ -25,4 +25,6 @@ dist-ssr
 
 .bolt
 .env
+.env.staging
+.env.production
 repo-backup.bundle

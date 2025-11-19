@@ -10,6 +10,7 @@ import Menus from './pages/Menus';
 import Categories from './pages/Categories';
 import Usuarios from './pages/Usuarios';
 import Alumnos from './pages/Students';
+import Settings from './pages/Settings';
 import VariantOptions from './pages/adicionales/VariantOptions';
 import IngredientOptions from './pages/adicionales/IngredientOptions';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -66,6 +67,14 @@ function App() {
             element={
               <ProtectedRoute requireAdmin>
                 <Alumnos />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="configuracion"
+            element={
+              <ProtectedRoute requireAdmin>
+                <Settings />
               </ProtectedRoute>
             }
           />

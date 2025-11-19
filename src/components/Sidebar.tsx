@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
+import {
+  LayoutDashboard,
   ClipboardList,
   History,
   MenuSquare,
@@ -16,6 +16,7 @@ import {
   UserRoundCog,
   IdCard,
   IdCardLanyard,
+  Settings
 } from 'lucide-react';
 import { Route } from '../types';
 import { useAuthStore } from '../stores/authStore';
@@ -100,6 +101,12 @@ const routes: RouteWithSubRoutes[] = [
     icon: 'Users', 
     adminOnly: true 
   },
+  {
+    path: '/configuracion',
+    name: 'Configuración',
+    icon: 'Settings',
+    adminOnly: true
+  },
 ];
 
 const iconComponents: { [key: string]: React.ComponentType<any> } = {
@@ -116,6 +123,7 @@ const iconComponents: { [key: string]: React.ComponentType<any> } = {
   UserRoundCog,
   IdCard,
   IdCardLanyard,
+  Settings,
 };
 
 export default function Sidebar() {

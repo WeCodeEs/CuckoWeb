@@ -1,9 +1,10 @@
-import React from 'react';
-import { Clock, Printer } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import React, { useState, useEffect } from 'react';
+import { Clock, CalendarClock, Printer, Timer } from 'lucide-react';
+import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Order } from '../../stores/orderStore';
 import { formatCurrency } from '../../utils/formatCurrency';
+import { getScheduledOrderAlert } from '../../utils/timeAlerts';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
@@ -23,6 +24,13 @@ const statusColors = {
   Entregado: 'border-gray-500 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/10',
 };
 
+const badgeColors = {
+  Recibido: 'bg-blue-500 dark:bg-blue-600',
+  EnPreparacion: 'bg-orange-500 dark:bg-orange-600',
+  Listo: 'bg-green-500 dark:bg-green-600',
+  Entregado: 'bg-gray-500 dark:bg-gray-600',
+};
+
 const statusLabels = {
   Recibido: 'Recibido',
   EnPreparacion: 'En Preparación',
@@ -31,6 +39,8 @@ const statusLabels = {
 };
 
 export default function PedidoCard({ order, onClick, onPrint, isDragging = false, enableDrag = true }: Props) {
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: order.id,
     disabled: !enableDrag,
@@ -42,6 +52,25 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
     WebkitUserSelect: 'none',
     userSelect: 'none',
   } : {};
+
+  // Update time every minute for alerts
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Get alert info for scheduled orders in all statuses
+  const alertInfo = order.scheduled_delivery_time
+    ? getScheduledOrderAlert(
+        order.scheduled_delivery_time,
+        order.status,
+        order.ready_at,
+        order.delivered_at
+      )
+    : null;
 
   // Determine which timestamp to show based on status
   const getRelevantTimestamp = () => {
@@ -76,23 +105,60 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
       {...(enableDrag ? attributes : {})}
       {...(enableDrag ? listeners : {})}
       className={clsx(
-        "bg-white dark:bg-darkbg-lighter rounded-lg shadow-sm hover:shadow-md transition-all duration-200 border-l-4 cursor-pointer active:scale-[0.98]",
-        statusColors[order.status],
+        "cursor-pointer active:scale-[0.98]",
         {
           'opacity-50 shadow-xl z-50': isDragging,
           'transform-gpu will-change-transform': enableDrag,
           'touch-manipulation': !enableDrag,
-          'hover:scale-[1.02]': !isDragging,
         }
       )}
       onClick={onClick}
     >
-      <div className="p-3 sm:p-4">
-        <div className="flex items-start justify-between mb-2 sm:mb-3">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-            #{order.id}
-          </h3>
-          <div className="flex items-center gap-2">
+      {order.scheduled_delivery_time && (
+        <div className="w-[96%] mx-auto">
+          <div
+            className={clsx(
+              "flex items-center gap-2 px-3 py-1 rounded-t-lg rounded-b-none",
+              "text-white dark:text-white",
+              alertInfo ? alertInfo.badgeColor : badgeColors[order.status],
+              "shadow-primary-light/20"
+            )}
+          >
+            {alertInfo ? (
+              <>
+                <Timer className={clsx("w-4 h-4 text-white dark:text-white", alertInfo.iconAnimation)} />
+                <span className="text-xs sm:text-sm font-bold">
+                  {alertInfo.badgeText} - Entrega: {format(new Date(order.scheduled_delivery_time as string), "HH:mm")}
+                </span>
+              </>
+            ) : (
+              <>
+                <CalendarClock className="w-4 h-4 text-white dark:text-white" />
+                <span className="text-xs sm:text-sm font-medium">
+                  Agendado para la(s) {format(new Date(order.scheduled_delivery_time as string), "HH:mm")}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div
+        className={clsx(
+          "p-3 sm:p-4 shadow-sm transition-transform transition-shadow duration-200 border-l-4 transform",
+          alertInfo ? alertInfo.className : statusColors[order.status],
+          "bg-white dark:bg-darkbg-lighter",
+          "rounded-lg",
+          {
+            'hover:-translate-y-0.5 hover:shadow-lg hover:ring-1 hover:ring-primary/20 hover:z-10': !isDragging,
+          }
+        )}
+      >
+        <div className="mb-2 sm:mb-3">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+              #{order.id}
+            </h3>
             <button
               onClick={handlePrintClick}
               className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-secondary hover:bg-gray-100 dark:hover:bg-darkbg rounded-lg transition-colors"
@@ -100,33 +166,34 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
             >
               <Printer className="w-4 h-4" />
             </button>
-            <div className="flex items-center text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-              <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
-              <span className="truncate max-w-[80px] sm:max-w-none">{timeAgo}</span>
-            </div>
+          </div>
+          <div className="flex items-center text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
+            <span>{timeAgo}</span>
           </div>
         </div>
 
-        {/* Customer Name */}
-        {order.user && (
-          <div className="mb-2 sm:mb-3">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              {order.user.first_name} {order.user.last_name}
-            </p>
-          </div>
-        )}
-
-        <div className="space-y-1 sm:space-y-2">
+        {/* Products - Now with more prominence */}
+        <div className="space-y-1.5 sm:space-y-2 mb-3">
           {order.details.slice(0, 3).map((detail) => (
-            <p key={detail.id} className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 line-clamp-1">
-              <span className="font-medium">{detail.quantity}x</span> {detail.product.name}
-              {detail.product?.variant?.name && (
-                <span className="text-gray-500 dark:text-gray-400"> ({detail.product.variant.name})</span>
+            <div key={detail.id}>
+              <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">
+                {detail.quantity}x {detail.product.name}
+              </p>
+              {(detail.product_variant?.variant || (detail.ingredients && detail.ingredients.length > 0)) && (
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                  {detail.product_variant?.variant && (
+                    <span>{detail.product_variant.variant.name}</span>
+                  )}
+                  {detail.ingredients && detail.ingredients.length > 0 && (
+                    <span>
+                      {detail.product_variant?.variant && ', '}
+                      {detail.ingredients.map(ing => ing.name).join(', ')}
+                    </span>
+                  )}
+                </p>
               )}
-              {detail.ingredients && detail.ingredients.length > 0 && (
-                <span className="text-gray-500 dark:text-gray-400"> ({detail.ingredients.map(ing => ing.name).join(', ')})</span>
-              )}
-            </p>
+            </div>
           ))}
           {order.details.length > 3 && (
             <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 italic">
@@ -135,8 +202,16 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
           )}
         </div>
 
+        {/* Bottom section with price and customer name */}
         <div className="flex items-center justify-between mt-3 sm:mt-4 gap-2">
-          <div className="text-base sm:text-lg font-semibold text-primary dark:text-secondary">
+          {/* Customer Name - Bottom left with ellipsis */}
+          {order.user && (
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate flex-1 min-w-0">
+              {order.user.first_name} {order.user.last_name}
+            </p>
+          )}
+          {/* Price */}
+          <div className="text-base sm:text-lg font-semibold text-primary dark:text-secondary flex-shrink-0">
             {formatCurrency(order.total)}
           </div>
         </div>

@@ -59,19 +59,7 @@ export default function Usuarios() {
       user.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === 'Todos' || user.role === roleFilter;
     const result = matchesSearch && matchesRole;
-    
-    // Debug filtering for Jair user
-    if (user.full_name.includes('Jair') || user.email.includes('jair')) {
-      console.log('🔍 Filtering Jair user:', {
-        user: user.full_name,
-        searchTerm,
-        roleFilter,
-        matchesSearch,
-        matchesRole,
-        finalResult: result
-      });
-    }
-    
+        
     return result;
   });
   
@@ -101,8 +89,8 @@ export default function Usuarios() {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-primary-dark dark:text-white">Usuarios</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-300">Gestiona los usuarios del sistema</p>
+          <h1 className="text-2xl font-bold text-primary-dark dark:text-white">Staff</h1>
+          <p className="text-sm text-gray-600 dark:text-gray-300">Gestiona a los administradores y operadores</p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}

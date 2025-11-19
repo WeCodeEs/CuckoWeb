@@ -1,11 +1,11 @@
 import React, { useEffect } from 'react';
 import { useOrderStore, OrderStatus } from '../stores/orderStore';
-import { supabase } from '../lib/supabase';
 import PedidoCard from '../components/pedidos/PedidoCard';
 import PedidoDrawer from '../components/pedidos/PedidoDrawer';
 import PrintPreviewModal from '../components/pedidos/PrintPreviewModal';
 import SkeletonKanbanCard from '../components/skeletons/SkeletonKanbanCard';
-import { Printer, Plus, Trash2 } from 'lucide-react';
+import { Printer } from 'lucide-react';
+import { format } from 'date-fns';
 import {
   DndContext,
   DragEndEvent,
@@ -19,25 +19,6 @@ import {
   useDroppable,
 } from '@dnd-kit/core';
 import { useToast } from '../components/ui/use-toast';
-import { generateMultipleTestOrders } from '../utils/testOrderGenerator';
-
-// Function to delete all orders
-const deleteAllOrders = async () => {
-  try {
-    // Delete all orders - CASCADE will handle order_details automatically
-    const { error } = await supabase
-      .from('orders')
-      .delete()
-      .neq('id', 0); // Delete all orders
-    
-    if (error) throw error;
-    
-    return { success: true };
-  } catch (error: any) {
-    console.error('Error deleting orders:', error);
-    throw error;
-  }
-};
 
 const columns: { status: OrderStatus; title: string }[] = [
   { status: 'Recibido', title: 'Recibidos' },
@@ -66,17 +47,17 @@ function DroppableColumn({
     <div
       ref={enableDrop ? setNodeRef : undefined}
       aria-label={`${title} column`}
-      className={`flex-1 min-w-[280px] md:min-w-[300px] md:max-w-[400px] flex flex-col bg-gray-100 dark:bg-darkbg-darker rounded-xl p-3 md:p-4 transition-all duration-200 ${
+      className={`w-full md:flex-1 md:min-w-[300px] lg:max-w-[400px] flex flex-col bg-gray-100 dark:bg-darkbg-darker rounded-xl p-3 md:p-4 transition-all duration-200 ${
         isOver && enableDrop ? 'ring-2 ring-primary dark:ring-secondary ring-inset bg-gray-200 dark:bg-darkbg' : ''
       }`}
     >
       <h2 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-3 md:mb-4 flex items-center justify-between">
         <span>{title}</span>
-        <span className="text-xs bg-gray-200 dark:bg-darkbg px-2 py-1 rounded-full">
+        <span className="text-xs bg-gray-200 dark:bg-darkbg px-2 py-1 rounded-full text-gray-700 dark:text-gray-300">
           {React.Children.count(children)}
         </span>
       </h2>
-      <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-3 md:space-y-4 min-h-[200px] scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-darkbg">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-3 md:space-y-4 min-h-[200px] scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-darkbg pr-1">
         {children}
       </div>
     </div>
@@ -90,7 +71,7 @@ export default function Orders() {
     error,
     selectedOrder,
     isDrawerOpen,
-    fetchOrders,
+    fetchOrdersToday,
     updateOrderStatus,
     setSelectedOrder,
     setIsDrawerOpen,
@@ -141,7 +122,7 @@ export default function Orders() {
   useEffect(() => {
     const initializeOrders = async () => {
       try {
-        await fetchOrders();
+        await fetchOrdersToday();
         subscribeToOrders();
 
         // Request notification permission
@@ -162,7 +143,7 @@ export default function Orders() {
     return () => {
       unsubscribeFromOrders();
     };
-  }, [fetchOrders, subscribeToOrders, unsubscribeFromOrders]);
+  }, [fetchOrdersToday, subscribeToOrders, unsubscribeFromOrders]);
 
   const handleOrderClick = (order: any) => {
     if (!activeId) {
@@ -192,11 +173,17 @@ export default function Orders() {
     const printContent = `
       <div style="width: 80mm; padding: 8px; font-family: monospace;">
         <div style="text-align: center; margin-bottom: 8px;">
-          <h1 style="font-size: 18px; margin: 0 0 4px 0; font-weight: bold;">CuckooEats</h1>
-          <p style="font-size: 12px; margin: 0;">Pedido #${order.id}</p>
+          <h1 style="font-size: 22px; margin: 0 0 4px 0; font-weight: bold;">CuckooEats</h1>
+          <p style="font-size: 24px; margin: 4px 0; font-weight: bold;">Pedido #${order.id}</p>
+          ${order.scheduled_delivery_time ? `
+            <div style="font-size: 18px; margin: 8px 0; font-weight: bold; padding: 6px; border: 2px solid #000; border-radius: 4px;">
+              <p style="margin: 0 0 2px 0;">PEDIDO AGENDADO</p>
+              <p style="margin: 0; font-size: 16px;">Para la(s) ${format(new Date(order.scheduled_delivery_time), 'HH:mm')}</p>
+            </div>
+          ` : ''}
         </div>
-        
-        <div style="font-size: 11px; margin-bottom: 8px;">
+
+        <div style="font-size: 13px; margin-bottom: 8px;">
           <p style="margin: 0;">Fecha: ${new Date(order.created_at).toLocaleString('es-PE')}</p>
           <p style="margin: 0;">Cliente: ${order.user ? `${order.user.first_name} ${order.user.last_name}` : 'Cliente'}</p>
           <p style="margin: 0;">Estado: ${order.status}</p>
@@ -207,18 +194,22 @@ export default function Orders() {
         
         <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 8px 0; margin-bottom: 8px;">
           ${order.details.map(detail => `
-            <div style="font-size: 11px; margin-bottom: 4px;">
+            <div style="font-size: 14px; margin-bottom: 4px;">
               <div style="display: flex; justify-content: space-between;">
                 <span style="max-width: 60%; word-wrap: break-word;">${detail.quantity}x ${detail.product.name}</span>
                 <span>$${detail.subtotal.toFixed(2)}</span>
               </div>
-              ${detail.product.variant ? `<div style="padding-left: 12px; color: #666; font-size: 10px;">${detail.product.variant.name}</div>` : ''}
-              ${detail.notes ? `<div style="padding-left: 12px; color: #666; font-size: 10px;">Nota: ${detail.notes}</div>` : ''}
+              ${detail.product_variant && detail.product_variant?.variant
+                ? `<div style="padding-left: 12px; color: #000; font-size: 14px;">Variante: ${detail.product_variant?.variant.name}</div>`
+                : ''}
+              ${detail.ingredients && detail.ingredients.length
+                ? `<div style="padding-left: 12px; color: #000; font-size: 14px;">${detail.ingredients.map(ing => ing.name).join(', ')}</div>`
+                : ''}
             </div>
           `).join('')}
         </div>
-        
-        <div style="font-size: 14px; text-align: right; font-weight: bold; margin-bottom: 8px;">
+
+        <div style="font-size: 16px; text-align: right; font-weight: bold; margin-bottom: 8px;">
           Total: $${order.total.toFixed(2)}
         </div>
       </div>
@@ -241,6 +232,7 @@ export default function Orders() {
               font-family: 'Courier New', monospace;
               font-size: 11px;
               line-height: 1.2;
+              color: #000;
             }
             * {
               box-sizing: border-box;
@@ -318,7 +310,7 @@ export default function Orders() {
           </p>
           <p className="mt-2 text-sm text-red-600 dark:text-red-300">{error}</p>
           <button
-            onClick={() => fetchOrders()}
+            onClick={() => fetchOrdersToday()}
             className="mt-4 px-4 py-2 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900 transition-colors"
           >
             Reintentar
@@ -329,82 +321,34 @@ export default function Orders() {
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)] bg-gray-50 dark:bg-darkbg transition-colors duration-200">
-      <div className="h-full flex flex-col p-3 md:p-6">
-        <div className="mb-4 md:mb-6 flex flex-col md:flex-row md:items-center gap-3 md:gap-0 md:justify-between">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold text-primary-dark dark:text-white">
-              Pedidos
-            </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              Gestiona los pedidos del sistema
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={async () => {
-                try {
-                  await generateMultipleTestOrders(1);
-                  toast({
-                    title: 'Pedidos de prueba creados',
-                    description: 'Se han creado 1 pedidos de prueba con datos reales',
-                  });
-                } catch (error: any) {
-                  toast({
-                    variant: 'destructive',
-                    title: 'Error',
-                    description: error.message || 'Error al crear pedidos de prueba',
-                  });
-                }
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary dark:text-secondary bg-white dark:bg-darkbg-lighter rounded-xl hover:bg-primary/5 dark:hover:bg-darkbg transition-colors border border-primary/20 dark:border-secondary/20"
-            >
-              <Plus className="w-4 h-4" />
-              Crear Pedidos de Prueba
-            </button>
-            <button
-              onClick={async () => {
-                if (window.confirm('¿Estás seguro de que deseas eliminar TODOS los pedidos? Esta acción no se puede deshacer.')) {
-                  try {
-                    await deleteAllOrders();
-                    await fetchOrders();
-                    toast({
-                      title: 'Pedidos eliminados',
-                      description: 'Todos los pedidos han sido eliminados exitosamente',
-                      className: "border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20",
-                    
-                    });
-                  } catch (error: any) {
-                    toast({
-                      variant: 'destructive',
-                      title: 'Error',
-                      description: error.message || 'Error al eliminar los pedidos',
-                    });
-                  }
-                }
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-              Eliminar Todos
-            </button>
-            <button
-              onClick={() => setShowPrintPreview(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary dark:text-secondary bg-white dark:bg-darkbg-lighter rounded-xl hover:bg-primary/5 dark:hover:bg-darkbg transition-colors border border-primary/20 dark:border-secondary/20"
-            >
-              <Printer className="w-4 h-4" />
-              Prueba de Impresión
-            </button>
-          </div>
+    <div className="h-full flex flex-col">
+      <div className="flex-shrink-0 mb-4 md:mb-6 flex flex-col md:flex-row md:items-center gap-3 md:gap-0 md:justify-between">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-primary-dark dark:text-white">
+            Pedidos
+          </h1>
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Gestiona los pedidos del sistema
+          </p>
         </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowPrintPreview(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary dark:text-secondary bg-white dark:bg-darkbg-lighter rounded-xl hover:bg-primary/5 dark:hover:bg-darkbg transition-colors border border-primary/20 dark:border-secondary/20"
+          >
+            <Printer className="w-4 h-4" />
+            Prueba de Impresión
+          </button>
+        </div>
+      </div>
 
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="flex-1 flex flex-col md:flex-row gap-3 md:gap-6 min-h-0 overflow-x-auto">
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="flex-1 flex flex-col md:flex-row gap-3 md:gap-6 min-h-0 overflow-auto md:overflow-x-auto md:overflow-y-hidden">
             {columns.map(({ status, title }) => (
               <DroppableColumn 
                 key={status} 
@@ -421,6 +365,45 @@ export default function Orders() {
                 ) : (
                   orders
                     .filter((order) => order.status === status)
+                    .sort((a, b) => {
+                      // For "Recibido" status: sort by urgency
+                      if (status === 'Recibido') {
+                        const aHasScheduled = !!a.scheduled_delivery_time;
+                        const bHasScheduled = !!b.scheduled_delivery_time;
+
+                        // Both have scheduled times
+                        if (aHasScheduled && bHasScheduled) {
+                          const now = new Date().getTime();
+                          const aTime = new Date(a.scheduled_delivery_time!).getTime();
+                          const bTime = new Date(b.scheduled_delivery_time!).getTime();
+
+                          const aMinutesUntil = Math.floor((aTime - now) / 60000);
+                          const bMinutesUntil = Math.floor((bTime - now) / 60000);
+
+                          // Both are urgent (within 30 min or overdue) - sort by closest time
+                          if (aMinutesUntil <= 30 && bMinutesUntil <= 30) {
+                            return aTime - bTime; // Earliest first
+                          }
+
+                          // One is urgent, one is not - urgent comes first
+                          if (aMinutesUntil <= 30) return -1;
+                          if (bMinutesUntil <= 30) return 1;
+
+                          // Neither urgent - sort by scheduled time
+                          return aTime - bTime;
+                        }
+
+                        // Non-scheduled come before scheduled (immediate orders priority)
+                        if (!aHasScheduled && bHasScheduled) return -1;
+                        if (aHasScheduled && !bHasScheduled) return 1;
+
+                        // Both non-scheduled - oldest first
+                        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+                      }
+
+                      // For other statuses - maintain store order
+                      return 0;
+                    })
                     .map((order) => (
                       <PedidoCard
                         key={order.id}
@@ -434,21 +417,20 @@ export default function Orders() {
                 )}
               </DroppableColumn>
             ))}
-          </div>
+        </div>
 
-          <DragOverlay>
-            {activeId ? (
-              <PedidoCard
-                order={orders.find(o => o.id === activeId)!}
-                onClick={() => {}}
-                onPrint={() => {}}
-                isDragging
-                enableDrag={false}
-              />
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-      </div>
+        <DragOverlay>
+          {activeId ? (
+            <PedidoCard
+              order={orders.find(o => o.id === activeId)!}
+              onClick={() => {}}
+              onPrint={() => {}}
+              isDragging
+              enableDrag={false}
+            />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       {isDrawerOpen && selectedOrder && (
         <PedidoDrawer

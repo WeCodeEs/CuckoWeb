@@ -163,3 +163,41 @@ export function getReadyOrderAlert(
     iconAnimation: ''
   };
 }
+
+export function getPreparationTimeAlert(
+  startedAt: string | null,
+  orderStatus?: OrderStatus
+): TimeAlert | null {
+  if (!startedAt || orderStatus !== 'EnPreparacion') {
+    return null;
+  }
+
+  const now = new Date();
+  const started = new Date(startedAt);
+  const diffMs = now.getTime() - started.getTime();
+  const minutesElapsed = Math.floor(diffMs / 1000 / 60);
+
+  if (minutesElapsed < 12) {
+    return null;
+  }
+
+  if (minutesElapsed >= 15) {
+    return {
+      level: 'critical',
+      minutesRemaining: -minutesElapsed,
+      className: 'alert-red',
+      badgeText: `¡${minutesElapsed} min en preparación!`,
+      badgeColor: 'bg-red-500',
+      iconAnimation: 'spin-urgent'
+    };
+  }
+
+  return {
+    level: 'warning',
+    minutesRemaining: -minutesElapsed,
+    className: 'alert-yellow',
+    badgeText: `${minutesElapsed} min en preparación`,
+    badgeColor: 'bg-yellow-500',
+    iconAnimation: 'spin-slow'
+  };
+}

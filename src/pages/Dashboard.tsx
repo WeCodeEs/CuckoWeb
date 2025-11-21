@@ -182,6 +182,7 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* --- GRÁFICA DE VENTAS POR DÍA  --- */}
           <div className="bg-white dark:bg-darkbg-lighter rounded-xl shadow-soft dark:shadow-dark p-6">
             <h2 className="text-lg font-bold text-primary-dark dark:text-white mb-6">
               Ventas por Día
@@ -197,7 +198,8 @@ export default function Dashboard() {
                       dataKey="date"
                       tick={{ fontSize: 12 }}
                       tickFormatter={(value) => {
-                        const date = new Date(value);
+                        const date = new Date(value + 'T12:00:00');
+                        
                         return date.toLocaleDateString('es-PE', {
                           day: '2-digit',
                           month: 'short'
@@ -215,7 +217,7 @@ export default function Dashboard() {
                     <Tooltip
                       content={<CustomTooltip
                         labelFormatter={(label: string) => {
-                          const date = new Date(label);
+                          const date = new Date(label + 'T12:00:00');
                           return date.toLocaleDateString('es-PE', {
                             weekday: 'long',
                             year: 'numeric',
@@ -241,6 +243,7 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* --- GRÁFICA TOP 5 PRODUCTOS --- */}
           <div className="bg-white dark:bg-darkbg-lighter rounded-xl shadow-soft dark:shadow-dark p-6">
             <h2 className="text-lg font-bold text-primary-dark dark:text-white mb-6">
               Top 5 Productos
@@ -259,7 +262,7 @@ export default function Dashboard() {
                     <XAxis
                       type="number"
                       tick={{ fontSize: 12 }}
-                      tickFormatter={(value) => `$${value}`}
+                      tickFormatter={(value) => `${value}`} 
                       className="dark:text-gray-300"
                       stroke="#9ca3af"
                     />
@@ -272,12 +275,29 @@ export default function Dashboard() {
                       stroke="#9ca3af"
                     />
                     <Tooltip
-                      content={<CustomTooltip
-                        valueFormatter={(value: number) => `$${value}`}
-                      />}
+                      cursor={{ fill: 'transparent' }}
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-white dark:bg-darkbg-lighter border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                                {data.name}
+                              </p>
+                              <p className="text-sm text-gray-700 dark:text-gray-300">
+                                <span className="font-medium">Ventas:</span> ${data.total.toFixed(2)}
+                              </p>
+                              <p className="text-sm text-gray-700 dark:text-gray-300">
+                                <span className="font-medium">Unidades:</span> {data.quantity}
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
                     />
                     <Bar
-                      dataKey="total"
+                      dataKey="quantity" 
                       radius={[0, 8, 8, 0]}
                     >
                       {metrics.topProducts.map((_, index) => (

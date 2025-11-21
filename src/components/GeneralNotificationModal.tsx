@@ -4,6 +4,19 @@ import { useToast } from './ui/use-toast';
 import { supabase } from '../lib/supabase'; 
 import { parseEdgeError } from '../stores/usuariosStore'; 
 
+type SendNotificationResponse = {
+  success: boolean;
+  data?: {
+    sentTo: number;
+    expoResults: unknown[];
+  };
+  error?: {
+    code: string;
+    message: string;
+  };
+  requestId?: string;
+};
+
 interface Props {
   onClose: () => void;
 }
@@ -52,9 +65,18 @@ export default function GeneralNotificationModal({ onClose }: Props) {
         throw new Error(msg);
       }
 
+      const sentTo = response.data?.sentTo ?? 0;
+
+      let description: string;
+      if (sentTo === 0) {
+        description = 'El anuncio se procesó, pero no había dispositivos registrados para recibirlo.';
+      } else {
+        description = `El anuncio fue enviado a ${sentTo} dispositivo${sentTo === 1 ? '' : 's'} registrado${sentTo === 1 ? '' : 's'}.`;
+      }
+
       toast({
         title: 'Anuncio enviado',
-        description: `El anuncio fue enviado a todos los usuarios.`,
+        description: description,
         className: 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20',
       });
       onClose();

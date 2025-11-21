@@ -1,4 +1,5 @@
 import React from 'react';
+import { NavLink } from 'react-router-dom';
 import { DivideIcon as LucideIcon } from 'lucide-react';
 import clsx from 'clsx';
 import { formatCurrency } from '../utils/formatCurrency';
@@ -13,6 +14,7 @@ interface Props {
     isPositive: boolean;
   };
   isCurrency?: boolean;
+  to?: string; 
 }
 
 const colorVariants = {
@@ -42,7 +44,7 @@ const colorVariants = {
   }
 };
 
-export default function DashboardCard({ title, value, icon: Icon, color, trend, isCurrency }: Props) {
+function CardContent({ title, value, icon: Icon, color, trend, isCurrency }: Props) {
   const colorClasses = colorVariants[color];
   const displayValue = isCurrency ? formatCurrency(value as number) : value;
 
@@ -83,4 +85,18 @@ export default function DashboardCard({ title, value, icon: Icon, color, trend, 
       </div>
     </div>
   );
+}
+
+export default function DashboardCard(props: Props) {
+  const { to } = props;
+
+  if (to) {
+    return (
+      <NavLink to={to} className="block cursor-pointer">
+        <CardContent {...props} />
+      </NavLink>
+    );
+  }
+
+  return <CardContent {...props} />;
 }

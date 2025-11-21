@@ -144,6 +144,7 @@ export default function Dashboard() {
                 value={metrics.totalOrders}
                 icon={ShoppingBag}
                 color="primary"
+                to="/historico" 
               />
               <DashboardCard
                 title="Ventas"
@@ -157,6 +158,7 @@ export default function Dashboard() {
                 value={metrics.activeProducts}
                 icon={Coffee}
                 color="secondary"
+                to="/productos" 
               />
               <DashboardCard
                 title="Promedio de Venta"
@@ -170,6 +172,7 @@ export default function Dashboard() {
                 value={metrics.totalUsers}
                 icon={Users}
                 color="primary"
+                to="/alumnos"
               />
               <DashboardCard
                 title="Nuevos Usuarios"

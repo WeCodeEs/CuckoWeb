@@ -4,7 +4,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Order } from '../../stores/orderStore';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { getScheduledOrderAlert } from '../../utils/timeAlerts';
+import { getScheduledOrderAlert, getPreparationTimeAlert } from '../../utils/timeAlerts';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
@@ -62,7 +62,7 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
     return () => clearInterval(interval);
   }, []);
 
-  // Get alert info for scheduled orders in all statuses
+  // Get alert info for scheduled orders in all statuses (priority)
   const alertInfo = order.scheduled_delivery_time
     ? getScheduledOrderAlert(
         order.scheduled_delivery_time,
@@ -70,6 +70,11 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
         order.ready_at,
         order.delivered_at
       )
+    : null;
+
+  // Get alert info for non-scheduled orders in preparation (only if no scheduled alert)
+  const preparationAlert = !order.scheduled_delivery_time
+    ? getPreparationTimeAlert(order.started_at, order.status)
     : null;
 
   // Determine which timestamp to show based on status
@@ -143,10 +148,28 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
         </div>
       )}
 
+      {!order.scheduled_delivery_time && preparationAlert && (
+        <div className="w-[96%] mx-auto">
+          <div
+            className={clsx(
+              "flex items-center gap-2 px-3 py-1 rounded-t-lg rounded-b-none",
+              "text-white dark:text-white",
+              preparationAlert.badgeColor,
+              "shadow-primary-light/20"
+            )}
+          >
+            <Timer className={clsx("w-4 h-4 text-white dark:text-white", preparationAlert.iconAnimation)} />
+            <span className="text-xs sm:text-sm font-bold">
+              {preparationAlert.badgeText}
+            </span>
+          </div>
+        </div>
+      )}
+
       <div
         className={clsx(
           "p-3 sm:p-4 shadow-sm transition-transform transition-shadow duration-200 border-l-4 transform",
-          alertInfo ? alertInfo.className : statusColors[order.status],
+          alertInfo ? alertInfo.className : (preparationAlert ? preparationAlert.className : statusColors[order.status]),
           "bg-white dark:bg-darkbg-lighter",
           "rounded-lg",
           {

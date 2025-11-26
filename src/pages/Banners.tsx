@@ -24,6 +24,7 @@ import { useBannersStore, Banner } from '../stores/bannersStore';
 import { useToast } from '../components/ui/use-toast';
 import BannerModal from '../components/BannerModal';
 import BannerActionModal from '../components/BannerActionModal';
+import { supabase } from '../lib/supabase';
 
 export default function Banners() {
   const { toast } = useToast();
@@ -35,6 +36,8 @@ export default function Banners() {
   const [activeDragId, setActiveDragId] = useState<number | null>(null);
   const [isBannerModalOpen, setIsBannerModalOpen] = useState(false);
   const [editingActionBanner, setEditingActionBanner] = useState<Banner | null>(null);
+  const [products, setProducts] = useState<Array<{ id: number }>>([]);
+  const [menus, setMenus] = useState<Array<{ id: number }>>([]);
 
   const {
     banners,
@@ -61,6 +64,36 @@ export default function Banners() {
     fetchBanners();
   }, [fetchBanners]);
 
+  useEffect(() => {
+    const loadTargets = async () => {
+      try {
+        const [
+          { data: productsData, error: productsError },
+          { data: menusData, error: menusError },
+        ] = await Promise.all([
+          supabase
+            .from('products')
+            .select('id')
+            .eq('active', true),
+          supabase
+            .from('menus')
+            .select('id')
+            .eq('active', true),
+        ]);
+
+        if (productsError) console.error('Error cargando productos para validación de banners:', productsError);
+        if (menusError) console.error('Error cargando menús para validación de banners:', menusError);
+
+        setProducts((productsData as any[]) ?? []);
+        setMenus((menusData as any[]) ?? []);
+      } catch (error) {
+        console.error('Error inesperado cargando productos/menús para validación de banners:', error);
+      }
+    };
+
+    loadTargets();
+  }, []);
+
   const handleDeleteBannerRequest = (banner: Banner) => {
     setBannerToDelete(banner);
     setShowConfirmation(true);
@@ -68,7 +101,42 @@ export default function Banners() {
 
   const handleToggleBanner = async (banner: Banner) => {
     try {
+      if (!banner.active) {
+        if (banner.banner_action === 'REDIRECT_PRODUCT') {
+          const targetProduct = products.find(p => p.id === banner.product_id);
+
+          if (!targetProduct) {
+            toast({
+              variant: 'destructive',
+              title: 'No se puede activar el banner',
+              description:
+                'El producto asociado a este banner ya no está activo o fue eliminado. Actualiza la acción del banner antes de activarlo.',
+            });
+
+            // TODO: Definir el comportamiento cuando el producto se elimine
+            return;
+          }
+        }
+
+        if (banner.banner_action === 'REDIRECT_MENU') {
+          const targetMenu = menus.find(m => m.id === banner.menu_id);
+
+          if (!targetMenu) {
+            toast({
+              variant: 'destructive',
+              title: 'No se puede activar el banner',
+              description:
+                'El menú asociado a este banner ya no está activo o fue eliminado. Actualiza la acción del banner antes de activarlo.',
+            });
+
+            // TODO: Definir el comportamiento cuando el menú se elimine
+            return;
+          }
+        }
+      }
+
       await toggleBannerStatus(banner);
+
       toast({
         title: 'Éxito',
         description: `Banner ${banner.active ? 'desactivado' : 'activado'}.`,
@@ -241,14 +309,14 @@ export default function Banners() {
                   >
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {banners.map((banner) => (
-                      <BannerCard
-                        key={banner.id}
-                        banner={banner}
-                        onToggle={handleToggleBanner}
-                        onDelete={handleDeleteBannerRequest}
-                        onPreview={handlePreview}
-                        onEditAction={handleEditActionBanner}
-                      />
+                        <BannerCard
+                          key={banner.id}
+                          banner={banner}
+                          onToggle={handleToggleBanner}
+                          onDelete={handleDeleteBannerRequest}
+                          onPreview={handlePreview}
+                          onEditAction={handleEditActionBanner}
+                        />
                       ))}
                     </div>
                   </SortableContext>
@@ -302,7 +370,7 @@ export default function Banners() {
           onToggle={handleToggleBanner}
           onDelete={handleDeleteBannerRequest}
           onNavigate={handleNavigatePreview}
-          onEditAction={handleEditActionBanner} // 👈 importante
+          onEditAction={handleEditActionBanner}
         />
       )}
 

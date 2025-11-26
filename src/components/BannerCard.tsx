@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, Trash2, Link2 } from 'lucide-react';
 import { Banner } from '../stores/bannersStore';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -8,9 +8,16 @@ interface BannerCardProps {
   onToggle: (banner: Banner) => void;
   onDelete: (banner: Banner) => void;
   onPreview: (banner: Banner) => void;
+  onEditAction: (banner: Banner) => void;
 }
 
-export default function BannerCard({ banner, onToggle, onDelete, onPreview }: BannerCardProps) {
+export default function BannerCard({
+  banner,
+  onToggle,
+  onDelete,
+  onPreview,
+  onEditAction,
+}: BannerCardProps) {
   const {
     attributes,
     listeners,
@@ -73,20 +80,20 @@ export default function BannerCard({ banner, onToggle, onDelete, onPreview }: Ba
         </div>
       </div>
 
-      <div className="p-3 space-y-2">
-        <button
-          onClick={() => onPreview(banner)}
-          className="w-full px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-xs font-medium flex items-center justify-center gap-1.5"
-          title="Vista previa"
-        >
-          <Eye className="w-3.5 h-3.5" />
-          Previsualizar
-        </button>
+      <div className="p-3">
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => onPreview(banner)}
+            className="w-full px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-xs font-medium flex items-center justify-center gap-1.5"
+            title="Vista previa"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Previsualizar</span>
+          </button>
 
-        <div className="flex items-center gap-2">
           <button
             onClick={() => onToggle(banner)}
-            className={`flex-1 px-3 py-2 rounded-lg transition-colors text-xs font-medium flex items-center justify-center gap-1.5 ${
+            className={`w-full px-3 py-2 rounded-lg transition-colors text-xs font-medium flex items-center justify-center gap-1.5 ${
               banner.active
                 ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/30'
                 : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30'
@@ -105,10 +112,18 @@ export default function BannerCard({ banner, onToggle, onDelete, onPreview }: Ba
               </>
             )}
           </button>
+          <button
+            onClick={() => onEditAction(banner)}
+            className="w-full px-3 py-2 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors text-xs font-medium flex items-center justify-center gap-1.5"
+            title="Editar acción del banner"
+          >
+            <Link2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Editar acción</span>
+          </button>
 
           <button
             onClick={() => onDelete(banner)}
-            className="flex-1 px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-xs font-medium flex items-center justify-center gap-1.5"
+            className="w-full px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-xs font-medium flex items-center justify-center gap-1.5"
             title="Eliminar"
           >
             <Trash2 className="w-3.5 h-3.5" />

@@ -23,6 +23,7 @@ import BannerReorderNotification from '../components/BannerReorderNotification';
 import { useBannersStore, Banner } from '../stores/bannersStore';
 import { useToast } from '../components/ui/use-toast';
 import BannerModal from '../components/BannerModal';
+import BannerActionModal from '../components/BannerActionModal';
 
 export default function Banners() {
   const { toast } = useToast();
@@ -33,6 +34,7 @@ export default function Banners() {
   const [showReorderNotification, setShowReorderNotification] = useState(false);
   const [activeDragId, setActiveDragId] = useState<number | null>(null);
   const [isBannerModalOpen, setIsBannerModalOpen] = useState(false);
+  const [editingActionBanner, setEditingActionBanner] = useState<Banner | null>(null);
 
   const {
     banners,
@@ -151,6 +153,10 @@ export default function Banners() {
     setPreviewBanner(banners[newIndex]);
   };
 
+  const handleEditActionBanner = (banner: Banner) => {
+    setEditingActionBanner(banner);
+  };
+
   const activeCount = banners.filter((b) => b.active).length;
 
   return (
@@ -235,13 +241,14 @@ export default function Banners() {
                   >
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {banners.map((banner) => (
-                        <BannerCard
-                          key={banner.id}
-                          banner={banner}
-                          onToggle={handleToggleBanner}
-                          onDelete={handleDeleteBannerRequest}
-                          onPreview={handlePreview}
-                        />
+                      <BannerCard
+                        key={banner.id}
+                        banner={banner}
+                        onToggle={handleToggleBanner}
+                        onDelete={handleDeleteBannerRequest}
+                        onPreview={handlePreview}
+                        onEditAction={handleEditActionBanner}
+                      />
                       ))}
                     </div>
                   </SortableContext>
@@ -257,6 +264,7 @@ export default function Banners() {
                             onToggle={() => {}}
                             onDelete={() => {}}
                             onPreview={() => {}}
+                            onEditAction={() => {}}
                           />
                         </div>
                       ) : null;
@@ -294,6 +302,7 @@ export default function Banners() {
           onToggle={handleToggleBanner}
           onDelete={handleDeleteBannerRequest}
           onNavigate={handleNavigatePreview}
+          onEditAction={handleEditActionBanner} // 👈 importante
         />
       )}
 
@@ -304,6 +313,13 @@ export default function Banners() {
 
       {isBannerModalOpen && (
         <BannerModal onClose={() => setIsBannerModalOpen(false)} />
+      )}
+
+      {editingActionBanner && (
+        <BannerActionModal
+          banner={editingActionBanner}
+          onClose={() => setEditingActionBanner(null)}
+        />
       )}
     </>
   );

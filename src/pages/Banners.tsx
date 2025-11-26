@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Image, Upload, Search, Link2 } from 'lucide-react';
+import { Image, Plus } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -20,39 +20,25 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import BannerCard from '../components/BannerCard';
 import BannerPreviewModal from '../components/BannerPreviewModal';
 import BannerReorderNotification from '../components/BannerReorderNotification';
-import { useBannersStore, Banner, BannerAction } from '../stores/bannersStore';
+import { useBannersStore, Banner } from '../stores/bannersStore';
 import { useToast } from '../components/ui/use-toast';
-import { supabase } from '../lib/supabase';
+import BannerModal from '../components/BannerModal';
 
 export default function Banners() {
   const { toast } = useToast();
 
-  const [isUploading, setIsUploading] = useState(false);
   const [bannerToDelete, setBannerToDelete] = useState<Banner | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [previewBanner, setPreviewBanner] = useState<Banner | null>(null);
   const [showReorderNotification, setShowReorderNotification] = useState(false);
   const [activeDragId, setActiveDragId] = useState<number | null>(null);
-
-  const [bannerAction, setBannerAction] = useState<BannerAction>('NONE');
-  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
-  const [selectedMenuId, setSelectedMenuId] = useState<number | null>(null);
-  const [productSearch, setProductSearch] = useState('');
-  const [menuSearch, setMenuSearch] = useState('');
-  const [products, setProducts] = useState<Array<{ id: number; name: string; active: boolean }>>(
-    []
-  );
-  const [menus, setMenus] = useState<Array<{ id: number; name: string; active: boolean }>>([]);
-  const [loadingTargets, setLoadingTargets] = useState(false);
-  const [targetsError, setTargetsError] = useState<string | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [isBannerModalOpen, setIsBannerModalOpen] = useState(false);
 
   const {
     banners,
     loadingBanners,
     error: bannerError,
     fetchBanners,
-    addBanner,
     updateBannersOrder,
     toggleBannerStatus,
     deleteBanner,
@@ -71,101 +57,7 @@ export default function Banners() {
 
   useEffect(() => {
     fetchBanners();
-
-    const loadTargets = async () => {
-      setLoadingTargets(true);
-      setTargetsError(null);
-      try {
-        const [
-          { data: productsData, error: productsError },
-          { data: menusData, error: menusError },
-        ] = await Promise.all([
-          supabase
-            .from('products')
-            .select('id, name, active')
-            .eq('active', true)
-            .order('name', { ascending: true }),
-          supabase
-            .from('menus')
-            .select('id, name, active')
-            .eq('active', true)
-            .order('name', { ascending: true }),
-        ]);
-
-        if (productsError) throw productsError;
-        if (menusError) throw menusError;
-
-        setProducts((productsData as any[]) ?? []);
-        setMenus((menusData as any[]) ?? []);
-      } catch (error: any) {
-        console.error('Error cargando productos/menús para banners:', error);
-        setTargetsError(error.message ?? 'No se pudieron cargar productos y menús');
-      } finally {
-        setLoadingTargets(false);
-      }
-    };
-
-    loadTargets();
   }, [fetchBanners]);
-
-  const filteredProducts = products.filter((p) =>
-    p.name.toLowerCase().includes(productSearch.toLowerCase())
-  );
-
-  const filteredMenus = menus.filter((m) =>
-    m.name.toLowerCase().includes(menuSearch.toLowerCase())
-  );
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-
-    if (!file) return;
-    setFormError(null);
-
-    if (!file.type.startsWith('image/')) {
-      setFormError('Por favor selecciona un archivo de imagen válido.');
-      e.target.value = '';
-      return;
-    }
-
-    if (bannerAction === 'REDIRECT_PRODUCT' && !selectedProductId) {
-      setFormError('Selecciona el producto al que debe dirigir el banner.');
-      e.target.value = '';
-      return;
-    }
-
-    if (bannerAction === 'REDIRECT_MENU' && !selectedMenuId) {
-      setFormError('Selecciona el menú al que debe dirigir el banner.');
-      e.target.value = '';
-      return;
-    }
-
-    setIsUploading(true);
-    try {
-      await addBanner(file, {
-        banner_action: bannerAction,
-        product_id: bannerAction === 'REDIRECT_PRODUCT' ? selectedProductId : null,
-        menu_id: bannerAction === 'REDIRECT_MENU' ? selectedMenuId : null,
-      });
-
-      toast({ title: 'Éxito', description: 'Banner agregado correctamente.' });
-      e.target.value = '';
-
-      setBannerAction('NONE');
-      setSelectedProductId(null);
-      setSelectedMenuId(null);
-      setProductSearch('');
-      setMenuSearch('');
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.message || 'No se pudo agregar el banner.',
-      });
-    } finally {
-      setIsUploading(false);
-    }
-  };
 
   const handleDeleteBannerRequest = (banner: Banner) => {
     setBannerToDelete(banner);
@@ -259,6 +151,8 @@ export default function Banners() {
     setPreviewBanner(banners[newIndex]);
   };
 
+  const activeCount = banners.filter((b) => b.active).length;
+
   return (
     <>
       <div className="bg-white dark:bg-darkbg-lighter rounded-xl shadow-soft dark:shadow-dark p-6">
@@ -277,213 +171,26 @@ export default function Banners() {
         </div>
 
         <div className="space-y-6">
-            <div className="flex flex-col items-center gap-4">
-              <div className="p-4 bg-gray-100 dark:bg-darkbg rounded-full">
-                <Upload className="w-8 h-8 text-gray-400 dark:text-gray-500" />
-              </div>
-              <div className="text-center">
-                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
-                  Subir nueva imagen de banner
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Tamaño recomendado: 1200x400px (formato JPG, PNG o WEBP)
-                </p>
-              </div>
-
-              {/* Configuración de acción del banner */}
-              <div className="w-full max-w-xl space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 dark:bg-secondary/10 text-primary dark:text-secondary">
-                    <Link2 className="w-4 h-4" />
-                  </span>
-                  <div className="text-left">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      Acción al tocar el banner
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Opcional: define si el banner debe abrir un producto o un menú específico.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label
-                      htmlFor="banner-action"
-                      className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
-                    >
-                      Tipo de acción
-                    </label>
-                    <select
-                      id="banner-action"
-                      value={bannerAction}
-                      onChange={(e) => {
-                        const value = e.target.value as BannerAction;
-                        setBannerAction(value);
-                        setSelectedProductId(null);
-                        setSelectedMenuId(null);
-                        setProductSearch('');
-                        setMenuSearch('');
-                        setFormError(null);
-                      }}
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-darkbg bg-white dark:bg-darkbg-lighter text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary"
-                    >
-                      <option value="NONE">Sin acción (solo mostrar imagen)</option>
-                      <option value="REDIRECT_PRODUCT">Redirigir a un producto</option>
-                      <option value="REDIRECT_MENU">Redirigir a un menú</option>
-                    </select>
-                  </div>
-
-                  {bannerAction === 'REDIRECT_PRODUCT' && (
-                    <div className="space-y-2">
-                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                        Producto destino
-                      </label>
-                      <div className="relative">
-                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                          type="text"
-                          placeholder="Buscar productos..."
-                          value={productSearch}
-                          onChange={(e) => setProductSearch(e.target.value)}
-                          className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 dark:border-darkbg bg-white dark:bg-darkbg-lighter text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary"
-                        />
-                      </div>
-                      <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200 dark:border-darkbg bg-white dark:bg-darkbg-lighter">
-                        {loadingTargets ? (
-                          <div className="py-3 text-center text-xs text-gray-500 dark:text-gray-400">
-                            Cargando productos...
-                          </div>
-                        ) : targetsError ? (
-                          <div className="py-3 px-3 text-xs text-red-600 dark:text-red-400">
-                            {targetsError}
-                          </div>
-                        ) : filteredProducts.length === 0 ? (
-                          <div className="py-3 text-center text-xs text-gray-500 dark:text-gray-400">
-                            No hay productos activos que coincidan
-                          </div>
-                        ) : (
-                          <ul className="divide-y divide-gray-100 dark:divide-darkbg">
-                            {filteredProducts.map((product) => (
-                              <li
-                                key={product.id}
-                                className={`px-3 py-2 text-xs cursor-pointer flex items-center justify-between ${
-                                  selectedProductId === product.id
-                                    ? 'bg-primary/10 dark:bg-secondary/10 text-primary dark:text-secondary'
-                                    : 'hover:bg-gray-50 dark:hover:bg-darkbg-darker text-gray-700 dark:text-gray-200'
-                                }`}
-                                onClick={() => {
-                                  setSelectedProductId(product.id);
-                                  setFormError(null);
-                                }}
-                              >
-                                <span>{product.name}</span>
-                                {selectedProductId === product.id && (
-                                  <span className="text-[10px] uppercase font-semibold">
-                                    Seleccionado
-                                  </span>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {bannerAction === 'REDIRECT_MENU' && (
-                    <div className="space-y-2">
-                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                        Menú destino
-                      </label>
-                      <div className="relative">
-                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                          type="text"
-                          placeholder="Buscar menús..."
-                          value={menuSearch}
-                          onChange={(e) => setMenuSearch(e.target.value)}
-                          className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 dark:border-darkbg bg-white dark:bg-darkbg-lighter text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary"
-                        />
-                      </div>
-                      <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200 dark:border-darkbg bg-white dark:bg-darkbg-lighter">
-                        {loadingTargets ? (
-                          <div className="py-3 text-center text-xs text-gray-500 dark:text-gray-400">
-                            Cargando menús...
-                          </div>
-                        ) : targetsError ? (
-                          <div className="py-3 px-3 text-xs text-red-600 dark:text-red-400">
-                            {targetsError}
-                          </div>
-                        ) : filteredMenus.length === 0 ? (
-                          <div className="py-3 text-center text-xs text-gray-500 dark:text-gray-400">
-                            No hay menús activos que coincidan
-                          </div>
-                        ) : (
-                          <ul className="divide-y divide-gray-100 dark:divide-darkbg">
-                            {filteredMenus.map((menu) => (
-                              <li
-                                key={menu.id}
-                                className={`px-3 py-2 text-xs cursor-pointer flex items-center justify-between ${
-                                  selectedMenuId === menu.id
-                                    ? 'bg-primary/10 dark:bg-secondary/10 text-primary dark:text-secondary'
-                                    : 'hover:bg-gray-50 dark:hover:bg-darkbg-darker text-gray-700 dark:text-gray-200'
-                                }`}
-                                onClick={() => {
-                                  setSelectedMenuId(menu.id);
-                                  setFormError(null);
-                                }}
-                              >
-                                <span>{menu.name}</span>
-                                {selectedMenuId === menu.id && (
-                                  <span className="text-[10px] uppercase font-semibold">
-                                    Seleccionado
-                                  </span>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {formError && (
-                    <div className="text-xs bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg px-3 py-2">
-                      {formError}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-                id="banner-upload"
-                disabled={isUploading}
-              />
-              <label
-                htmlFor="banner-upload"
-                className={`px-4 py-2 bg-primary dark:bg-secondary text-white rounded-lg transition-colors text-sm font-medium ${
-                  isUploading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:bg-primary-dark dark:hover:bg-secondary/90'
-                }`}
-              >
-                {isUploading ? 'Subiendo...' : 'Seleccionar imagen'}
-              </label>
-            </div>
-
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                Banners Configurados
-              </h3>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {banners.length} banner{banners.length !== 1 ? 's' : ''} total
-                {banners.length !== 1 ? 'es' : ''} ({banners.filter((b) => b.active).length}{' '}
-                activo{banners.filter((b) => b.active).length !== 1 ? 's' : ''})
-              </span>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                  Banners Configurados
+                </h3>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {banners.length} banner{banners.length !== 1 ? 's' : ''} total
+                  {banners.length !== 1 ? 'es' : ''} ({activeCount}{' '}
+                  activo{activeCount !== 1 ? 's' : ''})
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsBannerModalOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-white bg-primary dark:bg-secondary rounded-lg hover:bg-primary-dark dark:hover:bg-secondary/90 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Nuevo Banner
+              </button>
             </div>
 
             {loadingBanners && (
@@ -509,7 +216,7 @@ export default function Banners() {
                   No hay banners configurados
                 </p>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                  Sube tu primera imagen para comenzar
+                  Crea tu primer banner para comenzar
                 </p>
               </div>
             ) : (
@@ -594,6 +301,10 @@ export default function Banners() {
         show={showReorderNotification}
         onClose={() => setShowReorderNotification(false)}
       />
+
+      {isBannerModalOpen && (
+        <BannerModal onClose={() => setIsBannerModalOpen(false)} />
+      )}
     </>
   );
 }

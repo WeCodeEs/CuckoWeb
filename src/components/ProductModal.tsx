@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Upload, Search, RefreshCw, Package, Settings, Palette } from 'lucide-react';
 import { useProductStore } from '../stores/productStore';
 import { useCategoryStore } from '../stores/categoryStore';
@@ -22,6 +22,14 @@ interface Props {
 export default function ProductModal({ onClose }: Props) {
   const { selectedProduct, createProduct, updateProduct } = useProductStore();
   const { categories, fetchCategories } = useCategoryStore();
+  const categoryNameCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    categories.forEach((category) => {
+      const key = category.name.trim().toLowerCase();
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    return counts;
+  }, [categories]);
   const { 
     options: variants, 
     fetchOptions: fetchVariants,
@@ -283,11 +291,21 @@ export default function ProductModal({ onClose }: Props) {
                           required
                         >
                           <option value="">Seleccionar Categoría</option>
-                          {categories.map(category => (
-                            <option key={category.id} value={category.id}>
-                              {category.name}
-                            </option>
-                          ))}
+                          {categories.map((category) => {
+                            const key = category.name.trim().toLowerCase();
+                            const isDuplicate = categoryNameCounts[key] > 1;
+
+                            const label =
+                              isDuplicate && category.menu?.name
+                                ? `${category.name} (${category.menu.name})`
+                                : category.name;
+
+                            return (
+                              <option key={category.id} value={category.id}>
+                                {label}
+                              </option>
+                            );
+                          })}
                         </select>
                       </div>
 

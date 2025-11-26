@@ -9,7 +9,7 @@ export interface Banner {
   created_at?: string;
 }
 
-type BannerAction =
+type BannerOperation =
   | { action: 'CREATE'; imageUrl: string; sort_order: number }
   | { action: 'UPDATE_ORDER'; banners: Array<{ id: number; sort_order: number }> }
   | { action: 'UPDATE_STATUS'; id: number; active: boolean }
@@ -75,7 +75,7 @@ export const useBannersStore = create<BannersState>((set, get) => ({
           action: 'CREATE',
           imageUrl: imageUrl,
           sort_order: newOrder
-        } as BannerAction
+        } as BannerOperation
       });
 
       console.warn("functionError: ", functionError);
@@ -100,7 +100,7 @@ export const useBannersStore = create<BannersState>((set, get) => ({
         body: {
           action: 'UPDATE_ORDER',
           banners: orderPayload
-        } as BannerAction
+        } as BannerOperation
       });
 
       if (functionError) throw functionError;
@@ -126,7 +126,7 @@ export const useBannersStore = create<BannersState>((set, get) => ({
           action: 'UPDATE_STATUS',
           id: banner.id,
           active: newStatus
-        } as BannerAction
+        } as BannerOperation
       });
 
       if (functionError) throw functionError;
@@ -154,7 +154,7 @@ export const useBannersStore = create<BannersState>((set, get) => ({
           action: 'DELETE',
           id: banner.id,
           imageUrl: banner.image_url, 
-        } as BannerAction,
+        } as BannerOperation,
       });
 
       if (functionError) throw functionError;

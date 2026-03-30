@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 
 export type OrderStatus = 'Recibido' | 'EnPreparacion' | 'Listo' | 'Entregado';
 export type NotificationType = 'NotificacionGeneral' | 'NotificacionPersonal' | 'PedidoRecibido' | 'PedidoEnPreparacion' | 'PedidoListo' | 'PedidoEntregado';
+export type OrderTypeFilter = 'Todos' | 'Agendados' | 'Inmediatos';
 
 // Helper function to sort orders with custom logic
 function sortOrders(orders: Order[]): Order[] {
@@ -30,25 +31,25 @@ function sortOrders(orders: Order[]): Order[] {
   });
 }
 
+export interface OrderSelectedOption {
+  id: number;
+  name: string;
+  group_name?: string;
+  quantity: number;
+  price_at_moment: number;
+}
+
 export interface OrderDetail {
   id: number;
   product_id: number;
-  product_variant_id: number | null;
   quantity: number;
   unit_price: number;
   subtotal: number;
   product: {
     name: string;
   };
-  product_variant?: {
-    variant: {
-      name: string;
-    };
-  };
-  ingredients?: Array<{
-    name: string;
-    extra_price?: number;
-  }>;
+  options?: OrderSelectedOption[];
+  ingredients?: Array<{ name: string; extra_price?: number }>;
 }
 
 export type PaymentStatus = 'pending_payment' | 'paid' | 'payment_failed' | 'canceled';
@@ -181,6 +182,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
             id,
             user_uuid,
             status,
+            payment_status,
             total,
             created_at,
             started_at,
@@ -198,18 +200,20 @@ export const useOrderStore = create<OrderStore>((set, get) => {
             details:order_details (
               id,
               product_id,
-              product_variant_id,
               quantity,
               unit_price,
               subtotal,
               product:products (name),
-              product_variant:product_variants (
-                variant:variant_options (name)
-              ),
-              ingredients:order_detail_ingredients (
-                ingredient:ingredient_options (
+              item_options:order_item_options (
+                id,
+                option_id,
+                quantity,
+                price_at_moment,
+                option:options (
+                  id,
                   name,
-                  extra_price
+                  additional_price,
+                  option_group:option_groups ( id, name )
                 )
               )
             )
@@ -233,12 +237,22 @@ export const useOrderStore = create<OrderStore>((set, get) => {
           transformedData = transformedData.map((order: any) => {
             if (order.details) {
               order.details = order.details.map((detail: any) => {
-                if (detail.ingredients) {
-                  detail.ingredients = detail.ingredients.map((ing: any) => ({
-                    name: ing.ingredient.name,
-                    extra_price: ing.ingredient.extra_price
-                  }));
-                }
+                const itemOptions = detail.item_options ?? [];
+                const normalized: OrderSelectedOption[] = itemOptions.map((io: any) => ({
+                  id: io.id,
+                  name: io.option?.name ?? 'Opción',
+                  group_name: io.option?.option_group?.name,
+                  quantity: io.quantity ?? 1,
+                  price_at_moment: io.price_at_moment ?? 0,
+                }));
+
+                detail.options = normalized;
+
+                detail.ingredients = normalized.map((o) => ({
+                  name: o.group_name ? `${o.group_name}: ${o.name}` : o.name,
+                  extra_price: o.price_at_moment,
+                }));
+                delete detail.item_options;
                 return detail;
               });
             }
@@ -269,6 +283,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
             id,
             user_uuid,
             status,
+            payment_status,
             total,
             created_at,
             started_at,
@@ -286,21 +301,23 @@ export const useOrderStore = create<OrderStore>((set, get) => {
             details:order_details (
               id,
               product_id,
-              product_variant_id,
               quantity,
               unit_price,
               subtotal,
               product:products (name),
-              product_variant:product_variants (
-                variant:variant_options (name)
-              ),
-              ingredients:order_detail_ingredients (
-                ingredient:ingredient_options (
+              item_options:order_item_options (
+                id,
+                option_id,
+                quantity,
+                price_at_moment,
+                option:options (
+                  id,
                   name,
-                  extra_price
+                  additional_price,
+                  option_group:option_groups ( id, name )
                 )
               )
-            )
+             )
           `)
           .eq('payment_status', 'paid')
           .order('created_at', { ascending: false });
@@ -312,12 +329,21 @@ export const useOrderStore = create<OrderStore>((set, get) => {
           transformedData = transformedData.map(order => {
             if (order.details) {
               order.details = order.details.map((detail: any) => {
-                if (detail.ingredients) {
-                  detail.ingredients = detail.ingredients.map((ing: any) => ({
-                    name: ing.ingredient.name,
-                    extra_price: ing.ingredient.extra_price
-                  }));
-                }
+                const itemOptions = detail.item_options ?? [];
+                const normalized: OrderSelectedOption[] = itemOptions.map((io: any) => ({
+                  id: io.id,
+                  name: io.option?.name ?? 'Opción',
+                  group_name: io.option?.option_group?.name,
+                  quantity: io.quantity ?? 1,
+                  price_at_moment: io.price_at_moment ?? 0,
+                }));
+
+                detail.options = normalized;
+                detail.ingredients = normalized.map((o) => ({
+                  name: o.group_name ? `${o.group_name}: ${o.name}` : o.name,
+                  extra_price: o.price_at_moment,
+                }));
+                delete detail.item_options;
                 return detail;
               });
             }

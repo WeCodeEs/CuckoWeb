@@ -85,7 +85,7 @@ interface ProductState {
    * - todos los option_groups con sus options
    * - y la configuración actual del producto (product_option_groups/product_option_group_options)
    */
-  fetchProductVariants: (productId: number) => Promise<any[]>;
+  fetchProductOptionGroups: (productId: number) => Promise<any[]>;
   /**
    * Guardar configuración completa de option groups para un producto.
    */

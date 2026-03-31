@@ -272,80 +272,14 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
   saveProductOptionGroups: async (productId, groups) => {
     try {
-      const { data: existingGroups, error: egErr } = await supabase
-        .from('product_option_groups')
-        .select('id')
-        .eq('product_id', productId);
-      if (egErr) throw egErr;
+      const payload = Array.isArray(groups) ? groups : [];
 
-      const existingIds = (existingGroups ?? []).map((g: any) => g.id);
+      const { error } = await supabase.rpc('save_product_option_groups', {
+        p_product_id: productId,
+        p_groups: payload,
+      } as any);
 
-      if (existingIds.length > 0) {
-        const { error: delOptErr } = await supabase
-          .from('product_option_group_options')
-          .delete()
-          .in('product_option_group_id', existingIds);
-        if (delOptErr) throw delOptErr;
-
-        const { error: delGroupsErr } = await supabase
-          .from('product_option_groups')
-          .delete()
-          .eq('product_id', productId);
-        if (delGroupsErr) throw delGroupsErr;
-      }
-
-      if (!groups || groups.length === 0) return;
-
-      const groupsPayload = groups.map((g, idx) => ({
-        product_id: productId,
-        option_group_id: g.option_group_id,
-        sort_order: g.sort_order ?? idx,
-      }));
-
-      const { data: insertedGroups, error: insGErr } = await supabase
-        .from('product_option_groups')
-        .insert(groupsPayload)
-        .select('id, option_group_id');
-      if (insGErr) throw insGErr;
-
-      const insertedByOgId = new Map<number, number>();
-      (insertedGroups ?? []).forEach((row: any) => insertedByOgId.set(row.option_group_id, row.id));
-
-      for (const g of groups) {
-        const pogId = insertedByOgId.get(g.option_group_id);
-        if (!pogId) continue;
-
-        let optionsToInsert = g.options;
-
-        if (!optionsToInsert) {
-          const { data: templateOptions, error: toErr } = await supabase
-            .from('options')
-            .select('id')
-            .eq('option_group_id', g.option_group_id)
-            .eq('active', true);
-          if (toErr) throw toErr;
-
-          optionsToInsert = (templateOptions ?? []).map((o: any) => ({
-            option_id: o.id,
-            active: true,
-            additional_price: null,
-          }));
-        }
-
-        const pgoPayload = optionsToInsert.map((o) => ({
-          product_option_group_id: pogId,
-          option_id: o.option_id,
-          active: o.active,
-          additional_price: o.additional_price,
-        }));
-
-        if (pgoPayload.length > 0) {
-          const { error: insOptErr } = await supabase
-            .from('product_option_group_options')
-            .insert(pgoPayload);
-          if (insOptErr) throw insOptErr;
-        }
-      }
+      if (error) throw error;
      } catch (error: any) {
       throw new Error(error.message || 'Error al guardar las personalizaciones del producto');
      }

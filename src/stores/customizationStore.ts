@@ -92,12 +92,17 @@ export const useCustomizationStore = create<CustomizationState>((set, get) => ({
   },
 
   deleteCustomization: async (id: number) => {
+    set({ loading: true, error: null });
     try {
-      const { error } = await supabase.from('customizations').delete().eq('id', id);
+      const { error } = await supabase
+        .from('customizations')
+        .delete()
+        .eq('id', id);
+
       if (error) throw error;
       await get().fetchCustomizations();
     } catch (error: any) {
-      console.error(error);
+      set({ loading: false, error: error.message || 'Error al eliminar personalización' });
       throw error;
     }
   }

@@ -80,15 +80,7 @@ interface ProductState {
   setSelectedProduct: (product: Product | null) => void;
   setIsModalOpen: (isOpen: boolean) => void;
   uploadImage: (file: File) => Promise<string>;
-  /**
-   * (Compat) Antes era fetchProductVariants. Ahora devuelve:
-   * - todos los option_groups con sus options
-   * - y la configuración actual del producto (product_option_groups/product_option_group_options)
-   */
   fetchProductOptionGroups: (productId: number) => Promise<any[]>;
-  /**
-   * Guardar configuración completa de option groups para un producto.
-   */
   saveProductOptionGroups: (
     productId: number,
     groups: NonNullable<ProductForm['option_groups']>
@@ -199,7 +191,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
     }
   },
 
-  fetchProductVariants: async (productId: number) => {
+  fetchProductOptionGroups: async (productId: number) => {
     try {
       const { data: groups, error: groupsErr } = await supabase
         .from('option_groups')
@@ -336,7 +328,6 @@ export const useProductStore = create<ProductState>((set, get) => ({
         imageUrl = await get().uploadImage(imageFile);
       }
       
-      // First update the product
       const { error: productError } = await supabase
         .from('products')
         .update({

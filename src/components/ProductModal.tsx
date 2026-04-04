@@ -125,13 +125,22 @@ export default function ProductModal({ onClose }: Props) {
     setSelectedGroups(prev => {
       const current = prev[groupId];
       if (current?.enabled) {
-        const { [groupId]: _, ...rest } = prev;
-        return rest;
+        return {
+          ...prev,
+          [groupId]: { ...current, enabled: false },
+        };
       }
 
+      const activeOptions = group.options.filter(o => o.active);
+      const existingOptions = current?.options ?? {};
+
       const optionsState: Record<number, { enabled: boolean; priceOverride: number | null }> = {};
-      group.options.filter(o => o.active).forEach(opt => {
-        optionsState[opt.id] = { enabled: true, priceOverride: null };
+      activeOptions.forEach(opt => {
+        if (existingOptions[opt.id]) {
+          optionsState[opt.id] = existingOptions[opt.id];
+        } else {
+          optionsState[opt.id] = { enabled: true, priceOverride: null };
+        }
       });
 
       return {

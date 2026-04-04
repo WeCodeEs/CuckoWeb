@@ -207,20 +207,15 @@ export default function ProductModal({ onClose }: Props) {
         .filter(([_, state]) => state.enabled)
         .map(([groupId, state], index) => {
           const gId = parseInt(groupId);
-          const group = optionGroups.find(g => g.id === gId);
           return {
             option_group_id: gId,
             sort_order: index,
             options: Object.entries(state.options)
               .filter(([_, optState]) => optState.enabled)
-              .map(([optionId, optState]) => {
-                const oId = parseInt(optionId);
-                const baseOption = group?.options.find(o => o.id === oId);
-                return {
-                  option_id: oId,
-                  additional_price: optState.priceOverride ?? baseOption?.additional_price ?? 0,
-                };
-              }),
+              .map(([optionId, optState]) => ({
+                option_id: parseInt(optionId),
+                additional_price: optState.priceOverride,
+              })),
           };
         });
 

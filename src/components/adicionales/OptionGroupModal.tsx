@@ -34,6 +34,7 @@ interface Props {
 
 interface OptionRow {
   tempId: string;
+  originalId?: number;
   name: string;
   additional_price: string;
 }
@@ -142,6 +143,7 @@ export default function OptionGroupModal({ onClose }: Props) {
     if (selectedGroup?.options && selectedGroup.options.length > 0) {
       return selectedGroup.options.map(opt => ({
         tempId: generateTempId(),
+        originalId: opt.id,
         name: opt.name,
         additional_price: opt.additional_price > 0 ? String(opt.additional_price) : '',
       }));
@@ -283,6 +285,7 @@ export default function OptionGroupModal({ onClose }: Props) {
       const validOptions: OptionInput[] = optionRows
         .filter(r => r.name.trim() !== '')
         .map(r => ({
+          ...(r.originalId ? { id: r.originalId } : {}),
           name: normalizeText(r.name),
           additional_price: parseFloat(r.additional_price) || 0,
         }));

@@ -21,6 +21,7 @@ export interface OptionGroup {
 }
 
 export interface OptionInput {
+  id?: number;
   name: string;
   additional_price: number;
 }

@@ -296,23 +296,29 @@ export const useProductStore = create<ProductState>((set, get) => ({
       if (productError) throw productError;
 
       if (product.option_groups !== undefined) {
-        const { data: existingPogs } = await supabase
+        const { data: existingPogs, error: fetchPogsError } = await supabase
           .from('product_option_groups')
           .select('id')
           .eq('product_id', id);
 
+        if (fetchPogsError) throw fetchPogsError;
+
         if (existingPogs && existingPogs.length > 0) {
           const pogIds = existingPogs.map(p => p.id);
 
-          await supabase
+          const { error: deleteOptionsError } = await supabase
             .from('product_option_group_options')
             .delete()
             .in('product_option_group_id', pogIds);
 
-          await supabase
+          if (deleteOptionsError) throw deleteOptionsError;
+
+          const { error: deletePogsError } = await supabase
             .from('product_option_groups')
             .delete()
             .eq('product_id', id);
+
+          if (deletePogsError) throw deletePogsError;
         }
 
         if (product.option_groups.length > 0) {

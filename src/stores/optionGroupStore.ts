@@ -104,25 +104,94 @@ export const useOptionGroupStore = create<OptionGroupState>((set, get) => ({
     try {
       set({ loading: true, error: null });
 
-      const { data, error } = await supabase.rpc('save_option_group_with_options', {
-        p_group_id: groupId ?? null,
-        p_name: name,
-        p_min_select: min_select,
-        p_max_select: max_select,
-        p_active: active,
-        p_options: options,
-      });
+      let resultGroupId: number;
 
-      if (error) {
-        if (error.code === '23505') {
-          throw new Error('Ya existe un grupo con este nombre');
+      if (!groupId) {
+        const { data: groupData, error: groupError } = await supabase
+          .from('option_groups')
+          .insert({ name, min_select, max_select, active })
+          .select('id')
+          .single();
+
+        if (groupError) {
+          if (groupError.code === '23505') throw new Error('Ya existe un grupo con este nombre');
+          throw groupError;
         }
-        throw error;
+
+        resultGroupId = groupData.id;
+
+        if (options.length > 0) {
+          const { error: optError } = await supabase
+            .from('options')
+            .insert(options.map(o => ({
+              option_group_id: resultGroupId,
+              name: o.name,
+              additional_price: o.additional_price,
+              active: true,
+            })));
+
+          if (optError) throw optError;
+        }
+      } else {
+        resultGroupId = groupId;
+
+        const { error: groupError } = await supabase
+          .from('option_groups')
+          .update({ name, min_select, max_select, active })
+          .eq('id', groupId);
+
+        if (groupError) {
+          if (groupError.code === '23505') throw new Error('Ya existe un grupo con este nombre');
+          throw groupError;
+        }
+
+        const existingOptions = options.filter(o => o.id);
+        const newOptions = options.filter(o => !o.id);
+
+        for (const opt of existingOptions) {
+          const { error: updErr } = await supabase
+            .from('options')
+            .update({ name: opt.name, additional_price: opt.additional_price })
+            .eq('id', opt.id!);
+
+          if (updErr) throw updErr;
+        }
+
+        if (newOptions.length > 0) {
+          const { error: insErr } = await supabase
+            .from('options')
+            .insert(newOptions.map(o => ({
+              option_group_id: groupId,
+              name: o.name,
+              additional_price: o.additional_price,
+              active: true,
+            })));
+
+          if (insErr) throw insErr;
+        }
+
+        const keepIds = existingOptions.map(o => o.id!);
+        if (keepIds.length > 0) {
+          const { error: delErr } = await supabase
+            .from('options')
+            .delete()
+            .eq('option_group_id', groupId)
+            .not('id', 'in', `(${keepIds.join(',')})`);
+
+          if (delErr) throw delErr;
+        } else {
+          const { error: delErr } = await supabase
+            .from('options')
+            .delete()
+            .eq('option_group_id', groupId);
+
+          if (delErr) throw delErr;
+        }
       }
 
       await get().fetchGroups();
       set({ isGroupModalOpen: false, selectedGroup: null });
-      return data as number;
+      return resultGroupId;
     } catch (error: any) {
       set({
         error: error.message || 'Error al guardar el grupo',

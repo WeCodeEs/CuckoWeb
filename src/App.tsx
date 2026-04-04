@@ -15,15 +15,12 @@ import OptionLibrary from './pages/adicionales/OptionLibrary';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Toaster } from './components/ui/toaster';
 import OptionGroupModal from './components/adicionales/OptionGroupModal';
-import OptionItemModal from './components/adicionales/OptionItemModal';
 import { useOptionGroupStore } from './stores/optionGroupStore';
 
 function App() {
   const {
     isGroupModalOpen,
     setIsGroupModalOpen,
-    isOptionModalOpen,
-    setIsOptionModalOpen
   } = useOptionGroupStore();
 
   return (
@@ -86,10 +83,6 @@ function App() {
 
       {isGroupModalOpen && (
         <OptionGroupModal onClose={() => setIsGroupModalOpen(false)} />
-      )}
-
-      {isOptionModalOpen && (
-        <OptionItemModal onClose={() => setIsOptionModalOpen(false)} />
       )}
     </BrowserRouter>
   );

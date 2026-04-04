@@ -20,27 +20,30 @@ export interface OptionGroup {
   product_count?: number;
 }
 
+export interface OptionInput {
+  name: string;
+  additional_price: number;
+}
+
 interface OptionGroupState {
   groups: OptionGroup[];
   loading: boolean;
   error: string | null;
   selectedGroup: OptionGroup | null;
-  selectedOption: Option | null;
   isGroupModalOpen: boolean;
-  isOptionModalOpen: boolean;
   fetchGroups: () => Promise<OptionGroup[]>;
-  createGroup: (data: { name: string; min_select: number; max_select: number }) => Promise<OptionGroup>;
-  updateGroup: (id: number, data: Partial<OptionGroup>) => Promise<void>;
+  saveGroupWithOptions: (data: {
+    groupId?: number | null;
+    name: string;
+    min_select: number;
+    max_select: number;
+    active: boolean;
+    options: OptionInput[];
+  }) => Promise<number>;
   deleteGroup: (id: number) => Promise<void>;
   toggleGroupActive: (id: number, active: boolean) => Promise<void>;
-  createOption: (groupId: number, data: { name: string; additional_price: number }) => Promise<void>;
-  updateOption: (id: number, data: Partial<Option>) => Promise<void>;
-  deleteOption: (id: number) => Promise<void>;
-  toggleOptionActive: (id: number, active: boolean) => Promise<void>;
   setSelectedGroup: (group: OptionGroup | null) => void;
-  setSelectedOption: (option: Option | null) => void;
   setIsGroupModalOpen: (isOpen: boolean) => void;
-  setIsOptionModalOpen: (isOpen: boolean) => void;
 }
 
 export const useOptionGroupStore = create<OptionGroupState>((set, get) => ({
@@ -48,9 +51,7 @@ export const useOptionGroupStore = create<OptionGroupState>((set, get) => ({
   loading: false,
   error: null,
   selectedGroup: null,
-  selectedOption: null,
   isGroupModalOpen: false,
-  isOptionModalOpen: false,
 
   fetchGroups: async () => {
     try {
@@ -98,43 +99,18 @@ export const useOptionGroupStore = create<OptionGroupState>((set, get) => ({
     }
   },
 
-  createGroup: async (data) => {
+  saveGroupWithOptions: async ({ groupId, name, min_select, max_select, active, options }) => {
     try {
       set({ loading: true, error: null });
 
-      const { data: newGroup, error } = await supabase
-        .from('option_groups')
-        .insert([{ ...data, active: true }])
-        .select()
-        .single();
-
-      if (error) {
-        if (error.code === '23505') {
-          throw new Error('Ya existe un grupo con este nombre');
-        }
-        throw error;
-      }
-
-      await get().fetchGroups();
-      set({ isGroupModalOpen: false });
-      return { ...newGroup, options: [] };
-    } catch (error: any) {
-      set({
-        error: error.message || 'Error al crear el grupo',
-        loading: false,
+      const { data, error } = await supabase.rpc('save_option_group_with_options', {
+        p_group_id: groupId ?? null,
+        p_name: name,
+        p_min_select: min_select,
+        p_max_select: max_select,
+        p_active: active,
+        p_options: options,
       });
-      throw error;
-    }
-  },
-
-  updateGroup: async (id, data) => {
-    try {
-      set({ loading: true, error: null });
-
-      const { error } = await supabase
-        .from('option_groups')
-        .update(data)
-        .eq('id', id);
 
       if (error) {
         if (error.code === '23505') {
@@ -145,9 +121,10 @@ export const useOptionGroupStore = create<OptionGroupState>((set, get) => ({
 
       await get().fetchGroups();
       set({ isGroupModalOpen: false, selectedGroup: null });
+      return data as number;
     } catch (error: any) {
       set({
-        error: error.message || 'Error al actualizar el grupo',
+        error: error.message || 'Error al guardar el grupo',
         loading: false,
       });
       throw error;
@@ -204,109 +181,9 @@ export const useOptionGroupStore = create<OptionGroupState>((set, get) => ({
     }
   },
 
-  createOption: async (groupId, data) => {
-    try {
-      set({ loading: true, error: null });
-
-      const { error } = await supabase
-        .from('options')
-        .insert([{ ...data, option_group_id: groupId, active: true }]);
-
-      if (error) {
-        if (error.code === '23505') {
-          throw new Error('Ya existe una opcion con este nombre en el grupo');
-        }
-        throw error;
-      }
-
-      await get().fetchGroups();
-      set({ isOptionModalOpen: false });
-    } catch (error: any) {
-      set({
-        error: error.message || 'Error al crear la opcion',
-        loading: false,
-      });
-      throw error;
-    }
-  },
-
-  updateOption: async (id, data) => {
-    try {
-      set({ loading: true, error: null });
-
-      const { error } = await supabase
-        .from('options')
-        .update(data)
-        .eq('id', id);
-
-      if (error) {
-        if (error.code === '23505') {
-          throw new Error('Ya existe una opcion con este nombre');
-        }
-        throw error;
-      }
-
-      await get().fetchGroups();
-      set({ isOptionModalOpen: false, selectedOption: null });
-    } catch (error: any) {
-      set({
-        error: error.message || 'Error al actualizar la opcion',
-        loading: false,
-      });
-      throw error;
-    }
-  },
-
-  deleteOption: async (id) => {
-    try {
-      set({ loading: true, error: null });
-
-      const { error } = await supabase
-        .from('options')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      await get().fetchGroups();
-    } catch (error: any) {
-      set({
-        error: error.message || 'Error al eliminar la opcion',
-        loading: false,
-      });
-      throw error;
-    }
-  },
-
-  toggleOptionActive: async (id, active) => {
-    try {
-      const { error } = await supabase
-        .from('options')
-        .update({ active })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      set(state => ({
-        groups: state.groups.map(g => ({
-          ...g,
-          options: g.options.map(o => (o.id === id ? { ...o, active } : o)),
-        })),
-      }));
-    } catch (error: any) {
-      console.error('Error al cambiar estado de la opcion:', error);
-      throw error;
-    }
-  },
-
   setSelectedGroup: (group) => set({ selectedGroup: group }),
-  setSelectedOption: (option) => set({ selectedOption: option }),
   setIsGroupModalOpen: (isOpen) => {
     set({ isGroupModalOpen: isOpen });
     if (!isOpen) set({ selectedGroup: null });
-  },
-  setIsOptionModalOpen: (isOpen) => {
-    set({ isOptionModalOpen: isOpen });
-    if (!isOpen) set({ selectedOption: null });
   },
 }));

@@ -148,9 +148,9 @@ export const useOrderStore = create<OrderStore>((set, get) => {
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('Subscrito exitosamente a las ordenes de hoy.');
+          console.log('Suscrito exitosamente a las órdenes de hoy.');
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('Error al subscribirse a las ordenes.');
+          console.error('Error al suscribirse a las órdenes.');
         }
       });
   };
@@ -412,7 +412,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
         throw new Error('El pedido no tiene un usuario asociado.');
       }
       if (!title?.trim() || !body?.trim()) {
-        throw new Error('Titulo y cuerpo son requeridos.');
+        throw new Error('Título y cuerpo son requeridos.');
       }
 
       const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
@@ -421,7 +421,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
       }
       const accessToken = sessionData?.session?.access_token;
       if (!accessToken) {
-        throw new Error('No fue posible procesar la solicitud. Inicia sesion nuevamente.');
+        throw new Error('No fue posible procesar la solicitud. Inicia sesión nuevamente.');
       }
 
       const { data: sendResp, error: sendErr } = await supabase.functions.invoke('send-notification', {
@@ -435,7 +435,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (sendErr || sendResp?.success !== true) {
-        throw new Error('No fue posible enviar la notificacion al usuario.');
+        throw new Error('No fue posible enviar la notificación al usuario.');
       }
     },
 

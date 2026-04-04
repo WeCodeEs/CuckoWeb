@@ -51,13 +51,13 @@ export default function PrintTicket({ order, isTest = false }: Props) {
     user: {
       first_name: 'Test',
       last_name: 'Print',
-      faculty: 'Ingenieria',
+      faculty: 'Ingeniería',
     },
     details: [
       {
         quantity: 1,
         product: {
-          name: 'Cafe Americano',
+          name: 'Café Americano',
         },
         unit_price: 15.5,
         subtotal: 15.5,
@@ -88,7 +88,7 @@ export default function PrintTicket({ order, isTest = false }: Props) {
       <div style={{ textAlign: 'center', marginBottom: '8px' }}>
         <h1 style={{ fontSize: 22, margin: '0 0 4px 0', fontWeight: 'bold' }}>CuckooEats</h1>
         <p style={{ fontSize: 24, margin: '4px 0', fontWeight: 'bold' }}>
-          {isTest ? 'PRUEBA DE IMPRESION' : `Pedido #${displayOrder.id}`}
+          {isTest ? 'PRUEBA DE IMPRESIÓN' : `Pedido #${displayOrder.id}`}
         </p>
         {!isTest && displayOrder.scheduled_delivery_time && (
           <div style={{
@@ -188,10 +188,10 @@ export default function PrintTicket({ order, isTest = false }: Props) {
             padding: '8px',
           }}
         >
-          <p style={{ margin: '0 0 4px 0', fontWeight: 'bold' }}>PRUEBA DE IMPRESION 80MM</p>
+          <p style={{ margin: '0 0 4px 0', fontWeight: 'bold' }}>PRUEBA DE IMPRESIÓN 80MM</p>
           <p style={{ margin: 0 }}>
             Si puede leer esto claramente y el texto no se corta,
-            la impresora esta configurada correctamente para papel de 80mm.
+            la impresora está configurada correctamente para papel de 80mm.
           </p>
         </div>
       )}

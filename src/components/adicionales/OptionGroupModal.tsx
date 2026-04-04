@@ -95,7 +95,7 @@ function SortableOptionRow({
           value={row.name}
           onChange={(e) => onUpdate(row.tempId, 'name', e.target.value)}
           onKeyDown={(e) => onKeyDown(e, index, 'name')}
-          placeholder={`Opcion ${index + 1}`}
+          placeholder={`Opción ${index + 1}`}
           maxLength={100}
           className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-darkbg bg-white dark:bg-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors"
         />
@@ -250,7 +250,7 @@ export default function OptionGroupModal({ onClose }: Props) {
       newErrors.max_select = 'Debe ser al menos 1';
     }
     if (formData.min_select > formData.max_select) {
-      newErrors.min_select = 'No puede ser mayor que el maximo';
+      newErrors.min_select = 'No puede ser mayor que el máximo';
     }
 
     const validOptions = optionRows.filter(r => r.name.trim() !== '');
@@ -316,8 +316,8 @@ export default function OptionGroupModal({ onClose }: Props) {
 
   const getSelectionDescription = () => {
     const { min_select, max_select } = formData;
-    if (min_select === 0 && max_select === 1) return 'El cliente puede seleccionar hasta 1 opcion (opcional)';
-    if (min_select === 1 && max_select === 1) return 'El cliente debe seleccionar exactamente 1 opcion (requerido)';
+    if (min_select === 0 && max_select === 1) return 'El cliente puede seleccionar hasta 1 opción (opcional)';
+    if (min_select === 1 && max_select === 1) return 'El cliente debe seleccionar exactamente 1 opción (requerido)';
     if (min_select === 0 && max_select > 1) return `El cliente puede seleccionar hasta ${max_select} opciones (opcional)`;
     if (min_select > 0 && max_select > 1 && min_select < max_select) return `El cliente debe seleccionar entre ${min_select} y ${max_select} opciones`;
     if (min_select > 0 && min_select === max_select && max_select > 1) return `El cliente debe seleccionar exactamente ${max_select} opciones`;
@@ -348,19 +348,19 @@ export default function OptionGroupModal({ onClose }: Props) {
                 }}
                 className={errors.name ? 'border-red-500' : ''}
                 maxLength={100}
-                placeholder="Ej: Salsas, Tamano, Extras"
+                placeholder="Ej: Salsas, Tamaño, Extras"
               />
               {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
               {formData.name && (
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Se guardara como: "{normalizeText(formData.name)}"
+                  Se guardará como: "{normalizeText(formData.name)}"
                 </p>
               )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="min_select">Seleccion Minima</Label>
+                <Label htmlFor="min_select">Selección Mínima</Label>
                 <Input
                   type="number"
                   id="min_select"
@@ -376,7 +376,7 @@ export default function OptionGroupModal({ onClose }: Props) {
                 <p className="text-xs text-gray-500 dark:text-gray-400">0 = opcional</p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="max_select">Seleccion Maxima</Label>
+                <Label htmlFor="max_select">Selección Máxima</Label>
                 <Input
                   type="number"
                   id="max_select"
@@ -421,7 +421,7 @@ export default function OptionGroupModal({ onClose }: Props) {
                 </span>
                 {validOptionCount > 0 && (
                   <span className="text-xs text-gray-400 dark:text-gray-500">
-                    ({validOptionCount} {validOptionCount === 1 ? 'opcion' : 'opciones'})
+                    ({validOptionCount} {validOptionCount === 1 ? 'opción' : 'opciones'})
                   </span>
                 )}
               </div>
@@ -469,7 +469,7 @@ export default function OptionGroupModal({ onClose }: Props) {
               className="flex items-center justify-center gap-2 w-full py-2.5 border-2 border-dashed border-gray-200 dark:border-darkbg hover:border-primary/40 dark:hover:border-secondary/40 rounded-lg text-sm text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-secondary transition-colors"
             >
               <Plus className="w-4 h-4" />
-              Agregar Opcion
+              Agregar Opción
             </button>
           </div>
 

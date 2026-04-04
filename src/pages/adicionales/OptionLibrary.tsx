@@ -99,7 +99,7 @@ export default function OptionLibrary() {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-primary-dark dark:text-white">Libreria de Opciones</h1>
+          <h1 className="text-2xl font-bold text-primary-dark dark:text-white">Librería de Opciones</h1>
           <p className="text-sm text-gray-600 dark:text-gray-300">Gestiona los grupos de opciones y sus valores</p>
         </div>
         <button
@@ -231,7 +231,7 @@ export default function OptionLibrary() {
                       ))}
                       {group.options.length > 4 && (
                         <p className="text-xs text-gray-400 dark:text-gray-500 text-center pt-1">
-                          +{group.options.length - 4} mas
+                          +{group.options.length - 4} más
                         </p>
                       )}
                     </>
@@ -254,7 +254,7 @@ export default function OptionLibrary() {
             <div className="col-span-full bg-white dark:bg-darkbg-lighter rounded-xl shadow-soft dark:shadow-dark p-12 text-center">
               <Layers className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
               <p className="text-gray-500 dark:text-gray-400">
-                {searchTerm ? 'No hay grupos que coincidan con la busqueda' : 'No hay grupos de opciones registrados'}
+                {searchTerm ? 'No hay grupos que coincidan con la búsqueda' : 'No hay grupos de opciones registrados'}
               </p>
               {!searchTerm && (
                 <button

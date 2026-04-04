@@ -90,7 +90,7 @@ export default function ProductModal({ onClose }: Props) {
       return false;
     }
     if (!formData.category_id) {
-      setError('Debe seleccionar una categoria');
+      setError('Debe seleccionar una categoría');
       return false;
     }
     if (formData.base_price <= 0) {
@@ -231,7 +231,7 @@ export default function ProductModal({ onClose }: Props) {
   };
 
   const tabs = [
-    { id: 'basic', label: 'Informacion Basica', icon: Package },
+    { id: 'basic', label: 'Información Básica', icon: Package },
     { id: 'options', label: 'Opciones', icon: Settings },
   ];
 
@@ -303,7 +303,7 @@ export default function ProductModal({ onClose }: Props) {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-4">
                       <div>
-                        <Label htmlFor="category_id">Categoria</Label>
+                        <Label htmlFor="category_id">Categoría</Label>
                         <select
                           id="category_id"
                           value={formData.category_id}
@@ -314,7 +314,7 @@ export default function ProductModal({ onClose }: Props) {
                           className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary bg-white dark:bg-darkbg-lighter text-gray-900 dark:text-white"
                           required
                         >
-                          <option value="">Seleccionar Categoria</option>
+                          <option value="">Seleccionar Categoría</option>
                           {categories.map(category => (
                             <option key={category.id} value={category.id}>
                               {category.name}
@@ -357,7 +357,7 @@ export default function ProductModal({ onClose }: Props) {
                       </div>
 
                       <div>
-                        <Label htmlFor="description">Descripcion</Label>
+                        <Label htmlFor="description">Descripción</Label>
                         <textarea
                           id="description"
                           value={formData.description}

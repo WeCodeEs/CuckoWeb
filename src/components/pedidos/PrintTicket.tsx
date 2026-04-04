@@ -1,19 +1,23 @@
-// PrintTicket.tsx
 import React from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { formatCurrency } from '../../utils/formatCurrency';
 
+interface OrderOption {
+  id: number;
+  option: {
+    name: string;
+  };
+}
+
 interface OrderDetail {
   quantity: number;
   product: {
     name: string;
-    variant?: {
-      name: string;
-    };
   };
   unit_price: number;
   subtotal: number;
+  options?: OrderOption[];
 }
 
 interface Order {
@@ -22,12 +26,13 @@ interface Order {
   started_at?: string | null;
   ready_at?: string | null;
   delivered_at?: string | null;
+  scheduled_delivery_time?: string | null;
   status: string;
   total: number;
   user?: {
     first_name: string;
     last_name: string;
-    faculty_id?: number;
+    faculty?: string;
   };
   details: OrderDetail[];
 }
@@ -46,19 +51,20 @@ export default function PrintTicket({ order, isTest = false }: Props) {
     user: {
       first_name: 'Test',
       last_name: 'Print',
-      faculty_id: 1,
+      faculty: 'Ingenieria',
     },
     details: [
       {
         quantity: 1,
         product: {
-          name: 'Café Americano',
-          variant: {
-            name: 'Grande',
-          },
+          name: 'Cafe Americano',
         },
         unit_price: 15.5,
         subtotal: 15.5,
+        options: [
+          { id: 1, option: { name: 'Grande' } },
+          { id: 2, option: { name: 'Leche de almendra' } },
+        ],
       },
       {
         quantity: 2,
@@ -82,7 +88,7 @@ export default function PrintTicket({ order, isTest = false }: Props) {
       <div style={{ textAlign: 'center', marginBottom: '8px' }}>
         <h1 style={{ fontSize: 22, margin: '0 0 4px 0', fontWeight: 'bold' }}>CuckooEats</h1>
         <p style={{ fontSize: 24, margin: '4px 0', fontWeight: 'bold' }}>
-          {isTest ? 'PRUEBA DE IMPRESIÓN' : `Pedido #${displayOrder.id}`}
+          {isTest ? 'PRUEBA DE IMPRESION' : `Pedido #${displayOrder.id}`}
         </p>
         {!isTest && displayOrder.scheduled_delivery_time && (
           <div style={{
@@ -113,8 +119,7 @@ export default function PrintTicket({ order, isTest = false }: Props) {
           {displayOrder.user
             ? `${displayOrder.user.first_name} ${displayOrder.user.last_name}`
             : 'Cliente'}
-          {displayOrder.user?.faculty_id &&
-            ` (Facultad ${displayOrder.user.faculty_id})`}
+          {displayOrder.user?.faculty && ` (${displayOrder.user.faculty})`}
         </p>
         <p style={{ margin: 0 }}>Estado: {displayOrder.status}</p>
         {displayOrder.started_at && (
@@ -153,14 +158,9 @@ export default function PrintTicket({ order, isTest = false }: Props) {
               </span>
               <span>{formatCurrency(detail.subtotal)}</span>
             </div>
-            {detail.product.variant && (
-              <div style={{ paddingLeft: 12, color: '#000', fontSize: 14 }}>
-                Variante: {detail.product.variant.name || 'Estándar'}
-              </div>
-            )}
-            {detail.ingredients && detail.ingredients.length > 0 && (
+            {detail.options && detail.options.length > 0 && (
               <div style={{ paddingLeft: 12, color: 'black', fontSize: 14, fontWeight: 'normal' }}>
-                {detail.ingredients.map(ing => ing.name).join(', ')}
+                {detail.options.map(opt => opt.option.name).join(', ')}
               </div>
             )}
           </div>
@@ -188,10 +188,10 @@ export default function PrintTicket({ order, isTest = false }: Props) {
             padding: '8px',
           }}
         >
-          <p style={{ margin: '0 0 4px 0', fontWeight: 'bold' }}>PRUEBA DE IMPRESIÓN 80MM</p>
+          <p style={{ margin: '0 0 4px 0', fontWeight: 'bold' }}>PRUEBA DE IMPRESION 80MM</p>
           <p style={{ margin: 0 }}>
-            Si puede leer esto claramente y el texto no se corta, 
-            la impresora está configurada correctamente para papel de 80mm.
+            Si puede leer esto claramente y el texto no se corta,
+            la impresora esta configurada correctamente para papel de 80mm.
           </p>
         </div>
       )}

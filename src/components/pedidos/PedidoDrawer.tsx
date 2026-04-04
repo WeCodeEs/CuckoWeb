@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Printer, Clock, CheckCircle, Truck, Play, Mail, CalendarClock, AlertCircle, ExternalLink } from 'lucide-react';
+import { X, Printer, Clock, CircleCheck as CheckCircle, Truck, Play, Mail, CalendarClock, CircleAlert as AlertCircle, ExternalLink } from 'lucide-react';
 import { Order, OrderStatus, OrderNotification, useOrderStore } from '../../stores/orderStore';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { format } from 'date-fns';
@@ -98,11 +98,8 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                 <span style="max-width: 60%; word-wrap: break-word;">${detail.quantity}x ${detail.product.name}</span>
                 <span>${formatCurrency(detail.subtotal)}</span>
               </div>
-              ${detail.product_variant && detail.product_variant?.variant
-                ? `<div style="padding-left: 12px; color: #000; font-size: 14px;">Variante: ${detail.product_variant?.variant.name}</div>`
-                : ''}
-              ${detail.ingredients && detail.ingredients.length
-                ? `<div style="padding-left: 12px; color: #000; font-size: 14px;"> ${detail.ingredients.map(ing => ing.name).join(', ')}</div>`
+              ${detail.options && detail.options.length
+                ? `<div style="padding-left: 12px; color: #000; font-size: 14px;">${detail.options.map(opt => opt.option.name).join(', ')}</div>`
                 : ''}
             </div>
           `).join('')}
@@ -303,16 +300,10 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                         <p className="text-gray-900 dark:text-white font-semibold">
                           {detail.quantity}x {detail.product?.name || 'Producto'}
                         </p>
-                        {detail.product_variant?.variant && (
+                        {detail.options && detail.options.length > 0 && (
                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 flex items-center gap-1.5">
                             <span className="inline-block w-1 h-1 rounded-full bg-gray-400"></span>
-                            Variante: {detail.product_variant?.variant?.name || 'Estándar'}
-                          </p>
-                        )}
-                        {detail.ingredients && detail.ingredients.length > 0 && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1.5 flex items-center gap-1.5">
-                            <span className="inline-block w-1 h-1 rounded-full bg-gray-400"></span>
-                            Personalización: {detail.ingredients.map(ing => ing.name).join(', ')}
+                            {detail.options.map(opt => opt.option.name).join(', ')}
                           </p>
                         )}
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">

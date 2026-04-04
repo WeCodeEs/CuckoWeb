@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Upload, Search, RefreshCw, Package, Settings, Palette } from 'lucide-react';
+import { X, Plus, Upload, Search, RefreshCw, Package, Settings } from 'lucide-react';
 import { useProductStore } from '../stores/productStore';
 import { useCategoryStore } from '../stores/categoryStore';
-import { useVariantOptionStore } from '../stores/variantOptionStore';
-import { useIngredientOptionStore } from '../stores/ingredientOptionStore';
+import { useOptionGroupStore, OptionGroup, Option } from '../stores/optionGroupStore';
 import { formatCurrency } from '../utils/formatCurrency';
 import { useToast } from './ui/use-toast';
 import {
@@ -19,23 +18,23 @@ interface Props {
   onClose: () => void;
 }
 
+interface SelectedGroupState {
+  enabled: boolean;
+  options: Record<number, { enabled: boolean; priceOverride: number | null }>;
+}
+
 export default function ProductModal({ onClose }: Props) {
   const { selectedProduct, createProduct, updateProduct } = useProductStore();
   const { categories, fetchCategories } = useCategoryStore();
-  const { 
-    options: variants, 
-    fetchOptions: fetchVariants,
-    setIsModalOpen: setVariantModalOpen 
-  } = useVariantOptionStore();
-  const { 
-    options: ingredients, 
-    fetchOptions: fetchIngredients,
-    setIsModalOpen: setIngredientModalOpen 
-  } = useIngredientOptionStore();
-  
+  const {
+    groups: optionGroups,
+    fetchGroups,
+    setIsGroupModalOpen,
+  } = useOptionGroupStore();
+
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'basic' | 'variants' | 'ingredients'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'options'>('basic');
   const [formData, setFormData] = useState({
     name: selectedProduct?.name || '',
     category_id: selectedProduct?.category_id || 0,
@@ -45,50 +44,44 @@ export default function ProductModal({ onClose }: Props) {
     active: selectedProduct?.active ?? true,
   });
 
-  const [selectedIngredients, setSelectedIngredients] = useState<number[]>([]);
-  const [variantState, setVariantState] = useState<Record<number, { active: boolean; priceOverride: number }>>({});
-  const [loadingVariants, setLoadingVariants] = useState(false);
-  const [variantSearch, setVariantSearch] = useState('');
-  const [ingredientSearch, setIngredientSearch] = useState('');
+  const [selectedGroups, setSelectedGroups] = useState<Record<number, SelectedGroupState>>({});
+  const [loadingOptions, setLoadingOptions] = useState(false);
+  const [optionSearch, setOptionSearch] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [interactionLock, setInteractionLock] = useState<number | null>(null);
 
   useEffect(() => {
     fetchCategories();
-    fetchVariants();
-    fetchIngredients();
+    setLoadingOptions(true);
+    fetchGroups().finally(() => setLoadingOptions(false));
 
     if (selectedProduct) {
       if (selectedProduct.image_url) {
         setImagePreview(selectedProduct.image_url);
       }
-      
-      const initialIngredients = selectedProduct.ingredients
-        ?.filter(i => i.active) 
-        .map(i => i.ingredient_option_id) || [];
-      setSelectedIngredients(initialIngredients);
 
-      const initialVariantState: Record<number, { active: boolean; priceOverride: number }> = {};
-      selectedProduct.variants?.forEach(pv => {
-        initialVariantState[pv.variant_option_id] = {
-          active: pv.active,
-          priceOverride: pv.additional_price,
+      const initialState: Record<number, SelectedGroupState> = {};
+      selectedProduct.option_groups?.forEach(pog => {
+        initialState[pog.option_group_id] = {
+          enabled: true,
+          options: {},
         };
+        pog.options.forEach(po => {
+          initialState[pog.option_group_id].options[po.option_id] = {
+            enabled: po.active,
+            priceOverride: po.additional_price,
+          };
+        });
       });
-      setVariantState(initialVariantState);
+      setSelectedGroups(initialState);
     }
-  }, [fetchCategories, fetchVariants, fetchIngredients, selectedProduct]);
+  }, [fetchCategories, fetchGroups, selectedProduct]);
 
-  const filteredVariants = variants.filter(variant => 
-    variant.active &&
-    variant.name.toLowerCase().includes(variantSearch.toLowerCase())
-  );
-
-  const filteredIngredients = ingredients.filter(ingredient => 
-    ingredient.active &&
-    ingredient.name.toLowerCase().includes(ingredientSearch.toLowerCase())
+  const filteredGroups = optionGroups.filter(group =>
+    group.active &&
+    (group.name.toLowerCase().includes(optionSearch.toLowerCase()) ||
+      group.options.some(opt => opt.name.toLowerCase().includes(optionSearch.toLowerCase())))
   );
 
   const validateForm = () => {
@@ -97,7 +90,7 @@ export default function ProductModal({ onClose }: Props) {
       return false;
     }
     if (!formData.category_id) {
-      setError('Debe seleccionar una categoría');
+      setError('Debe seleccionar una categoria');
       return false;
     }
     if (formData.base_price <= 0) {
@@ -125,32 +118,72 @@ export default function ProductModal({ onClose }: Props) {
     }
   };
 
-  const handleVariantToggle = (variantId: number) => {
-    const variant = variants.find(v => v.id === variantId);
-    if (!variant) return;
+  const handleGroupToggle = (groupId: number) => {
+    const group = optionGroups.find(g => g.id === groupId);
+    if (!group) return;
 
-    setInteractionLock(variantId);
-    
-    setTimeout(() => {
-      setInteractionLock(null);
-    }, 2000);
-    setVariantState(prev => ({
-      ...prev,
-      [variantId]: {
-        active: !prev[variantId]?.active,
-        priceOverride: prev[variantId]?.priceOverride ?? variant.base_price
+    setSelectedGroups(prev => {
+      const current = prev[groupId];
+      if (current?.enabled) {
+        const { [groupId]: _, ...rest } = prev;
+        return rest;
       }
-    }));
+
+      const optionsState: Record<number, { enabled: boolean; priceOverride: number | null }> = {};
+      group.options.filter(o => o.active).forEach(opt => {
+        optionsState[opt.id] = { enabled: true, priceOverride: null };
+      });
+
+      return {
+        ...prev,
+        [groupId]: { enabled: true, options: optionsState },
+      };
+    });
   };
 
-  const handlePriceChange = (variantId: number, price: number) => {
-    setVariantState(prev => ({
-      ...prev,
-      [variantId]: {
-        ...prev[variantId],
-        priceOverride: price
-      }
-    }));
+  const handleOptionToggle = (groupId: number, optionId: number, option: Option) => {
+    setSelectedGroups(prev => {
+      const groupState = prev[groupId];
+      if (!groupState) return prev;
+
+      const optionState = groupState.options[optionId];
+      const newEnabled = !optionState?.enabled;
+
+      return {
+        ...prev,
+        [groupId]: {
+          ...groupState,
+          options: {
+            ...groupState.options,
+            [optionId]: {
+              enabled: newEnabled,
+              priceOverride: newEnabled ? (optionState?.priceOverride ?? null) : null,
+            },
+          },
+        },
+      };
+    });
+  };
+
+  const handlePriceOverride = (groupId: number, optionId: number, price: number | null) => {
+    setSelectedGroups(prev => {
+      const groupState = prev[groupId];
+      if (!groupState) return prev;
+
+      return {
+        ...prev,
+        [groupId]: {
+          ...groupState,
+          options: {
+            ...groupState.options,
+            [optionId]: {
+              ...groupState.options[optionId],
+              priceOverride: price,
+            },
+          },
+        },
+      };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -161,15 +194,22 @@ export default function ProductModal({ onClose }: Props) {
       setLoading(true);
       setError(null);
 
+      const optionGroupsData = Object.entries(selectedGroups)
+        .filter(([_, state]) => state.enabled)
+        .map(([groupId, state], index) => ({
+          option_group_id: parseInt(groupId),
+          sort_order: index,
+          options: Object.entries(state.options)
+            .filter(([_, optState]) => optState.enabled)
+            .map(([optionId, optState]) => ({
+              option_id: parseInt(optionId),
+              additional_price: optState.priceOverride,
+            })),
+        }));
+
       const productData = {
         ...formData,
-        ingredients: selectedIngredients,
-        variants: Object.entries(variantState)
-          .filter(([_, state]) => state.active)
-          .map(([variantId, state]) => ({
-            variant_option_id: parseInt(variantId),
-            additional_price: state.priceOverride || variants.find(v => v.id === parseInt(variantId))?.base_price || 0
-          }))
+        option_groups: optionGroupsData,
       };
 
       if (selectedProduct) {
@@ -191,19 +231,16 @@ export default function ProductModal({ onClose }: Props) {
   };
 
   const tabs = [
-    { id: 'basic', label: 'Información Básica', icon: Package },
-    { id: 'variants', label: 'Variantes', icon: Settings },
-    { id: 'ingredients', label: 'Ingredientes', icon: Palette },
+    { id: 'basic', label: 'Informacion Basica', icon: Package },
+    { id: 'options', label: 'Opciones', icon: Settings },
   ];
 
-  const activeVariantsCount = Object.values(variantState).filter(v => v.active).length;
-  const selectedIngredientsCount = selectedIngredients.length;
+  const activeGroupsCount = Object.values(selectedGroups).filter(g => g.enabled).length;
 
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-4xl p-0 overflow-hidden">
         <div className="flex flex-col h-[85vh]">
-          {/* Header */}
           <DialogHeader className="px-6 py-4 border-b border-gray-200 dark:border-darkbg bg-gradient-to-r from-primary/5 to-secondary/5 dark:from-primary/10 dark:to-secondary/10">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-xl font-bold text-primary-dark dark:text-white flex items-center gap-2">
@@ -219,18 +256,15 @@ export default function ProductModal({ onClose }: Props) {
             </div>
           </DialogHeader>
 
-          {/* Tab Navigation */}
           <div className="px-6 py-3 border-b border-gray-200 dark:border-darkbg bg-gray-50 dark:bg-darkbg-darker">
             <div className="flex space-x-1">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
                 let badge = '';
-                
-                if (tab.id === 'variants' && activeVariantsCount > 0) {
-                  badge = activeVariantsCount.toString();
-                } else if (tab.id === 'ingredients' && selectedIngredientsCount > 0) {
-                  badge = selectedIngredientsCount.toString();
+
+                if (tab.id === 'options' && activeGroupsCount > 0) {
+                  badge = activeGroupsCount.toString();
                 }
 
                 return (
@@ -256,7 +290,6 @@ export default function ProductModal({ onClose }: Props) {
             </div>
           </div>
 
-          {/* Content */}
           <div className="flex-1 overflow-y-auto">
             <form id="productForm" onSubmit={handleSubmit} className="p-6">
               {error && (
@@ -265,24 +298,23 @@ export default function ProductModal({ onClose }: Props) {
                 </div>
               )}
 
-              {/* Basic Information Tab */}
               {activeTab === 'basic' && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-4">
                       <div>
-                        <Label htmlFor="category_id">Categoría</Label>
+                        <Label htmlFor="category_id">Categoria</Label>
                         <select
                           id="category_id"
                           value={formData.category_id}
-                          onChange={(e) => setFormData(prev => ({ 
-                            ...prev, 
-                            category_id: parseInt(e.target.value) 
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            category_id: parseInt(e.target.value)
                           }))}
                           className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary bg-white dark:bg-darkbg-lighter text-gray-900 dark:text-white"
                           required
                         >
-                          <option value="">Seleccionar Categoría</option>
+                          <option value="">Seleccionar Categoria</option>
                           {categories.map(category => (
                             <option key={category.id} value={category.id}>
                               {category.name}
@@ -298,7 +330,7 @@ export default function ProductModal({ onClose }: Props) {
                           value={formData.name}
                           onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                           className="h-12"
-                          placeholder="Ej: Café Americano"
+                          placeholder="Ej: Cafe Americano"
                           required
                         />
                       </div>
@@ -311,8 +343,8 @@ export default function ProductModal({ onClose }: Props) {
                             type="number"
                             id="base_price"
                             value={formData.base_price}
-                            onChange={(e) => setFormData(prev => ({ 
-                              ...prev, 
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
                               base_price: parseFloat(e.target.value) || 0
                             }))}
                             min="0"
@@ -325,7 +357,7 @@ export default function ProductModal({ onClose }: Props) {
                       </div>
 
                       <div>
-                        <Label htmlFor="description">Descripción</Label>
+                        <Label htmlFor="description">Descripcion</Label>
                         <textarea
                           id="description"
                           value={formData.description}
@@ -341,9 +373,9 @@ export default function ProductModal({ onClose }: Props) {
                           type="checkbox"
                           id="active"
                           checked={formData.active}
-                          onChange={(e) => setFormData(prev => ({ 
-                            ...prev, 
-                            active: e.target.checked 
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            active: e.target.checked
                           }))}
                           className="w-4 h-4 rounded border-gray-300 dark:border-darkbg text-primary dark:text-secondary focus:ring-primary/20 dark:focus:ring-secondary/20"
                         />
@@ -358,9 +390,9 @@ export default function ProductModal({ onClose }: Props) {
                       <div className="mt-2 space-y-4">
                         {imagePreview && (
                           <div className="relative w-full h-48 rounded-lg overflow-hidden bg-gray-100 dark:bg-darkbg">
-                            <img 
-                              src={imagePreview} 
-                              alt="Preview" 
+                            <img
+                              src={imagePreview}
+                              alt="Preview"
                               className="w-full h-full object-cover"
                             />
                             <button
@@ -399,31 +431,33 @@ export default function ProductModal({ onClose }: Props) {
                 </div>
               )}
 
-              {/* Variants Tab */}
-              {activeTab === 'variants' && (
+              {activeTab === 'options' && (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Variantes del Producto</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Selecciona las variantes disponibles para este producto</p>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Grupos de Opciones</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Selecciona los grupos de opciones disponibles para este producto</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={fetchVariants}
-                        disabled={loadingVariants}
+                        onClick={() => {
+                          setLoadingOptions(true);
+                          fetchGroups().finally(() => setLoadingOptions(false));
+                        }}
+                        disabled={loadingOptions}
                         className="p-2 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-secondary hover:bg-gray-100 dark:hover:bg-darkbg rounded-lg transition-colors"
-                        title="Recargar variantes"
+                        title="Recargar opciones"
                       >
-                        <RefreshCw className={`w-5 h-5 ${loadingVariants ? 'animate-spin' : ''}`} />
+                        <RefreshCw className={`w-5 h-5 ${loadingOptions ? 'animate-spin' : ''}`} />
                       </button>
                       <button
                         type="button"
-                        onClick={() => setVariantModalOpen(true)}
+                        onClick={() => setIsGroupModalOpen(true)}
                         className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary dark:bg-secondary rounded-lg hover:bg-primary-dark dark:hover:bg-secondary/90 transition-colors"
                       >
                         <Plus className="w-4 h-4" />
-                        Nueva Variante
+                        Nuevo Grupo
                       </button>
                     </div>
                   </div>
@@ -432,104 +466,135 @@ export default function ProductModal({ onClose }: Props) {
                     <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                     <Input
                       type="text"
-                      placeholder="Buscar variantes..."
-                      value={variantSearch}
-                      onChange={(e) => setVariantSearch(e.target.value)}
+                      placeholder="Buscar grupos u opciones..."
+                      value={optionSearch}
+                      onChange={(e) => setOptionSearch(e.target.value)}
                       className="pl-10 h-12"
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
-                    {loadingVariants ? (
-                      <div className="col-span-full text-center py-8">
+                  <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                    {loadingOptions ? (
+                      <div className="text-center py-8">
                         <div className="w-8 h-8 border-2 border-primary dark:border-secondary border-t-transparent rounded-full animate-spin mx-auto" />
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Cargando variantes...</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Cargando opciones...</p>
                       </div>
-                    ) : filteredVariants
-                      .sort((a, b) => {
-                        const aState = variantState[a.id] || { active: false, priceOverride: a.base_price };
-                        const bState = variantState[b.id] || { active: false, priceOverride: b.base_price };
-                        
-                        if (selectedProduct) {
-                          if (aState.active && !bState.active) return -1;
-                          if (!aState.active && bState.active) return 1;
-                        }
-                        
-                        return a.name.localeCompare(b.name);
-                      }).length === 0 ? (
-                      <div className="col-span-full text-center py-8">
+                    ) : filteredGroups.length === 0 ? (
+                      <div className="text-center py-8">
                         <Settings className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {variantSearch ? 'No se encontraron variantes' : 'No hay variantes activas disponibles'}
+                          {optionSearch ? 'No se encontraron grupos' : 'No hay grupos de opciones disponibles'}
                         </p>
                       </div>
                     ) : (
-                      filteredVariants
-                        .sort((a, b) => {
-                          if (interactionLock !== null) {
-                            return a.name.localeCompare(b.name);
-                          }
-                          
-                          if (selectedProduct) {
-                            const aState = variantState[a.id] || { active: false, priceOverride: a.base_price };
-                            const bState = variantState[b.id] || { active: false, priceOverride: b.base_price };
-                            
-                            if (aState.active && !bState.active) return -1;
-                            if (!aState.active && bState.active) return 1;
-                          }
-                          
-                          return a.name.localeCompare(b.name);
-                        })
-                        .map(variant => {
-                        const state = variantState[variant.id] || { active: false, priceOverride: variant.base_price };
-                        
+                      filteredGroups.map(group => {
+                        const groupState = selectedGroups[group.id];
+                        const isGroupEnabled = groupState?.enabled || false;
+                        const activeOptions = group.options.filter(o => o.active);
+
                         return (
                           <div
-                            key={variant.id}
-                            className={`p-4 border rounded-lg transition-all ${
-                              state.active 
-                                ? 'border-primary/30 dark:border-secondary/30 bg-primary/5 dark:bg-secondary/5' 
-                                : 'border-gray-200 dark:border-darkbg bg-white dark:bg-darkbg-lighter hover:border-gray-300 dark:hover:border-darkbg-darker'
+                            key={group.id}
+                            className={`border rounded-lg transition-all ${
+                              isGroupEnabled
+                                ? 'border-primary/30 dark:border-secondary/30 bg-primary/5 dark:bg-secondary/5'
+                                : 'border-gray-200 dark:border-darkbg bg-white dark:bg-darkbg-lighter'
                             }`}
                           >
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-3">
-                                <input
-                                  type="checkbox"
-                                  id={`variant-${variant.id}`}
-                                  checked={state.active}
-                                  onChange={() => handleVariantToggle(variant.id)}
-                                  className="w-4 h-4 rounded border-gray-300 dark:border-darkbg text-primary dark:text-secondary focus:ring-primary/20 dark:focus:ring-secondary/20"
-                                />
-                                <label htmlFor={`variant-${variant.id}`} className="font-medium text-gray-900 dark:text-white">
-                                  {variant.name}
-                                </label>
-                              </div>
-                              <span className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded">
-                                Global: {formatCurrency(variant.base_price)}
-                              </span>
-                            </div>
-                            
-                            {state.active && (
-                              <div className="pt-3 border-t border-gray-200 dark:border-darkbg">
-                                <Label htmlFor={`variant-price-${variant.id}`} className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                                  Precio para este producto
-                                </Label>
-                                <div className="mt-1 relative">
-                                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm">$</span>
+                            <div className="p-4">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
                                   <input
-                                    type="number"
-                                    id={`variant-price-${variant.id}`}
-                                    value={state.priceOverride}
-                                    onChange={(e) => handlePriceChange(variant.id, parseFloat(e.target.value) || 0)}
-                                    min="0"
-                                    step="0.50"
-                                    className="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 dark:border-darkbg focus:ring-1 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary rounded-lg bg-white dark:bg-darkbg text-gray-900 dark:text-white"
-                                    placeholder={formatCurrency(variant.base_price)}
+                                    type="checkbox"
+                                    id={`group-${group.id}`}
+                                    checked={isGroupEnabled}
+                                    onChange={() => handleGroupToggle(group.id)}
+                                    className="w-4 h-4 rounded border-gray-300 dark:border-darkbg text-primary dark:text-secondary focus:ring-primary/20 dark:focus:ring-secondary/20"
                                   />
+                                  <div>
+                                    <label htmlFor={`group-${group.id}`} className="font-medium text-gray-900 dark:text-white cursor-pointer">
+                                      {group.name}
+                                    </label>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                      Min: {group.min_select} | Max: {group.max_select} | {activeOptions.length} opciones
+                                    </p>
+                                  </div>
                                 </div>
                               </div>
-                            )}
+
+                              {isGroupEnabled && activeOptions.length > 0 && (
+                                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-darkbg space-y-3">
+                                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                                    Opciones habilitadas para este producto
+                                  </p>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {activeOptions.map(option => {
+                                      const optionState = groupState?.options[option.id];
+                                      const isOptionEnabled = optionState?.enabled || false;
+
+                                      return (
+                                        <div
+                                          key={option.id}
+                                          className={`p-3 border rounded-lg ${
+                                            isOptionEnabled
+                                              ? 'border-primary/20 dark:border-secondary/20 bg-white dark:bg-darkbg'
+                                              : 'border-gray-100 dark:border-darkbg-darker bg-gray-50 dark:bg-darkbg-darker opacity-60'
+                                          }`}
+                                        >
+                                          <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                              <input
+                                                type="checkbox"
+                                                id={`option-${group.id}-${option.id}`}
+                                                checked={isOptionEnabled}
+                                                onChange={() => handleOptionToggle(group.id, option.id, option)}
+                                                className="w-3.5 h-3.5 rounded border-gray-300 dark:border-darkbg text-primary dark:text-secondary focus:ring-primary/20 dark:focus:ring-secondary/20"
+                                              />
+                                              <label
+                                                htmlFor={`option-${group.id}-${option.id}`}
+                                                className="text-sm font-medium text-gray-900 dark:text-white cursor-pointer"
+                                              >
+                                                {option.name}
+                                              </label>
+                                            </div>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                              Base: {option.additional_price > 0 ? `+${formatCurrency(option.additional_price)}` : 'Sin costo'}
+                                            </span>
+                                          </div>
+
+                                          {isOptionEnabled && (
+                                            <div className="mt-2">
+                                              <label className="text-xs text-gray-500 dark:text-gray-400">
+                                                Precio override (dejar vacio para usar precio base)
+                                              </label>
+                                              <div className="relative mt-1">
+                                                <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">$</span>
+                                                <input
+                                                  type="number"
+                                                  value={optionState?.priceOverride ?? ''}
+                                                  onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    handlePriceOverride(
+                                                      group.id,
+                                                      option.id,
+                                                      val === '' ? null : parseFloat(val)
+                                                    );
+                                                  }}
+                                                  min="0"
+                                                  step="0.50"
+                                                  placeholder={option.additional_price.toString()}
+                                                  className="w-full pl-6 pr-2 py-1.5 text-sm border border-gray-200 dark:border-darkbg rounded bg-white dark:bg-darkbg-lighter text-gray-900 dark:text-white"
+                                                />
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         );
                       })
@@ -537,89 +602,9 @@ export default function ProductModal({ onClose }: Props) {
                   </div>
                 </div>
               )}
-
-              {/* Ingredients Tab */}
-              {activeTab === 'ingredients' && (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Ingredientes Personalizables</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Selecciona los ingredientes que los clientes pueden personalizar</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setIngredientModalOpen(true)}
-                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary dark:bg-secondary rounded-lg hover:bg-primary-dark dark:hover:bg-secondary/90 transition-colors"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Nuevo Ingrediente
-                    </button>
-                  </div>
-
-                  <div className="relative">
-                    <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                    <Input
-                      type="text"
-                      placeholder="Buscar ingredientes..."
-                      value={ingredientSearch}
-                      onChange={(e) => setIngredientSearch(e.target.value)}
-                      className="pl-10 h-12"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-                    {filteredIngredients.length === 0 ? (
-                      <div className="col-span-full text-center py-8">
-                        <Palette className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {ingredientSearch ? 'No se encontraron ingredientes' : 'No hay ingredientes disponibles'}
-                        </p>
-                      </div>
-                    ) : (
-                      filteredIngredients.map(ingredient => (
-                        <div 
-                          key={ingredient.id}
-                          className={`p-4 border rounded-lg transition-all ${
-                            selectedIngredients.includes(ingredient.id)
-                              ? 'border-primary/30 dark:border-secondary/30 bg-primary/5 dark:bg-secondary/5'
-                              : 'border-gray-200 dark:border-darkbg bg-white dark:bg-darkbg-lighter hover:border-gray-300 dark:hover:border-darkbg-darker'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <input
-                                type="checkbox"
-                                id={`ingredient-${ingredient.id}`}
-                                checked={selectedIngredients.includes(ingredient.id)}
-                                onChange={() => {
-                                  setSelectedIngredients(prev => 
-                                    prev.includes(ingredient.id)
-                                      ? prev.filter(id => id !== ingredient.id)
-                                      : [...prev, ingredient.id]
-                                  );
-                                }}
-                                className="w-4 h-4 rounded border-gray-300 dark:border-darkbg text-primary dark:text-secondary focus:ring-primary/20 dark:focus:ring-secondary/20"
-                              />
-                              <Label htmlFor={`ingredient-${ingredient.id}`} className="font-medium text-gray-900 dark:text-white">
-                                {ingredient.name}
-                              </Label>
-                            </div>
-                            {ingredient.extra_price > 0 && (
-                              <span className="text-sm text-primary dark:text-secondary font-medium">
-                                +{formatCurrency(ingredient.extra_price)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
             </form>
           </div>
 
-          {/* Footer */}
           <div className="px-6 py-4 border-t border-gray-200 dark:border-darkbg bg-gray-50 dark:bg-darkbg-darker">
             <div className="flex justify-end gap-3">
               <button

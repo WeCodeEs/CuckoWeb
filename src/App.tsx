@@ -11,18 +11,20 @@ import Categories from './pages/Categories';
 import Usuarios from './pages/Usuarios';
 import Alumnos from './pages/Students';
 import Settings from './pages/Settings';
-import VariantOptions from './pages/adicionales/VariantOptions';
-import IngredientOptions from './pages/adicionales/IngredientOptions';
+import OptionLibrary from './pages/adicionales/OptionLibrary';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Toaster } from './components/ui/toaster';
-import VariantModal from './components/adicionales/VariantModal';
-import IngredientModal from './components/adicionales/IngredientModal';
-import { useVariantOptionStore } from './stores/variantOptionStore';
-import { useIngredientOptionStore } from './stores/ingredientOptionStore';
+import OptionGroupModal from './components/adicionales/OptionGroupModal';
+import OptionItemModal from './components/adicionales/OptionItemModal';
+import { useOptionGroupStore } from './stores/optionGroupStore';
 
 function App() {
-  const { isModalOpen: isVariantModalOpen, setIsModalOpen: setVariantModalOpen } = useVariantOptionStore();
-  const { isModalOpen: isIngredientModalOpen, setIsModalOpen: setIngredientModalOpen } = useIngredientOptionStore();
+  const {
+    isGroupModalOpen,
+    setIsGroupModalOpen,
+    isOptionModalOpen,
+    setIsOptionModalOpen
+  } = useOptionGroupStore();
 
   return (
     <BrowserRouter>
@@ -36,7 +38,7 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="/dashboard\" replace />} />
+          <Route index element={<Navigate to="/dashboard" replace />} />
           <Route
             path="dashboard"
             element={
@@ -51,8 +53,7 @@ function App() {
           <Route path="menus" element={<Menus />} />
           <Route path="categorias" element={<Categories />} />
           <Route path="adicionales">
-            <Route path="variantes" element={<VariantOptions />} />
-            <Route path="ingredientes" element={<IngredientOptions />} />
+            <Route path="opciones" element={<OptionLibrary />} />
           </Route>
           <Route
             path="usuarios"
@@ -78,17 +79,17 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="*" element={<Navigate to="/dashboard\" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>
       <Toaster />
-      
-      {isVariantModalOpen && (
-        <VariantModal onClose={() => setVariantModalOpen(false)} />
+
+      {isGroupModalOpen && (
+        <OptionGroupModal onClose={() => setIsGroupModalOpen(false)} />
       )}
-      
-      {isIngredientModalOpen && (
-        <IngredientModal onClose={() => setIngredientModalOpen(false)} />
+
+      {isOptionModalOpen && (
+        <OptionItemModal onClose={() => setIsOptionModalOpen(false)} />
       )}
     </BrowserRouter>
   );

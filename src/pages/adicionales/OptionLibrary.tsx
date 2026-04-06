@@ -374,18 +374,9 @@ export default function OptionLibrary() {
 
   return (
     <div className="p-6 h-[calc(100vh-4rem)] flex flex-col">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-primary-dark dark:text-white">Grupos de Opciones</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-300">Gestiona los grupos de opciones del sistema</p>
-        </div>
-        <button
-          onClick={handleCreateNew}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary dark:bg-secondary rounded-xl hover:bg-primary-dark dark:hover:bg-secondary/90 transition-colors shadow-lg shadow-primary/20 dark:shadow-secondary/20"
-        >
-          <Plus className="w-4 h-4" />
-          Nuevo Grupo
-        </button>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-primary-dark dark:text-white">Grupos de Opciones</h1>
+        <p className="text-sm text-gray-600 dark:text-gray-300">Gestiona los grupos de opciones del sistema</p>
       </div>
 
       <div className="flex-1 flex gap-6 min-h-0">

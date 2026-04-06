@@ -1,4 +1,4 @@
-import { X, ChevronLeft, ChevronRight, Eye, EyeOff, Trash2 } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Eye, EyeOff, Trash2, Link2 } from 'lucide-react';
 import { Banner } from '../stores/bannersStore';
 
 interface BannerPreviewModalProps {
@@ -8,6 +8,7 @@ interface BannerPreviewModalProps {
   onToggle: (banner: Banner) => void;
   onDelete: (banner: Banner) => void;
   onNavigate: (direction: 'prev' | 'next') => void;
+  onEditAction: (banner: Banner) => void;
 }
 
 export default function BannerPreviewModal({
@@ -17,7 +18,9 @@ export default function BannerPreviewModal({
   onToggle,
   onDelete,
   onNavigate,
+  onEditAction,
 }: BannerPreviewModalProps) {
+
   const currentIndex = banners.findIndex((b) => b.id === banner.id);
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex < banners.length - 1;
@@ -98,7 +101,7 @@ export default function BannerPreviewModal({
           </div>
 
           <div className="p-6 border-t border-gray-200 dark:border-darkbg">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
                   Banner #{banner.sort_order}
@@ -108,7 +111,7 @@ export default function BannerPreviewModal({
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => onToggle(banner)}
                   className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2 ${
@@ -131,6 +134,14 @@ export default function BannerPreviewModal({
                 </button>
 
                 <button
+                  onClick={() => onEditAction(banner)}
+                  className="px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2 bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/30"
+                >
+                  <Link2 className="w-4 h-4" />
+                  Editar acción
+                </button>
+
+                <button
                   onClick={() => {
                     onDelete(banner);
                     onClose();
@@ -143,6 +154,7 @@ export default function BannerPreviewModal({
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </>

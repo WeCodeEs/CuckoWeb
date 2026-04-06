@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Image, Upload } from 'lucide-react';
+import { Image, Plus } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -22,23 +22,28 @@ import BannerPreviewModal from '../components/BannerPreviewModal';
 import BannerReorderNotification from '../components/BannerReorderNotification';
 import { useBannersStore, Banner } from '../stores/bannersStore';
 import { useToast } from '../components/ui/use-toast';
+import BannerModal from '../components/BannerModal';
+import BannerActionModal from '../components/BannerActionModal';
+import { supabase } from '../lib/supabase';
 
 export default function Banners() {
   const { toast } = useToast();
 
-  const [isUploading, setIsUploading] = useState(false);
   const [bannerToDelete, setBannerToDelete] = useState<Banner | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [previewBanner, setPreviewBanner] = useState<Banner | null>(null);
   const [showReorderNotification, setShowReorderNotification] = useState(false);
   const [activeDragId, setActiveDragId] = useState<number | null>(null);
+  const [isBannerModalOpen, setIsBannerModalOpen] = useState(false);
+  const [editingActionBanner, setEditingActionBanner] = useState<Banner | null>(null);
+  const [products, setProducts] = useState<Array<{ id: number }>>([]);
+  const [menus, setMenus] = useState<Array<{ id: number }>>([]);
 
   const {
     banners,
     loadingBanners,
     error: bannerError,
     fetchBanners,
-    addBanner,
     updateBannersOrder,
     toggleBannerStatus,
     deleteBanner,
@@ -59,25 +64,35 @@ export default function Banners() {
     fetchBanners();
   }, [fetchBanners]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      setIsUploading(true);
+  useEffect(() => {
+    const loadTargets = async () => {
       try {
-        await addBanner(file);
-        toast({ title: 'Éxito', description: 'Banner agregado correctamente.' });
-        e.target.value = '';
-      } catch (error: any) {
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: error.message || 'No se pudo agregar el banner.',
-        });
-      } finally {
-        setIsUploading(false);
+        const [
+          { data: productsData, error: productsError },
+          { data: menusData, error: menusError },
+        ] = await Promise.all([
+          supabase
+            .from('products')
+            .select('id')
+            .eq('active', true),
+          supabase
+            .from('menus')
+            .select('id')
+            .eq('active', true),
+        ]);
+
+        if (productsError) console.error('Error cargando productos para validación de banners:', productsError);
+        if (menusError) console.error('Error cargando menús para validación de banners:', menusError);
+
+        setProducts((productsData as any[]) ?? []);
+        setMenus((menusData as any[]) ?? []);
+      } catch (error) {
+        console.error('Error inesperado cargando productos/menús para validación de banners:', error);
       }
-    }
-  };
+    };
+
+    loadTargets();
+  }, []);
 
   const handleDeleteBannerRequest = (banner: Banner) => {
     setBannerToDelete(banner);
@@ -86,7 +101,42 @@ export default function Banners() {
 
   const handleToggleBanner = async (banner: Banner) => {
     try {
+      if (!banner.active) {
+        if (banner.banner_action === 'REDIRECT_PRODUCT') {
+          const targetProduct = products.find(p => p.id === banner.product_id);
+
+          if (!targetProduct) {
+            toast({
+              variant: 'destructive',
+              title: 'No se puede activar el banner',
+              description:
+                'El producto asociado a este banner ya no está activo o fue eliminado. Actualiza la acción del banner antes de activarlo.',
+            });
+
+            // TODO: Definir el comportamiento cuando el producto se elimine
+            return;
+          }
+        }
+
+        if (banner.banner_action === 'REDIRECT_MENU') {
+          const targetMenu = menus.find(m => m.id === banner.menu_id);
+
+          if (!targetMenu) {
+            toast({
+              variant: 'destructive',
+              title: 'No se puede activar el banner',
+              description:
+                'El menú asociado a este banner ya no está activo o fue eliminado. Actualiza la acción del banner antes de activarlo.',
+            });
+
+            // TODO: Definir el comportamiento cuando el menú se elimine
+            return;
+          }
+        }
+      }
+
       await toggleBannerStatus(banner);
+
       toast({
         title: 'Éxito',
         description: `Banner ${banner.active ? 'desactivado' : 'activado'}.`,
@@ -171,6 +221,12 @@ export default function Banners() {
     setPreviewBanner(banners[newIndex]);
   };
 
+  const handleEditActionBanner = (banner: Banner) => {
+    setEditingActionBanner(banner);
+  };
+
+  const activeCount = banners.filter((b) => b.active).length;
+
   return (
     <>
       <div className="bg-white dark:bg-darkbg-lighter rounded-xl shadow-soft dark:shadow-dark p-6">
@@ -189,50 +245,26 @@ export default function Banners() {
         </div>
 
         <div className="space-y-6">
-          <div className="border-2 border-dashed border-gray-300 dark:border-darkbg rounded-lg p-6">
-            <div className="flex flex-col items-center gap-4">
-              <div className="p-4 bg-gray-100 dark:bg-darkbg rounded-full">
-                <Upload className="w-8 h-8 text-gray-400 dark:text-gray-500" />
-              </div>
-              <div className="text-center">
-                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
-                  Subir nueva imagen de banner
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Tamaño recomendado: 1200x400px (formato JPG, PNG o WEBP)
-                </p>
-              </div>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-                id="banner-upload"
-                disabled={isUploading}
-              />
-              <label
-                htmlFor="banner-upload"
-                className={`px-4 py-2 bg-primary dark:bg-secondary text-white rounded-lg transition-colors text-sm font-medium ${
-                  isUploading
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'cursor-pointer hover:bg-primary-dark dark:hover:bg-secondary/80'
-                }`}
-              >
-                {isUploading ? 'Subiendo...' : 'Seleccionar imagen'}
-              </label>
-            </div>
-          </div>
-
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                Banners Configurados
-              </h3>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {banners.length} banner{banners.length !== 1 ? 's' : ''} total
-                {banners.length !== 1 ? 'es' : ''} ({banners.filter((b) => b.active).length}{' '}
-                activo{banners.filter((b) => b.active).length !== 1 ? 's' : ''})
-              </span>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                  Banners Configurados
+                </h3>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {banners.length} banner{banners.length !== 1 ? 's' : ''} total
+                  {banners.length !== 1 ? 'es' : ''} ({activeCount}{' '}
+                  activo{activeCount !== 1 ? 's' : ''})
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsBannerModalOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-white bg-primary dark:bg-secondary rounded-lg hover:bg-primary-dark dark:hover:bg-secondary/90 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Nuevo Banner
+              </button>
             </div>
 
             {loadingBanners && (
@@ -258,7 +290,7 @@ export default function Banners() {
                   No hay banners configurados
                 </p>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                  Sube tu primera imagen para comenzar
+                  Crea tu primer banner para comenzar
                 </p>
               </div>
             ) : (
@@ -283,6 +315,7 @@ export default function Banners() {
                           onToggle={handleToggleBanner}
                           onDelete={handleDeleteBannerRequest}
                           onPreview={handlePreview}
+                          onEditAction={handleEditActionBanner}
                         />
                       ))}
                     </div>
@@ -299,6 +332,7 @@ export default function Banners() {
                             onToggle={() => {}}
                             onDelete={() => {}}
                             onPreview={() => {}}
+                            onEditAction={() => {}}
                           />
                         </div>
                       ) : null;
@@ -336,6 +370,7 @@ export default function Banners() {
           onToggle={handleToggleBanner}
           onDelete={handleDeleteBannerRequest}
           onNavigate={handleNavigatePreview}
+          onEditAction={handleEditActionBanner}
         />
       )}
 
@@ -343,6 +378,17 @@ export default function Banners() {
         show={showReorderNotification}
         onClose={() => setShowReorderNotification(false)}
       />
+
+      {isBannerModalOpen && (
+        <BannerModal onClose={() => setIsBannerModalOpen(false)} />
+      )}
+
+      {editingActionBanner && (
+        <BannerActionModal
+          banner={editingActionBanner}
+          onClose={() => setEditingActionBanner(null)}
+        />
+      )}
     </>
   );
 }

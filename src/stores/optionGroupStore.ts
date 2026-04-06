@@ -122,12 +122,13 @@ export const useOptionGroupStore = create<OptionGroupState>((set, get) => ({
       await syncOptionsWithDB(resultGroupId, options);
 
       await get().fetchGroups();
+      set({ isGroupModalOpen: false, selectedGroup: null });
       return resultGroupId;
     } catch (error: any) {
       set({ error: error.message || 'Error al guardar el grupo' });
       throw error;
     } finally {
-      set({ loading: false, isGroupModalOpen: false, selectedGroup: null });
+      set({ loading: false });
     }
   },
 

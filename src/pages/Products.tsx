@@ -56,13 +56,14 @@ export default function Products() {
   }, [products]);
 
   const categories = useMemo(() => {
-    const categoryMap = new Map<string, { name: string; displayName: string }>();
+    const categoryMap = new Map<string, { key: string; name: string; displayName: string }>();
 
     for (const product of products) {
       if (!product.category?.name) continue;
-      const key = product.category.name + (product.category.menu?.name || '');
+      const key = product.category.name + '::' + (product.category.menu?.name || '');
       if (!categoryMap.has(key)) {
         categoryMap.set(key, {
+          key,
           name: product.category.name,
           displayName: formatProductCategoryName(product.category, categoryFrequencies),
         });
@@ -76,6 +77,16 @@ export default function Products() {
 
   const hasUncategorized = products.some(p => !p.category?.name);
 
+  useEffect(() => {
+    if (
+      selectedCategory !== 'all' &&
+      selectedCategory !== 'uncategorized' &&
+      !categories.some(c => c.key === selectedCategory)
+    ) {
+      setSelectedCategory('all');
+    }
+  }, [categories, selectedCategory]);
+
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.category?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -83,8 +94,8 @@ export default function Products() {
   ).filter(product => {
     if (selectedCategory === 'all') return true;
     if (selectedCategory === 'uncategorized') return !product.category?.name;
-    const productCategoryDisplay = formatProductCategoryName(product.category, categoryFrequencies);
-    return productCategoryDisplay === selectedCategory;
+    const productKey = (product.category?.name || '') + '::' + (product.category?.menu?.name || '');
+    return productKey === selectedCategory;
   }).sort((a, b) => {
     let aValue: string | number;
     let bValue: string | number;
@@ -161,7 +172,7 @@ export default function Products() {
           >
             <option value="all">Todas las categorías</option>
             {categories.map(category => (
-              <option key={category.displayName} value={category.displayName}>
+              <option key={category.key} value={category.key}>
                 {category.displayName}
               </option>
             ))}

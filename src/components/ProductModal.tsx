@@ -168,7 +168,7 @@ export default function ProductModal({ onClose }: Props) {
             ...groupState.options,
             [optionId]: {
               enabled: newEnabled,
-              priceOverride: newEnabled ? (optionState?.priceOverride ?? null) : null,
+              priceOverride: optionState?.priceOverride ?? null,
             },
           },
         },

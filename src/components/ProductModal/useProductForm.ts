@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useProductStore } from '../../stores/productStore';
 import { useCategoryStore } from '../../stores/categoryStore';
 import { useToast } from '../ui/use-toast';
@@ -24,6 +24,13 @@ export function useProductForm(onClose: () => void) {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const blobUrlRef = useRef<string | null>(null);
+
+  const revokeBlobUrl = (url: string | null) => {
+    if (url && url.startsWith('blob:')) {
+      URL.revokeObjectURL(url);
+    }
+  };
 
   useEffect(() => {
     fetchCategories();
@@ -32,6 +39,12 @@ export function useProductForm(onClose: () => void) {
       setImagePreview(selectedProduct.image_url);
     }
   }, [fetchCategories, selectedProduct]);
+
+  useEffect(() => {
+    return () => {
+      revokeBlobUrl(blobUrlRef.current);
+    };
+  }, []);
 
   const validateForm = () => {
     if (!formData.name.trim()) {
@@ -61,13 +74,17 @@ export function useProductForm(onClose: () => void) {
         return;
       }
       setImageFile(file);
+      revokeBlobUrl(blobUrlRef.current);
       const previewUrl = URL.createObjectURL(file);
+      blobUrlRef.current = previewUrl;
       setImagePreview(previewUrl);
       setError(null);
     }
   };
 
   const clearImage = () => {
+    revokeBlobUrl(blobUrlRef.current);
+    blobUrlRef.current = null;
     setImagePreview(null);
     setImageFile(null);
     setFormData(prev => ({ ...prev, image_url: '' }));

@@ -261,8 +261,11 @@ export function useOptionGroupManager() {
       });
 
       setLoadingOptions(true);
-      await fetchGroups();
-      setLoadingOptions(false);
+      try {
+        await fetchGroups();
+      } finally {
+        setLoadingOptions(false);
+      }
 
       toast({
         title: 'Grupo creado',

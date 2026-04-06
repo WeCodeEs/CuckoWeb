@@ -36,6 +36,8 @@ interface OptionGroupState {
   groups: OptionGroup[];
   loading: boolean;
   error: string | null;
+  isGroupModalOpen: boolean;
+  setIsGroupModalOpen: (open: boolean) => void;
   fetchGroups: () => Promise<OptionGroup[]>;
   saveGroupWithOptions: (data: {
     groupId?: number | null;
@@ -53,6 +55,8 @@ export const useOptionGroupStore = create<OptionGroupState>((set, get) => ({
   groups: [],
   loading: false,
   error: null,
+  isGroupModalOpen: false,
+  setIsGroupModalOpen: (open) => set({ isGroupModalOpen: open }),
 
   fetchGroups: async () => {
     try {

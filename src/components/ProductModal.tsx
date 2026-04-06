@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Upload, Search, RefreshCw, Package, Settings } from 'lucide-react';
+import { X, Plus, Upload, Search, RefreshCw, Package, Settings, GripVertical, Check, ListChecks } from 'lucide-react';
 import { useProductStore } from '../stores/productStore';
 import { useCategoryStore } from '../stores/categoryStore';
-import { useOptionGroupStore, OptionGroup, Option } from '../stores/optionGroupStore';
+import { useOptionGroupStore, OptionGroup, Option, OptionInput } from '../stores/optionGroupStore';
 import { formatCurrency } from '../utils/formatCurrency';
 import { useToast } from './ui/use-toast';
 import {
@@ -13,6 +13,23 @@ import {
 } from './ui/dialog';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Props {
   onClose: () => void;
@@ -23,13 +40,102 @@ interface SelectedGroupState {
   options: Record<number, { enabled: boolean; priceOverride: number | null }>;
 }
 
+interface OptionRow {
+  tempId: string;
+  name: string;
+  additional_price: string;
+}
+
+const normalizeText = (text: string): string => {
+  return text.trim().charAt(0).toUpperCase() + text.trim().slice(1).toLowerCase();
+};
+
+const generateTempId = () => Math.random().toString(36).slice(2, 10);
+
+function SortableOptionRow({
+  row,
+  index,
+  onUpdate,
+  onRemove,
+}: {
+  row: OptionRow;
+  index: number;
+  onUpdate: (tempId: string, field: 'name' | 'additional_price', value: string) => void;
+  onRemove: (tempId: string) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: row.tempId });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-2 group ${isDragging ? 'z-50 opacity-80' : ''}`}
+    >
+      <button
+        type="button"
+        className="flex-shrink-0 p-1 text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 cursor-grab active:cursor-grabbing touch-none"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="w-4 h-4" />
+      </button>
+
+      <div className="flex-1 min-w-0">
+        <input
+          type="text"
+          value={row.name}
+          onChange={(e) => onUpdate(row.tempId, 'name', e.target.value)}
+          placeholder={`Opcion ${index + 1}`}
+          maxLength={100}
+          className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-darkbg bg-white dark:bg-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors"
+        />
+      </div>
+
+      <div className="flex-shrink-0 w-24 relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm">$</span>
+        <input
+          type="number"
+          value={row.additional_price}
+          onChange={(e) => onUpdate(row.tempId, 'additional_price', e.target.value)}
+          placeholder="0"
+          min="0"
+          step="0.50"
+          className="w-full pl-7 pr-2 py-2 text-sm rounded-lg border border-gray-200 dark:border-darkbg bg-white dark:bg-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors"
+        />
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onRemove(row.tempId)}
+        className="flex-shrink-0 p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+      >
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
 export default function ProductModal({ onClose }: Props) {
   const { selectedProduct, createProduct, updateProduct } = useProductStore();
   const { categories, fetchCategories } = useCategoryStore();
   const {
     groups: optionGroups,
     fetchGroups,
+    isGroupModalOpen,
     setIsGroupModalOpen,
+    saveGroupWithOptions,
   } = useOptionGroupStore();
 
   const { toast } = useToast();
@@ -50,6 +156,22 @@ export default function ProductModal({ onClose }: Props) {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [newGroupData, setNewGroupData] = useState({
+    name: '',
+    min_select: 0,
+    max_select: 1,
+  });
+  const [newGroupOptions, setNewGroupOptions] = useState<OptionRow[]>([
+    { tempId: generateTempId(), name: '', additional_price: '' }
+  ]);
+  const [savingGroup, setSavingGroup] = useState(false);
+  const [groupFormErrors, setGroupFormErrors] = useState<Record<string, string>>({});
+
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   useEffect(() => {
     fetchCategories();
@@ -196,6 +318,145 @@ export default function ProductModal({ onClose }: Props) {
       };
     });
   };
+
+  const resetNewGroupForm = () => {
+    setNewGroupData({ name: '', min_select: 0, max_select: 1 });
+    setNewGroupOptions([{ tempId: generateTempId(), name: '', additional_price: '' }]);
+    setGroupFormErrors({});
+  };
+
+  const handleCloseGroupModal = () => {
+    setIsGroupModalOpen(false);
+    resetNewGroupForm();
+  };
+
+  const updateGroupOptionRow = (tempId: string, field: 'name' | 'additional_price', value: string) => {
+    setNewGroupOptions(prev => prev.map(r => r.tempId === tempId ? { ...r, [field]: value } : r));
+    if (groupFormErrors.options) setGroupFormErrors(prev => ({ ...prev, options: '' }));
+  };
+
+  const removeGroupOptionRow = (tempId: string) => {
+    setNewGroupOptions(prev => {
+      const filtered = prev.filter(r => r.tempId !== tempId);
+      return filtered.length === 0
+        ? [{ tempId: generateTempId(), name: '', additional_price: '' }]
+        : filtered;
+    });
+  };
+
+  const addGroupOptionRow = () => {
+    setNewGroupOptions(prev => [...prev, { tempId: generateTempId(), name: '', additional_price: '' }]);
+  };
+
+  const handleGroupDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    setNewGroupOptions(prev => {
+      const oldIndex = prev.findIndex(r => r.tempId === active.id);
+      const newIndex = prev.findIndex(r => r.tempId === over.id);
+      return arrayMove(prev, oldIndex, newIndex);
+    });
+  };
+
+  const validateGroupForm = () => {
+    const newErrors: Record<string, string> = {};
+    const normalizedName = normalizeText(newGroupData.name);
+
+    if (!normalizedName) {
+      newErrors.name = 'El nombre es requerido';
+    } else if (normalizedName.length > 100) {
+      newErrors.name = 'El nombre no puede exceder los 100 caracteres';
+    } else {
+      const isDuplicate = optionGroups.some(group =>
+        group.name.toLowerCase() === normalizedName.toLowerCase()
+      );
+      if (isDuplicate) {
+        newErrors.name = 'Ya existe un grupo con este nombre';
+      }
+    }
+
+    if (newGroupData.min_select < 0) {
+      newErrors.min_select = 'No puede ser negativo';
+    }
+    if (newGroupData.max_select < 1) {
+      newErrors.max_select = 'Debe ser al menos 1';
+    }
+    if (newGroupData.min_select > newGroupData.max_select) {
+      newErrors.min_select = 'No puede ser mayor que el maximo';
+    }
+
+    const validOptions = newGroupOptions.filter(r => r.name.trim() !== '');
+    const optionNames = validOptions.map(r => normalizeText(r.name).toLowerCase());
+    const hasDuplicateOptions = new Set(optionNames).size !== optionNames.length;
+    if (hasDuplicateOptions) {
+      newErrors.options = 'Hay opciones con nombres duplicados';
+    }
+
+    for (const row of validOptions) {
+      const price = parseFloat(row.additional_price) || 0;
+      if (price < 0) {
+        newErrors.options = 'Los precios no pueden ser negativos';
+        break;
+      }
+    }
+
+    setGroupFormErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSaveNewGroup = async () => {
+    if (!validateGroupForm()) return;
+
+    try {
+      setSavingGroup(true);
+      const normalizedName = normalizeText(newGroupData.name);
+
+      const validOptions: OptionInput[] = newGroupOptions
+        .filter(r => r.name.trim() !== '')
+        .map(r => ({
+          name: normalizeText(r.name),
+          additional_price: parseFloat(r.additional_price) || 0,
+        }));
+
+      await saveGroupWithOptions({
+        groupId: null,
+        name: normalizedName,
+        min_select: newGroupData.min_select,
+        max_select: newGroupData.max_select,
+        active: true,
+        options: validOptions,
+      });
+
+      toast({
+        title: 'Grupo creado',
+        description: 'El grupo y sus opciones se han creado exitosamente',
+      });
+
+      handleCloseGroupModal();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al crear el grupo';
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: message,
+      });
+    } finally {
+      setSavingGroup(false);
+    }
+  };
+
+  const getGroupSelectionDescription = () => {
+    const { min_select, max_select } = newGroupData;
+    if (min_select === 0 && max_select === 1) return 'El cliente puede seleccionar hasta 1 opcion (opcional)';
+    if (min_select === 1 && max_select === 1) return 'El cliente debe seleccionar exactamente 1 opcion (requerido)';
+    if (min_select === 0 && max_select > 1) return `El cliente puede seleccionar hasta ${max_select} opciones (opcional)`;
+    if (min_select > 0 && max_select > 1 && min_select < max_select) return `El cliente debe seleccionar entre ${min_select} y ${max_select} opciones`;
+    if (min_select > 0 && min_select === max_select && max_select > 1) return `El cliente debe seleccionar exactamente ${max_select} opciones`;
+    return '';
+  };
+
+  const validNewGroupOptionCount = newGroupOptions.filter(r => r.name.trim() !== '').length;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -659,6 +920,161 @@ export default function ProductModal({ onClose }: Props) {
           </div>
         </div>
       </DialogContent>
+
+      {isGroupModalOpen && (
+        <Dialog open onOpenChange={handleCloseGroupModal}>
+          <DialogContent className="max-w-lg p-0 overflow-hidden">
+            <DialogHeader className="px-5 py-4 border-b border-gray-200 dark:border-darkbg">
+              <div className="flex items-center justify-between">
+                <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <ListChecks className="w-5 h-5 text-primary dark:text-secondary" />
+                  Nuevo Grupo de Opciones
+                </DialogTitle>
+                <button
+                  onClick={handleCloseGroupModal}
+                  className="p-1.5 hover:bg-gray-100 dark:hover:bg-darkbg rounded-lg transition-colors"
+                >
+                  <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                </button>
+              </div>
+            </DialogHeader>
+
+            <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto">
+              <div>
+                <Label htmlFor="newGroupName">Nombre del Grupo</Label>
+                <Input
+                  id="newGroupName"
+                  value={newGroupData.name}
+                  onChange={(e) => {
+                    setNewGroupData(prev => ({ ...prev, name: e.target.value }));
+                    if (groupFormErrors.name) setGroupFormErrors(prev => ({ ...prev, name: '' }));
+                  }}
+                  placeholder="Ej: Salsas, Tamano, Extras"
+                  maxLength={100}
+                  className={`mt-1.5 ${groupFormErrors.name ? 'border-red-500' : ''}`}
+                />
+                {groupFormErrors.name && <p className="mt-1 text-sm text-red-500">{groupFormErrors.name}</p>}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="newGroupMinSelect">Seleccion Minima</Label>
+                  <Input
+                    type="number"
+                    id="newGroupMinSelect"
+                    value={newGroupData.min_select}
+                    onChange={(e) => {
+                      setNewGroupData(prev => ({ ...prev, min_select: parseInt(e.target.value) || 0 }));
+                      if (groupFormErrors.min_select) setGroupFormErrors(prev => ({ ...prev, min_select: '' }));
+                    }}
+                    min="0"
+                    className={`mt-1.5 ${groupFormErrors.min_select ? 'border-red-500' : ''}`}
+                  />
+                  {groupFormErrors.min_select && <p className="mt-1 text-sm text-red-500">{groupFormErrors.min_select}</p>}
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">0 = opcional</p>
+                </div>
+                <div>
+                  <Label htmlFor="newGroupMaxSelect">Seleccion Maxima</Label>
+                  <Input
+                    type="number"
+                    id="newGroupMaxSelect"
+                    value={newGroupData.max_select}
+                    onChange={(e) => {
+                      setNewGroupData(prev => ({ ...prev, max_select: parseInt(e.target.value) || 1 }));
+                      if (groupFormErrors.max_select) setGroupFormErrors(prev => ({ ...prev, max_select: '' }));
+                    }}
+                    min="1"
+                    className={`mt-1.5 ${groupFormErrors.max_select ? 'border-red-500' : ''}`}
+                  />
+                  {groupFormErrors.max_select && <p className="mt-1 text-sm text-red-500">{groupFormErrors.max_select}</p>}
+                </div>
+              </div>
+
+              <div className="p-3 bg-gray-50 dark:bg-darkbg rounded-lg">
+                <p className="text-sm text-gray-600 dark:text-gray-400">{getGroupSelectionDescription()}</p>
+              </div>
+
+              <div className="border-t border-gray-100 dark:border-darkbg pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">Opciones</span>
+                    {validNewGroupOptionCount > 0 && (
+                      <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-darkbg px-2 py-0.5 rounded-full">
+                        {validNewGroupOptionCount}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {groupFormErrors.options && (
+                  <p className="mb-3 text-sm text-red-500">{groupFormErrors.options}</p>
+                )}
+
+                <div className="space-y-2 mb-3">
+                  <DndContext
+                    sensors={dndSensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleGroupDragEnd}
+                  >
+                    <SortableContext
+                      items={newGroupOptions.map(r => r.tempId)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {newGroupOptions.map((row, index) => (
+                        <SortableOptionRow
+                          key={row.tempId}
+                          row={row}
+                          index={index}
+                          onUpdate={updateGroupOptionRow}
+                          onRemove={removeGroupOptionRow}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={addGroupOptionRow}
+                  className="flex items-center justify-center gap-2 w-full py-2 border-2 border-dashed border-gray-200 dark:border-darkbg hover:border-primary/40 dark:hover:border-secondary/40 rounded-lg text-sm text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-secondary transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Agregar Opcion
+                </button>
+              </div>
+            </div>
+
+            <div className="px-5 py-4 border-t border-gray-200 dark:border-darkbg bg-gray-50 dark:bg-darkbg-darker flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={handleCloseGroupModal}
+                disabled={savingGroup}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-darkbg rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveNewGroup}
+                disabled={savingGroup}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary dark:bg-secondary rounded-lg hover:bg-primary-dark dark:hover:bg-secondary/90 transition-colors disabled:opacity-50"
+              >
+                {savingGroup ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Crear Grupo
+                  </>
+                )}
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </Dialog>
   );
 }

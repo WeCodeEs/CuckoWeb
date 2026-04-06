@@ -149,6 +149,15 @@ export default function OptionLibrary() {
 
   useEffect(() => {
     if (selectedGroup) {
+      const updatedGroup = groups.find(g => g.id === selectedGroup.id);
+      if (updatedGroup && updatedGroup !== selectedGroup) {
+        setSelectedGroup(updatedGroup);
+      }
+    }
+  }, [groups, selectedGroup]);
+
+  useEffect(() => {
+    if (selectedGroup) {
       setFormData({
         name: selectedGroup.name,
         min_select: selectedGroup.min_select,

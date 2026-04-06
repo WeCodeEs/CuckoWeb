@@ -1,11 +1,12 @@
-import React, { useEffect } from 'react';
-import { Plus, Pencil, AlertCircle } from 'lucide-react';
+import React, { useEffect, useMemo } from 'react';
+import { Plus, Pencil, CircleAlert as AlertCircle } from 'lucide-react';
 import { useCategoryStore, Category } from '../stores/categoryStore';
 import { useProductStore } from '../stores/productStore';
 import CategoryModal from '../components/CategoryModal';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import SkeletonTable from '../components/skeletons/SkeletonTable';
+import { getCategoryNameFrequencies, formatCategoryName } from '../utils/categoryUtils';
 
 export default function Categories() {
   const { 
@@ -24,6 +25,10 @@ export default function Categories() {
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
+
+  const categoryFrequencies = useMemo(() => {
+    return getCategoryNameFrequencies(categories);
+  }, [categories]);
 
   const handleEdit = (category: Category) => {
     setSelectedCategory(category);
@@ -125,7 +130,7 @@ export default function Categories() {
                     className="hover:bg-gray-50/50 dark:hover:bg-darkbg/50 transition-colors"
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      {category.name}
+                      {formatCategoryName(category, categoryFrequencies)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                       {category.menu?.name || '-'}

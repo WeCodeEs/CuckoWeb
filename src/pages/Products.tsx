@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
-import { Plus, Pencil, AlertCircle, Search } from 'lucide-react';
+import React, { useEffect, useMemo } from 'react';
+import { Plus, Pencil, CircleAlert as AlertCircle, Search } from 'lucide-react';
 import { useProductStore, Product } from '../stores/productStore';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { formatCurrency } from '../utils/formatCurrency';
+import { getProductCategoryNameFrequencies, formatProductCategoryName } from '../utils/categoryUtils';
 import SkeletonTable from '../components/skeletons/SkeletonTable';
 import ProductModal from '../components/ProductModal';
 
@@ -28,7 +29,7 @@ export default function Products() {
     fetchProducts();
   }, [fetchProducts]);
 
-  const handleEdit = (product: Product) => { 
+  const handleEdit = (product: Product) => {
     setSelectedProduct(product);
     setIsModalOpen(true);
   };
@@ -39,7 +40,7 @@ export default function Products() {
     if (newStatus === true) {
       if (product.category && !product.category.active) {
         alert(`No se puede activar el producto "${product.name}" porque la categoría "${product.category.name}" está desactivada.`);
-        return; 
+        return;
       }
     }
 
@@ -50,6 +51,31 @@ export default function Products() {
     }
   };
 
+  const categoryFrequencies = useMemo(() => {
+    return getProductCategoryNameFrequencies(products.map(p => p.category));
+  }, [products]);
+
+  const categories = useMemo(() => {
+    const categoryMap = new Map<string, { name: string; displayName: string }>();
+
+    for (const product of products) {
+      if (!product.category?.name) continue;
+      const key = product.category.name + (product.category.menu?.name || '');
+      if (!categoryMap.has(key)) {
+        categoryMap.set(key, {
+          name: product.category.name,
+          displayName: formatProductCategoryName(product.category, categoryFrequencies),
+        });
+      }
+    }
+
+    return Array.from(categoryMap.values()).sort((a, b) =>
+      a.displayName.localeCompare(b.displayName)
+    );
+  }, [products, categoryFrequencies]);
+
+  const hasUncategorized = products.some(p => !p.category?.name);
+
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.category?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -57,11 +83,12 @@ export default function Products() {
   ).filter(product => {
     if (selectedCategory === 'all') return true;
     if (selectedCategory === 'uncategorized') return !product.category?.name;
-    return product.category?.name === selectedCategory;
+    const productCategoryDisplay = formatProductCategoryName(product.category, categoryFrequencies);
+    return productCategoryDisplay === selectedCategory;
   }).sort((a, b) => {
     let aValue: string | number;
     let bValue: string | number;
-    
+
     switch (sortBy) {
       case 'category':
         aValue = a.category?.name?.toLowerCase() || 'zzz';
@@ -74,22 +101,11 @@ export default function Products() {
       default:
         return 0;
     }
-    
+
     if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
     if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
     return 0;
   });
-
-  const categories = React.useMemo(() => {
-    const uniqueCategories = new Set(
-      products
-        .map(p => p.category?.name)
-        .filter(Boolean)
-    );
-    return Array.from(uniqueCategories).sort();
-  }, [products]);
-
-  const hasUncategorized = products.some(p => !p.category?.name);
 
   if (error) {
     return (
@@ -145,8 +161,8 @@ export default function Products() {
           >
             <option value="all">Todas las categorías</option>
             {categories.map(category => (
-              <option key={category} value={category}>
-                {category}
+              <option key={category.displayName} value={category.displayName}>
+                {category.displayName}
               </option>
             ))}
             {hasUncategorized && (
@@ -222,7 +238,7 @@ export default function Products() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                      {product.category?.name || '-'}
+                      {formatProductCategoryName(product.category, categoryFrequencies)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900 dark:text-white">
                       {formatCurrency(product.base_price)}

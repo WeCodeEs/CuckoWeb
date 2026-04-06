@@ -4,6 +4,7 @@ import { useProductStore } from '../stores/productStore';
 import { useCategoryStore } from '../stores/categoryStore';
 import { useOptionGroupStore, OptionGroup, Option, OptionInput } from '../stores/optionGroupStore';
 import { formatCurrency } from '../utils/formatCurrency';
+import { getActiveCategories, getSortedCategories, getCategoryNameFrequencies, formatCategoryName } from '../utils/categoryUtils';
 import { useToast } from './ui/use-toast';
 import {
   Dialog,
@@ -608,11 +609,16 @@ export default function ProductModal({ onClose }: Props) {
                           required
                         >
                           <option value="">Seleccionar Categoría</option>
-                          {categories.map(category => (
-                            <option key={category.id} value={category.id}>
-                              {category.name}
-                            </option>
-                          ))}
+                          {(() => {
+                            const activeCategories = getActiveCategories(categories);
+                            const sortedCategories = getSortedCategories(activeCategories);
+                            const frequencies = getCategoryNameFrequencies(activeCategories);
+                            return sortedCategories.map(category => (
+                              <option key={category.id} value={category.id}>
+                                {formatCategoryName(category, frequencies)}
+                              </option>
+                            ));
+                          })()}
                         </select>
                       </div>
 

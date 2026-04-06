@@ -179,7 +179,7 @@ export default function OptionLibrary() {
     try {
       await toggleGroupActive(group.id, newStatus);
       if (selectedGroup?.id === group.id) {
-        setSelectedGroup({ ...selectedGroup, active: newStatus });
+        setFormData(prev => ({ ...prev, active: newStatus }));
       }
       toast({
         title: 'Estado actualizado',
@@ -524,12 +524,12 @@ export default function OptionLibrary() {
                 <button
                   onClick={(e) => handleToggleGroupActive(e, selectedGroup)}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                    selectedGroup.active
+                    formData.active
                       ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-200'
                       : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200'
                   }`}
                 >
-                  {selectedGroup.active ? 'Activo' : 'Inactivo'}
+                  {formData.active ? 'Activo' : 'Inactivo'}
                 </button>
               )}
             </div>

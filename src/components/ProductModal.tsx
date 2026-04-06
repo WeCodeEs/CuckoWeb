@@ -200,6 +200,12 @@ export default function ProductModal({ onClose }: Props) {
     }
   }, [fetchCategories, fetchGroups, selectedProduct]);
 
+  useEffect(() => {
+    return () => {
+      setIsGroupModalOpen(false);
+    };
+  }, [setIsGroupModalOpen]);
+
   const filteredGroups = optionGroups
     .filter(group =>
       group.active &&

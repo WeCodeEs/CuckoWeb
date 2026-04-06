@@ -1,23 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  ClipboardList,
-  History,
-  MenuSquare,
-  Users,
-  ChevronDown,
-  ChevronRight,
-  FolderTree,
-  Coffee,
-  HeartPlus,
-  Blend,
-  Soup,
-  UserRoundCog,
-  IdCard,
-  IdCardLanyard,
-  Settings
-} from 'lucide-react';
+import { LayoutDashboard, ClipboardList, History, SquareMenu as MenuSquare, Users, ChevronDown, ChevronRight, FolderTree, Coffee, HeartPlus, Layers, UserRoundCog, IdCard, IdCardLanyard, Settings } from 'lucide-react';
 import { Route } from '../types';
 import { useAuthStore } from '../stores/authStore';
 import clsx from 'clsx';
@@ -72,20 +55,14 @@ const routes: RouteWithSubRoutes[] = [
     ]
   },
   {
-    
     name: 'Adicionales',
     icon: 'HeartPlus',
     path: '/adicionales',
     subRoutes: [
       {
-        path: '/adicionales/variantes',
-        name: 'Variantes',
-        icon: 'Blend'
-      },
-      {
-        path: '/adicionales/ingredientes',
-        name: 'Ingredientes',
-        icon: 'Soup'
+        path: '/adicionales/opciones',
+        name: 'Opciones',
+        icon: 'Layers'
       }
     ]
   },
@@ -118,8 +95,7 @@ const iconComponents: { [key: string]: React.ComponentType<any> } = {
   FolderTree,
   Coffee,
   HeartPlus,
-  Blend,
-  Soup,
+  Layers,
   UserRoundCog,
   IdCard,
   IdCardLanyard,

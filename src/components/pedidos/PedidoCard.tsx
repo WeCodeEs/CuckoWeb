@@ -203,17 +203,9 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
               <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">
                 {detail.quantity}x {detail.product.name}
               </p>
-              {(detail.product_variant?.variant || (detail.ingredients && detail.ingredients.length > 0)) && (
+              {detail.options && detail.options.length > 0 && (
                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5">
-                  {detail.product_variant?.variant && (
-                    <span>{detail.product_variant.variant.name}</span>
-                  )}
-                  {detail.ingredients && detail.ingredients.length > 0 && (
-                    <span>
-                      {detail.product_variant?.variant && ', '}
-                      {detail.ingredients.map(ing => ing.name).join(', ')}
-                    </span>
-                  )}
+                  {detail.options.map(opt => opt.option.name).join(', ')}
                 </p>
               )}
             </div>

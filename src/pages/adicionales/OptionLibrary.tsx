@@ -455,14 +455,54 @@ export default function OptionLibrary() {
             )}
           </div>
 
-          {!showPanel && groups.length > 0 && (
-            <div className="p-4 border-t border-gray-100 dark:border-darkbg text-center">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Selecciona un grupo para editarlo
-              </p>
-            </div>
-          )}
         </div>
+
+        {!showPanel && (
+          <div className="flex-1 bg-white dark:bg-darkbg-lighter rounded-xl shadow-soft dark:shadow-dark overflow-hidden flex items-center justify-center">
+            <div className="text-center px-8 py-12 max-w-md">
+              <div className="w-16 h-16 rounded-full bg-primary/10 dark:bg-secondary/10 flex items-center justify-center mx-auto mb-5">
+                <ListChecks className="w-8 h-8 text-primary dark:text-secondary" />
+              </div>
+
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                Grupos de Opciones
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                Selecciona un grupo de la lista para editarlo o crea uno nuevo
+              </p>
+
+              {groups.length > 0 && (
+                <div className="flex items-center justify-center gap-6 mb-6 text-sm">
+                  <div className="text-center">
+                    <span className="block text-2xl font-semibold text-gray-900 dark:text-white">
+                      {groups.filter(g => g.active).length}
+                    </span>
+                    <span className="text-gray-400 dark:text-gray-500 text-xs">
+                      {groups.filter(g => g.active).length === 1 ? 'grupo activo' : 'grupos activos'}
+                    </span>
+                  </div>
+                  <div className="w-px h-8 bg-gray-200 dark:bg-darkbg" />
+                  <div className="text-center">
+                    <span className="block text-2xl font-semibold text-gray-900 dark:text-white">
+                      {groups.reduce((sum, g) => sum + g.options.length, 0)}
+                    </span>
+                    <span className="text-gray-400 dark:text-gray-500 text-xs">
+                      opciones totales
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={handleCreateNew}
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-primary dark:bg-secondary rounded-xl hover:bg-primary-dark dark:hover:bg-secondary/90 transition-colors shadow-lg shadow-primary/20 dark:shadow-secondary/20"
+              >
+                <Plus className="w-4 h-4" />
+                Crear Nuevo Grupo
+              </button>
+            </div>
+          </div>
+        )}
 
         {showPanel && (
           <div className="flex-1 bg-white dark:bg-darkbg-lighter rounded-xl shadow-soft dark:shadow-dark overflow-hidden flex flex-col">

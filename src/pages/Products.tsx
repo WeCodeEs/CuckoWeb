@@ -7,6 +7,7 @@ import { formatCurrency } from '../utils/formatCurrency';
 import { getProductCategoryNameFrequencies, formatProductCategoryName } from '../utils/categoryUtils';
 import SkeletonTable from '../components/skeletons/SkeletonTable';
 import ProductModal from '../components/ProductModal';
+import { useToast } from '../components/ui/use-toast';
 
 export default function Products() {
   const { 
@@ -20,6 +21,7 @@ export default function Products() {
     setIsModalOpen
   } = useProductStore();
 
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState<string>('all');
   const [sortBy, setSortBy] = React.useState<'category' | 'created_at'>('category');
@@ -39,7 +41,11 @@ export default function Products() {
 
     if (newStatus === true) {
       if (product.category && !product.category.active) {
-        alert(`No se puede activar el producto "${product.name}" porque la categoría "${product.category.name}" está desactivada.`);
+        toast({
+          variant: 'destructive',
+          title: 'Acción no permitida',
+          description: `No se puede activar el producto "${product.name}" porque la categoría "${product.category.name}" está desactivada.`,
+        });
         return;
       }
     }

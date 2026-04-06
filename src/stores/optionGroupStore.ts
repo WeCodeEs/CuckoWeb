@@ -67,7 +67,7 @@ export const useOptionGroupStore = create<OptionGroupState>((set, get) => ({
       const { data: groups, error: groupsError } = await supabase
         .from('option_groups')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('name', { ascending: true });
 
       if (groupsError) throw groupsError;
 

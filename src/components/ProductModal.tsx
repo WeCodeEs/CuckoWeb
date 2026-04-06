@@ -78,11 +78,13 @@ export default function ProductModal({ onClose }: Props) {
     }
   }, [fetchCategories, fetchGroups, selectedProduct]);
 
-  const filteredGroups = optionGroups.filter(group =>
-    group.active &&
-    (group.name.toLowerCase().includes(optionSearch.toLowerCase()) ||
-      group.options.some(opt => opt.name.toLowerCase().includes(optionSearch.toLowerCase())))
-  );
+  const filteredGroups = optionGroups
+    .filter(group =>
+      group.active &&
+      (group.name.toLowerCase().includes(optionSearch.toLowerCase()) ||
+        group.options.some(opt => opt.name.toLowerCase().includes(optionSearch.toLowerCase())))
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const validateForm = () => {
     if (!formData.name.trim()) {
@@ -203,21 +205,29 @@ export default function ProductModal({ onClose }: Props) {
       setLoading(true);
       setError(null);
 
-      const optionGroupsData = Object.entries(selectedGroups)
+      const enabledGroups = Object.entries(selectedGroups)
         .filter(([_, state]) => state.enabled)
-        .map(([groupId, state], index) => {
+        .map(([groupId, state]) => {
           const gId = parseInt(groupId);
+          const group = optionGroups.find(g => g.id === gId);
           return {
-            option_group_id: gId,
-            sort_order: index,
-            options: Object.entries(state.options)
-              .filter(([_, optState]) => optState.enabled)
-              .map(([optionId, optState]) => ({
-                option_id: parseInt(optionId),
-                additional_price: optState.priceOverride,
-              })),
+            groupId: gId,
+            groupName: group?.name || '',
+            state,
           };
-        });
+        })
+        .sort((a, b) => a.groupName.localeCompare(b.groupName));
+
+      const optionGroupsData = enabledGroups.map((item, index) => ({
+        option_group_id: item.groupId,
+        sort_order: index,
+        options: Object.entries(item.state.options)
+          .filter(([_, optState]) => optState.enabled)
+          .map(([optionId, optState]) => ({
+            option_id: parseInt(optionId),
+            additional_price: optState.priceOverride,
+          })),
+      }));
 
       const productData = {
         ...formData,

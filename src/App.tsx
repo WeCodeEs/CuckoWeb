@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import Login from './pages/Login';
@@ -14,15 +13,8 @@ import Settings from './pages/Settings';
 import OptionLibrary from './pages/adicionales/OptionLibrary';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Toaster } from './components/ui/toaster';
-import OptionGroupModal from './components/adicionales/OptionGroupModal';
-import { useOptionGroupStore } from './stores/optionGroupStore';
 
 function App() {
-  const {
-    isGroupModalOpen,
-    setIsGroupModalOpen,
-  } = useOptionGroupStore();
-
   return (
     <BrowserRouter>
       <Routes>
@@ -80,10 +72,6 @@ function App() {
         </Route>
       </Routes>
       <Toaster />
-
-      {isGroupModalOpen && (
-        <OptionGroupModal onClose={() => setIsGroupModalOpen(false)} />
-      )}
     </BrowserRouter>
   );
 }

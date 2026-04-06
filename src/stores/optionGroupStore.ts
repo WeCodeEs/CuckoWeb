@@ -36,8 +36,6 @@ interface OptionGroupState {
   groups: OptionGroup[];
   loading: boolean;
   error: string | null;
-  selectedGroup: OptionGroup | null;
-  isGroupModalOpen: boolean;
   fetchGroups: () => Promise<OptionGroup[]>;
   saveGroupWithOptions: (data: {
     groupId?: number | null;
@@ -49,16 +47,12 @@ interface OptionGroupState {
   }) => Promise<number>;
   deleteGroup: (id: number) => Promise<void>;
   toggleGroupActive: (id: number, active: boolean) => Promise<void>;
-  setSelectedGroup: (group: OptionGroup | null) => void;
-  setIsGroupModalOpen: (isOpen: boolean) => void;
 }
 
 export const useOptionGroupStore = create<OptionGroupState>((set, get) => ({
   groups: [],
   loading: false,
   error: null,
-  selectedGroup: null,
-  isGroupModalOpen: false,
 
   fetchGroups: async () => {
     try {
@@ -122,7 +116,6 @@ export const useOptionGroupStore = create<OptionGroupState>((set, get) => ({
       await syncOptionsWithDB(resultGroupId, options);
 
       await get().fetchGroups();
-      set({ isGroupModalOpen: false, selectedGroup: null });
       return resultGroupId;
     } catch (error: any) {
       set({ error: error.message || 'Error al guardar el grupo' });
@@ -182,9 +175,4 @@ export const useOptionGroupStore = create<OptionGroupState>((set, get) => ({
     }
   },
 
-  setSelectedGroup: (group) => set({ selectedGroup: group }),
-  setIsGroupModalOpen: (isOpen) => {
-    set({ isGroupModalOpen: isOpen });
-    if (!isOpen) set({ selectedGroup: null });
-  },
 }));

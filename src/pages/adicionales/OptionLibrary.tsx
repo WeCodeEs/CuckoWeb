@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Plus, CircleAlert as AlertCircle, Search, Package, Layers, Pencil, CircleDot, ToggleLeft, SquareCheck as CheckSquare, Square, ChevronRight } from 'lucide-react';
+import { Plus, CircleAlert as AlertCircle, Search, Package, Layers, Pencil } from 'lucide-react';
 import { useOptionGroupStore, type OptionGroup } from '../../stores/optionGroupStore';
 import { useToast } from '../../components/ui/use-toast';
 import { formatCurrency } from '../../utils/formatCurrency';
-import SkeletonCard from '../../components/skeletons/SkeletonCard';
+import SkeletonTable from '../../components/skeletons/SkeletonTable';
 
 type FilterType = 'all' | 'required' | 'optional';
 
@@ -31,8 +31,7 @@ export default function OptionLibrary() {
     setIsGroupModalOpen(true);
   };
 
-  const handleToggleGroupActive = async (e: React.MouseEvent, group: OptionGroup) => {
-    e.stopPropagation();
+  const handleToggleGroupActive = async (group: OptionGroup) => {
     const newStatus = !group.active;
     try {
       await toggleGroupActive(group.id, newStatus);
@@ -61,21 +60,15 @@ export default function OptionLibrary() {
 
   const getSelectionLabel = (group: OptionGroup) => {
     const { min_select, max_select } = group;
-    if (min_select === 0 && max_select === 1) return 'Opcional';
-    if (min_select === 1 && max_select === 1) return 'Obligatorio';
-    if (min_select === 0 && max_select > 1) return `Hasta ${max_select}`;
-    if (min_select > 0 && min_select === max_select) return `Exactamente ${max_select}`;
-    if (min_select > 0 && max_select > 1) return `${min_select} a ${max_select}`;
-    return `${min_select}-${max_select}`;
+    if (min_select === 0 && max_select === 1) return 'Opcional - hasta 1';
+    if (min_select === 1 && max_select === 1) return 'Obligatorio - exactamente 1';
+    if (min_select === 0 && max_select > 1) return `Opcional - hasta ${max_select}`;
+    if (min_select > 0 && min_select === max_select) return `Obligatorio - exactamente ${max_select}`;
+    if (min_select > 0 && max_select > 1) return `Obligatorio - ${min_select} a ${max_select}`;
+    return `Min: ${min_select} | Max: ${max_select}`;
   };
 
   const isRequired = (group: OptionGroup) => group.min_select > 0;
-
-  const FILTER_TABS: { key: FilterType; label: string; count: number }[] = [
-    { key: 'all', label: 'Todos', count: groups.length },
-    { key: 'required', label: 'Obligatorios', count: groups.filter(g => g.min_select > 0).length },
-    { key: 'optional', label: 'Opcionales', count: groups.filter(g => g.min_select === 0).length },
-  ];
 
   if (error) {
     return (
@@ -97,242 +90,196 @@ export default function OptionLibrary() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Grupos de Opciones</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {groups.length} {groups.length === 1 ? 'grupo' : 'grupos'} configurados
-          </p>
+          <h1 className="text-2xl font-bold text-primary-dark dark:text-white">Grupos de Opciones</h1>
+          <p className="text-sm text-gray-600 dark:text-gray-300">Gestiona los grupos de opciones y sus valores</p>
         </div>
         <button
           onClick={() => {
             setSelectedGroup(null);
             setIsGroupModalOpen(true);
           }}
-          className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-primary dark:bg-secondary rounded-xl hover:bg-primary-dark dark:hover:bg-secondary/90 transition-all shadow-lg shadow-primary/25 dark:shadow-secondary/25 hover:shadow-xl hover:shadow-primary/30 dark:hover:shadow-secondary/30 hover:-translate-y-0.5"
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary dark:bg-secondary rounded-xl hover:bg-primary-dark dark:hover:bg-secondary/90 transition-colors shadow-lg shadow-primary/20 dark:shadow-secondary/20"
         >
           <Plus className="w-4 h-4" />
           Nuevo Grupo
         </button>
       </div>
 
-      <div className="bg-white dark:bg-darkbg-lighter rounded-2xl shadow-soft dark:shadow-dark p-4">
-        <div className="flex flex-col lg:flex-row gap-4">
-          <div className="relative flex-1">
-            <input
-              type="text"
-              placeholder="Buscar por nombre de grupo u opcion..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 dark:border-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary bg-gray-50 dark:bg-darkbg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all"
-            />
-            <Search className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
-          </div>
-
-          <div className="flex gap-2 p-1 bg-gray-100 dark:bg-darkbg rounded-xl">
-            {FILTER_TABS.map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => setFilter(tab.key)}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                  filter === tab.key
-                    ? 'bg-white dark:bg-darkbg-lighter text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                }`}
-              >
-                {tab.label}
-                <span className={`text-xs px-1.5 py-0.5 rounded-md ${
-                  filter === tab.key
-                    ? 'bg-primary/10 dark:bg-secondary/10 text-primary dark:text-secondary'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                }`}>
-                  {tab.count}
-                </span>
-              </button>
-            ))}
-          </div>
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1 relative">
+          <input
+            type="text"
+            placeholder="Buscar grupos u opciones..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary bg-white dark:bg-darkbg text-gray-900 dark:text-white"
+          />
+          <Search className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
         </div>
+
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value as FilterType)}
+          className="px-4 py-2 rounded-lg border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary bg-white dark:bg-darkbg text-gray-900 dark:text-white"
+        >
+          <option value="all">Todos los grupos</option>
+          <option value="required">Solo obligatorios</option>
+          <option value="optional">Solo opcionales</option>
+        </select>
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {[...Array(6)].map((_, i) => (
-            <SkeletonCard key={i} />
-          ))}
-        </div>
+        <SkeletonTable rows={5} columns={5} hasActions />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {filteredGroups.map((group) => (
-            <div
-              key={group.id}
-              onClick={() => handleEditGroup(group)}
-              className={`group bg-white dark:bg-darkbg-lighter rounded-2xl shadow-soft dark:shadow-dark overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border ${
-                !group.active
-                  ? 'border-gray-200 dark:border-gray-700 opacity-60'
-                  : isRequired(group)
-                    ? 'border-primary/20 dark:border-secondary/20'
-                    : 'border-gray-100 dark:border-darkbg'
-              }`}
-            >
-              <div className="p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 min-w-0 flex-1">
-                    <div className={`flex-shrink-0 p-2.5 rounded-xl transition-colors ${
-                      isRequired(group)
-                        ? 'bg-primary/10 dark:bg-secondary/10 group-hover:bg-primary/15 dark:group-hover:bg-secondary/15'
-                        : 'bg-gray-100 dark:bg-darkbg group-hover:bg-gray-200 dark:group-hover:bg-darkbg/80'
-                    }`}>
-                      {group.max_select === 1 ? (
-                        <CircleDot className={`w-5 h-5 ${
+        <div className="bg-white dark:bg-darkbg-lighter rounded-xl shadow-soft dark:shadow-dark overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-100 dark:divide-darkbg">
+              <thead>
+                <tr className="bg-gray-50/50 dark:bg-darkbg/50">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Nombre
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Tipo de Seleccion
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Opciones
+                  </th>
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Productos
+                  </th>
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Estado
+                  </th>
+                  <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-darkbg">
+                {filteredGroups.map((group) => (
+                  <tr
+                    key={group.id}
+                    className="hover:bg-gray-50/50 dark:hover:bg-darkbg/50 transition-colors"
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${
                           isRequired(group)
-                            ? 'text-primary dark:text-secondary'
-                            : 'text-gray-400 dark:text-gray-500'
-                        }`} />
-                      ) : (
-                        <CheckSquare className={`w-5 h-5 ${
-                          isRequired(group)
-                            ? 'text-primary dark:text-secondary'
-                            : 'text-gray-400 dark:text-gray-500'
-                        }`} />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-gray-900 dark:text-white truncate text-lg">{group.name}</h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
-                          isRequired(group)
-                            ? 'bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
-                            : 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
+                            ? 'bg-primary/10 dark:bg-secondary/10'
+                            : 'bg-gray-100 dark:bg-darkbg'
                         }`}>
-                          {isRequired(group) ? 'Requerido' : 'Opcional'}
-                        </span>
-                        <span className="text-xs text-gray-400 dark:text-gray-500">
-                          {getSelectionLabel(group)}
+                          <Layers className={`w-4 h-4 ${
+                            isRequired(group)
+                              ? 'text-primary dark:text-secondary'
+                              : 'text-gray-400 dark:text-gray-500'
+                          }`} />
+                        </div>
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                          {group.name}
                         </span>
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={(e) => handleToggleGroupActive(e, group)}
-                      className={`p-2 rounded-lg transition-colors ${
-                        group.active
-                          ? 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20'
-                          : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
-                      }`}
-                      title={group.active ? 'Desactivar' : 'Activar'}
-                    >
-                      {group.active ? (
-                        <ToggleLeft className="w-5 h-5 rotate-180" />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        isRequired(group)
+                          ? 'bg-amber-100 dark:bg-amber-900/20 text-amber-800 dark:text-amber-400'
+                          : 'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400'
+                      }`}>
+                        {getSelectionLabel(group)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {group.options.length === 0 ? (
+                        <span className="text-sm text-gray-400 dark:text-gray-500 italic">
+                          Sin opciones
+                        </span>
                       ) : (
-                        <ToggleLeft className="w-5 h-5" />
-                      )}
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditGroup(group);
-                      }}
-                      className="p-2 text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-secondary hover:bg-primary/5 dark:hover:bg-secondary/5 rounded-lg transition-colors"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-5 space-y-2">
-                  {group.options.length === 0 ? (
-                    <div className="py-6 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
-                      <Square className="w-6 h-6 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                      <p className="text-sm text-gray-400 dark:text-gray-500">Sin opciones</p>
-                      <p className="text-xs text-gray-300 dark:text-gray-600 mt-1">Haz clic para agregar</p>
-                    </div>
-                  ) : (
-                    <>
-                      {group.options.slice(0, 3).map((option) => (
-                        <div
-                          key={option.id}
-                          className={`flex items-center justify-between py-2.5 px-3 rounded-lg transition-colors ${
-                            option.active
-                              ? 'bg-gray-50 dark:bg-darkbg/50 group-hover:bg-gray-100 dark:group-hover:bg-darkbg/70'
-                              : 'bg-gray-50/50 dark:bg-darkbg/30'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                              option.active
-                                ? 'bg-green-500'
-                                : 'bg-gray-300 dark:bg-gray-600'
-                            }`} />
-                            <span className={`text-sm truncate ${
-                              option.active
-                                ? 'text-gray-700 dark:text-gray-300'
-                                : 'text-gray-400 dark:text-gray-500 line-through'
-                            }`}>
+                        <div className="flex flex-wrap gap-1.5 max-w-xs">
+                          {group.options.slice(0, 3).map((option) => (
+                            <span
+                              key={option.id}
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${
+                                option.active
+                                  ? 'bg-gray-100 dark:bg-darkbg text-gray-700 dark:text-gray-300'
+                                  : 'bg-gray-50 dark:bg-darkbg/50 text-gray-400 dark:text-gray-500 line-through'
+                              }`}
+                            >
                               {option.name}
+                              {option.additional_price > 0 && (
+                                <span className="text-green-600 dark:text-green-400 font-medium">
+                                  +{formatCurrency(option.additional_price)}
+                                </span>
+                              )}
                             </span>
-                          </div>
-                          <span className={`text-sm font-medium flex-shrink-0 ml-2 ${
-                            option.additional_price > 0
-                              ? 'text-green-600 dark:text-green-400'
-                              : 'text-gray-400 dark:text-gray-500'
-                          }`}>
-                            {option.additional_price > 0
-                              ? `+${formatCurrency(option.additional_price)}`
-                              : 'Gratis'}
-                          </span>
+                          ))}
+                          {group.options.length > 3 && (
+                            <span className="text-xs text-gray-400 dark:text-gray-500 py-0.5">
+                              +{group.options.length - 3} mas
+                            </span>
+                          )}
                         </div>
-                      ))}
-                      {group.options.length > 3 && (
-                        <button className="w-full flex items-center justify-center gap-1 py-2 text-xs font-medium text-primary dark:text-secondary hover:bg-primary/5 dark:hover:bg-secondary/5 rounded-lg transition-colors">
-                          Ver {group.options.length - 3} opciones mas
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </button>
                       )}
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {(group.product_count !== undefined && group.product_count > 0) && (
-                <div className="px-5 py-3 bg-gray-50 dark:bg-darkbg/50 border-t border-gray-100 dark:border-darkbg">
-                  <span className="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                    <Package className="w-3.5 h-3.5" />
-                    Vinculado a {group.product_count} {group.product_count === 1 ? 'producto' : 'productos'}
-                  </span>
-                </div>
-              )}
-            </div>
-          ))}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      {group.product_count !== undefined && group.product_count > 0 ? (
+                        <span className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300">
+                          <Package className="w-3.5 h-3.5" />
+                          {group.product_count}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-gray-400 dark:text-gray-500">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <button
+                        onClick={() => handleToggleGroupActive(group)}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${
+                          group.active
+                            ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/30'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                        title={group.active ? 'Clic para desactivar' : 'Clic para activar'}
+                      >
+                        {group.active ? 'Activo' : 'Inactivo'}
+                      </button>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleEditGroup(group)}
+                          className="p-2 text-primary dark:text-secondary hover:bg-primary/5 dark:hover:bg-secondary/5 rounded-lg transition-colors"
+                          title="Editar"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           {filteredGroups.length === 0 && !loading && (
-            <div className="col-span-full">
-              <div className="bg-white dark:bg-darkbg-lighter rounded-2xl shadow-soft dark:shadow-dark p-16 text-center">
-                <div className="w-16 h-16 bg-gray-100 dark:bg-darkbg rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Layers className="w-8 h-8 text-gray-400 dark:text-gray-500" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  {searchTerm ? 'Sin resultados' : 'Sin grupos de opciones'}
-                </h3>
-                <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-                  {searchTerm
-                    ? `No encontramos grupos que coincidan con "${searchTerm}"`
-                    : 'Crea tu primer grupo de opciones para personalizar tus productos'}
-                </p>
-                {!searchTerm && (
-                  <button
-                    onClick={() => {
-                      setSelectedGroup(null);
-                      setIsGroupModalOpen(true);
-                    }}
-                    className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-primary dark:bg-secondary rounded-xl hover:bg-primary-dark dark:hover:bg-secondary/90 transition-all shadow-lg shadow-primary/25 dark:shadow-secondary/25"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Crear primer grupo
-                  </button>
-                )}
-              </div>
+            <div className="text-center py-12">
+              <Layers className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400">
+                {searchTerm ? 'No hay grupos que coincidan con la busqueda' : 'No hay grupos de opciones registrados'}
+              </p>
+              {!searchTerm && (
+                <button
+                  onClick={() => {
+                    setSelectedGroup(null);
+                    setIsGroupModalOpen(true);
+                  }}
+                  className="mt-4 text-sm text-primary dark:text-secondary hover:underline"
+                >
+                  Crear primer grupo
+                </button>
+              )}
             </div>
           )}
         </div>

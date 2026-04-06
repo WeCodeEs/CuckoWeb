@@ -178,6 +178,9 @@ export default function OptionLibrary() {
     const newStatus = !group.active;
     try {
       await toggleGroupActive(group.id, newStatus);
+      if (selectedGroup?.id === group.id) {
+        setSelectedGroup({ ...selectedGroup, active: newStatus });
+      }
       toast({
         title: 'Estado actualizado',
         description: `Grupo ${newStatus ? 'activado' : 'desactivado'} exitosamente`,

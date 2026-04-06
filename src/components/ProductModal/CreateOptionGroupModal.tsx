@@ -89,7 +89,7 @@ export default function CreateOptionGroupModal({ manager }: CreateOptionGroupMod
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="newGroupMinSelect">Seleccion Minima</Label>
+              <Label htmlFor="newGroupMinSelect">Selección Mínima</Label>
               <Input
                 type="number"
                 id="newGroupMinSelect"
@@ -105,7 +105,7 @@ export default function CreateOptionGroupModal({ manager }: CreateOptionGroupMod
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">0 = opcional</p>
             </div>
             <div>
-              <Label htmlFor="newGroupMaxSelect">Seleccion Maxima</Label>
+              <Label htmlFor="newGroupMaxSelect">Selección Máxima</Label>
               <Input
                 type="number"
                 id="newGroupMaxSelect"
@@ -170,7 +170,7 @@ export default function CreateOptionGroupModal({ manager }: CreateOptionGroupMod
               className="flex items-center justify-center gap-2 w-full py-2 border-2 border-dashed border-gray-200 dark:border-darkbg hover:border-primary/40 dark:hover:border-secondary/40 rounded-lg text-sm text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-secondary transition-colors"
             >
               <Plus className="w-4 h-4" />
-              Agregar Opcion
+              Agregar Opción
             </button>
           </div>
         </div>

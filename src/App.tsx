@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import Login from './pages/Login';
@@ -11,19 +10,11 @@ import Categories from './pages/Categories';
 import Usuarios from './pages/Usuarios';
 import Alumnos from './pages/Students';
 import Settings from './pages/Settings';
-import VariantOptions from './pages/adicionales/VariantOptions';
-import IngredientOptions from './pages/adicionales/IngredientOptions';
+import OptionLibrary from './pages/adicionales/OptionLibrary';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Toaster } from './components/ui/toaster';
-import VariantModal from './components/adicionales/VariantModal';
-import IngredientModal from './components/adicionales/IngredientModal';
-import { useVariantOptionStore } from './stores/variantOptionStore';
-import { useIngredientOptionStore } from './stores/ingredientOptionStore';
 
 function App() {
-  const { isModalOpen: isVariantModalOpen, setIsModalOpen: setVariantModalOpen } = useVariantOptionStore();
-  const { isModalOpen: isIngredientModalOpen, setIsModalOpen: setIngredientModalOpen } = useIngredientOptionStore();
-
   return (
     <BrowserRouter>
       <Routes>
@@ -36,7 +27,7 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="/dashboard\" replace />} />
+          <Route index element={<Navigate to="/dashboard" replace />} />
           <Route
             path="dashboard"
             element={
@@ -51,8 +42,7 @@ function App() {
           <Route path="menus" element={<Menus />} />
           <Route path="categorias" element={<Categories />} />
           <Route path="adicionales">
-            <Route path="variantes" element={<VariantOptions />} />
-            <Route path="ingredientes" element={<IngredientOptions />} />
+            <Route path="opciones" element={<OptionLibrary />} />
           </Route>
           <Route
             path="usuarios"
@@ -78,18 +68,10 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="*" element={<Navigate to="/dashboard\" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>
       <Toaster />
-      
-      {isVariantModalOpen && (
-        <VariantModal onClose={() => setVariantModalOpen(false)} />
-      )}
-      
-      {isIngredientModalOpen && (
-        <IngredientModal onClose={() => setIngredientModalOpen(false)} />
-      )}
     </BrowserRouter>
   );
 }

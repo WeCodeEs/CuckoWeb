@@ -199,11 +199,8 @@ export default function Orders() {
                 <span style="max-width: 60%; word-wrap: break-word;">${detail.quantity}x ${detail.product.name}</span>
                 <span>$${detail.subtotal.toFixed(2)}</span>
               </div>
-              ${detail.product_variant && detail.product_variant?.variant
-                ? `<div style="padding-left: 12px; color: #000; font-size: 14px;">Variante: ${detail.product_variant?.variant.name}</div>`
-                : ''}
-              ${detail.ingredients && detail.ingredients.length
-                ? `<div style="padding-left: 12px; color: #000; font-size: 14px;">${detail.ingredients.map(ing => ing.name).join(', ')}</div>`
+              ${detail.options && detail.options.length
+                ? `<div style="padding-left: 12px; color: #000; font-size: 14px;">${detail.options.map(opt => opt.option.name).join(', ')}</div>`
                 : ''}
             </div>
           `).join('')}

@@ -4,51 +4,49 @@ import { supabase } from '../lib/supabase';
 export type OrderStatus = 'Recibido' | 'EnPreparacion' | 'Listo' | 'Entregado';
 export type NotificationType = 'NotificacionGeneral' | 'NotificacionPersonal' | 'PedidoRecibido' | 'PedidoEnPreparacion' | 'PedidoListo' | 'PedidoEntregado';
 
-// Helper function to sort orders with custom logic
 function sortOrders(orders: Order[]): Order[] {
   return orders.sort((a, b) => {
-    // Only apply custom sorting for "Recibido" status
     if (a.status === 'Recibido' && b.status === 'Recibido') {
       const aHasScheduled = !!a.scheduled_delivery_time;
       const bHasScheduled = !!b.scheduled_delivery_time;
 
-      // Non-scheduled orders come first (immediate orders have priority)
       if (!aHasScheduled && bHasScheduled) return -1;
       if (aHasScheduled && !bHasScheduled) return 1;
 
-      // Both are non-scheduled - sort by created_at (oldest first)
       if (!aHasScheduled && !bHasScheduled) {
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       }
 
-      // Both have scheduled times - sort by scheduled time (earliest first)
       return new Date(a.scheduled_delivery_time!).getTime() - new Date(b.scheduled_delivery_time!).getTime();
     }
 
-    // For other statuses, sort by created_at (newest first for default behavior)
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
+}
+
+export interface OrderItemOption {
+  id: number;
+  option_id: number;
+  price_at_moment: number;
+  quantity: number;
+  option: {
+    name: string;
+    option_group: {
+      name: string;
+    };
+  };
 }
 
 export interface OrderDetail {
   id: number;
   product_id: number;
-  product_variant_id: number | null;
   quantity: number;
   unit_price: number;
   subtotal: number;
   product: {
     name: string;
   };
-  product_variant?: {
-    variant: {
-      name: string;
-    };
-  };
-  ingredients?: Array<{
-    name: string;
-    extra_price?: number;
-  }>;
+  options?: OrderItemOption[];
 }
 
 export type PaymentStatus = 'pending_payment' | 'paid' | 'payment_failed' | 'canceled';
@@ -85,6 +83,8 @@ export interface OrderNotification {
   created_at: string;
 }
 
+export type OrderTypeFilter = 'Todos' | 'Agendados' | 'Inmediatos';
+
 interface OrderStore {
   orders: Order[];
   loading: boolean;
@@ -112,25 +112,23 @@ export const useOrderStore = create<OrderStore>((set, get) => {
 
     subscription = supabase
       .channel('orders-realtime')
-      .on('postgres_changes', 
-        { 
+      .on('postgres_changes',
+        {
           event: '*',
-          schema: 'public', 
-          table: 'orders' 
-        }, 
+          schema: 'public',
+          table: 'orders'
+        },
         async (payload) => {
           if (payload.eventType === 'UPDATE') {
             try {
               const { new: newRow, old: oldRow } = payload;
               if (newRow.status === 'Recibido' && oldRow.status !== 'Recibido') {
-                // Play sound regardless of window focus
                 if ('Audio' in window) {
                   const audio = new Audio('/assets/new-order.mp3');
                   audio.volume = 0.7;
                   await audio.play().catch(e => console.log('Audio play failed:', e));
                 }
 
-                // Show notification regardless of window focus
                 if ('Notification' in window && Notification.permission === 'granted') {
                   new Notification('Nuevo Pedido', {
                     body: `Pedido #${payload.new.id} recibido`,
@@ -150,9 +148,9 @@ export const useOrderStore = create<OrderStore>((set, get) => {
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('Subscrito exitosamente a las órdenes de hoy.');
+          console.log('Suscrito exitosamente a las órdenes de hoy.');
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('Error al subscribirse a las órdenes.');
+          console.error('Error al suscribirse a las órdenes.');
         }
       });
   };
@@ -162,6 +160,31 @@ export const useOrderStore = create<OrderStore>((set, get) => {
       supabase.removeChannel(subscription);
       subscription = null;
     }
+  };
+
+  const transformOrderData = (data: any[]): Order[] => {
+    return data.map((order: any) => {
+      if (order.details) {
+        order.details = order.details.map((detail: any) => {
+          if (detail.options) {
+            detail.options = detail.options.map((opt: any) => ({
+              id: opt.id,
+              option_id: opt.option_id,
+              price_at_moment: opt.price_at_moment,
+              quantity: opt.quantity,
+              option: {
+                name: opt.option?.name || '',
+                option_group: {
+                  name: opt.option?.option_group?.name || ''
+                }
+              }
+            }));
+          }
+          return detail;
+        });
+      }
+      return order;
+    });
   };
 
   return {
@@ -198,18 +221,18 @@ export const useOrderStore = create<OrderStore>((set, get) => {
             details:order_details (
               id,
               product_id,
-              product_variant_id,
               quantity,
               unit_price,
               subtotal,
               product:products (name),
-              product_variant:product_variants (
-                variant:variant_options (name)
-              ),
-              ingredients:order_detail_ingredients (
-                ingredient:ingredient_options (
+              options:order_item_options (
+                id,
+                option_id,
+                price_at_moment,
+                quantity,
+                option:options (
                   name,
-                  extra_price
+                  option_group:option_groups (name)
                 )
               )
             )
@@ -228,26 +251,8 @@ export const useOrderStore = create<OrderStore>((set, get) => {
         const { data, error } = await query;
         if (error) throw error;
 
-        let transformedData = data;
-        if (transformedData) {
-          transformedData = transformedData.map((order: any) => {
-            if (order.details) {
-              order.details = order.details.map((detail: any) => {
-                if (detail.ingredients) {
-                  detail.ingredients = detail.ingredients.map((ing: any) => ({
-                    name: ing.ingredient.name,
-                    extra_price: ing.ingredient.extra_price
-                  }));
-                }
-                return detail;
-              });
-            }
-            return order;
-          });
-        }
-
-        // Sort orders with custom logic
-        const sortedOrders = sortOrders(transformedData as Order[] || []);
+        const transformedData = transformOrderData(data || []);
+        const sortedOrders = sortOrders(transformedData);
 
         set({ orders: sortedOrders, loading: false });
       } catch (error: any) {
@@ -286,18 +291,18 @@ export const useOrderStore = create<OrderStore>((set, get) => {
             details:order_details (
               id,
               product_id,
-              product_variant_id,
               quantity,
               unit_price,
               subtotal,
               product:products (name),
-              product_variant:product_variants (
-                variant:variant_options (name)
-              ),
-              ingredients:order_detail_ingredients (
-                ingredient:ingredient_options (
+              options:order_item_options (
+                id,
+                option_id,
+                price_at_moment,
+                quantity,
+                option:options (
                   name,
-                  extra_price
+                  option_group:option_groups (name)
                 )
               )
             )
@@ -307,26 +312,8 @@ export const useOrderStore = create<OrderStore>((set, get) => {
 
         if (error) throw error;
 
-        let transformedData = data;
-        if (transformedData) {
-          transformedData = transformedData.map(order => {
-            if (order.details) {
-              order.details = order.details.map((detail: any) => {
-                if (detail.ingredients) {
-                  detail.ingredients = detail.ingredients.map((ing: any) => ({
-                    name: ing.ingredient.name,
-                    extra_price: ing.ingredient.extra_price
-                  }));
-                }
-                return detail;
-              });
-            }
-            return order;
-          });
-        }
-
-        // Sort orders with custom logic for "Recibido" status
-        const sortedOrders = sortOrders(transformedData as Order[] || []);
+        const transformedData = transformOrderData(data || []);
+        const sortedOrders = sortOrders(transformedData);
 
         set({ orders: sortedOrders, loading: false });
       } catch (error: any) {
@@ -365,9 +352,9 @@ export const useOrderStore = create<OrderStore>((set, get) => {
 
         set({ loading: true });
         const now = new Date().toISOString();
-        const updateData: Record<string,any> = { status };
+        const updateData: Record<string, any> = { status };
 
-        switch(status){
+        switch (status) {
           case 'Recibido': {
             updateData.started_at = null;
             updateData.ready_at = null;
@@ -382,7 +369,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
           }
           case 'Listo': {
             updateData.ready_at = now;
-            if(!current?.started_at){
+            if (!current?.started_at) {
               updateData.started_at = now;
             }
             updateData.delivered_at = null;
@@ -390,10 +377,10 @@ export const useOrderStore = create<OrderStore>((set, get) => {
           }
           case 'Entregado': {
             updateData.delivered_at = now;
-            if(!current?.ready_at) {
+            if (!current?.ready_at) {
               updateData.ready_at = now;
             }
-            if(!current?.started_at) {
+            if (!current?.started_at) {
               updateData.started_at = now;
             }
             break;
@@ -436,7 +423,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
       if (!accessToken) {
         throw new Error('No fue posible procesar la solicitud. Inicia sesión nuevamente.');
       }
-      
+
       const { data: sendResp, error: sendErr } = await supabase.functions.invoke('send-notification', {
         body: {
           type: 'NotificacionPersonal',

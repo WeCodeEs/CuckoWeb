@@ -76,6 +76,12 @@ export const useOptionGroupStore = create<OptionGroupState>((set, get) => ({
 
       if (optionsError) throw optionsError;
 
+      console.log('[fetchGroups] Grupos cargados:', groups?.length || 0);
+      console.log('[fetchGroups] Opciones cargadas:', options?.length || 0);
+      options?.forEach(opt => {
+        console.log(`[fetchGroups] Opcion: id=${opt.id}, group_id=${opt.option_group_id}, name=${opt.name}, active=${opt.active}`);
+      });
+
       const { data: productCounts, error: countError } = await supabase
         .from('product_option_groups')
         .select('option_group_id');
@@ -92,6 +98,10 @@ export const useOptionGroupStore = create<OptionGroupState>((set, get) => ({
         options: (options || []).filter(opt => opt.option_group_id === group.id),
         product_count: countMap[group.id] || 0,
       }));
+
+      groupsWithOptions.forEach(g => {
+        console.log(`[fetchGroups] Grupo "${g.name}" (id=${g.id}): ${g.options.length} opciones`);
+      });
 
       set({ groups: groupsWithOptions, loading: false });
       return groupsWithOptions;

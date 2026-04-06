@@ -434,6 +434,10 @@ export default function ProductModal({ onClose }: Props) {
         options: validOptions,
       });
 
+      setLoadingOptions(true);
+      await fetchGroups();
+      setLoadingOptions(false);
+
       toast({
         title: 'Grupo creado',
         description: 'El grupo y sus opciones se han creado exitosamente',

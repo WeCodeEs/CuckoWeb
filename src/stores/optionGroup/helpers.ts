@@ -112,10 +112,8 @@ export async function syncOptionsWithDB(
   const dbOptions = await fetchCurrentOptions(groupId);
   const { toInsert, toUpdate, toDelete } = computeOptionsDiff(dbOptions, incomingOptions);
 
-  const promises: Promise<void>[] = [];
-
   if (toInsert.length > 0) {
-    const insertPromise = supabase
+    const { error } = await supabase
       .from('options')
       .insert(
         toInsert.map(o => ({
@@ -124,37 +122,26 @@ export async function syncOptionsWithDB(
           additional_price: o.additional_price,
           active: true,
         }))
-      )
-      .then(({ error }) => {
-        if (error) throw new Error(`Error al insertar opciones: ${error.message}`);
-      });
-    promises.push(insertPromise);
+      );
+    if (error) throw new Error(`Error al insertar opciones: ${error.message}`);
   }
 
   for (const opt of toUpdate) {
-    const updatePromise = supabase
+    const { error } = await supabase
       .from('options')
       .update({
         name: opt.name,
         additional_price: opt.additional_price,
       })
-      .eq('id', opt.id!)
-      .then(({ error }) => {
-        if (error) throw new Error(`Error al actualizar opción: ${error.message}`);
-      });
-    promises.push(updatePromise);
+      .eq('id', opt.id!);
+    if (error) throw new Error(`Error al actualizar opcion: ${error.message}`);
   }
 
   if (toDelete.length > 0) {
-    const deletePromise = supabase
+    const { error } = await supabase
       .from('options')
       .delete()
-      .in('id', toDelete)
-      .then(({ error }) => {
-        if (error) throw new Error(`Error al eliminar opciones: ${error.message}`);
-      });
-    promises.push(deletePromise);
+      .in('id', toDelete);
+    if (error) throw new Error(`Error al eliminar opciones: ${error.message}`);
   }
-
-  await Promise.all(promises);
 }

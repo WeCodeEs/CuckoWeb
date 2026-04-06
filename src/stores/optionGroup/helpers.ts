@@ -11,8 +11,8 @@ export function validateGroupPayload(data: GroupPayload): void {
     throw new Error('La selección mínima no puede ser negativa');
   }
 
-  if (data.max_select < 0) {
-    throw new Error('La selección máxima no puede ser negativa');
+  if (data.max_select < 1) {
+    throw new Error('La selección máxima debe ser al menos 1');
   }
 
   if (data.min_select > data.max_select) {

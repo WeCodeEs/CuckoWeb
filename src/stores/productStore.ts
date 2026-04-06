@@ -42,6 +42,9 @@ export interface Product {
   category?: {
     name: string;
     active: boolean;
+    menu?: {
+      name: string;
+    };
   };
   option_groups?: ProductOptionGroup[];
 }
@@ -133,7 +136,10 @@ export const useProductStore = create<ProductState>((set, get) => ({
           created_at,
           category:categories (
             name,
-            active
+            active,
+            menu:menus (
+              name
+            )
           )
         `)
         .order('created_at', { ascending: false });

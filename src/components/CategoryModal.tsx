@@ -68,11 +68,14 @@ export default function CategoryModal({ onClose }: Props) {
               required
             >
               <option value="">Seleccionar Menú</option>
-              {menus.map(menu => (
-                <option key={menu.id} value={menu.id}>
-                  {menu.name}
-                </option>
-              ))}
+              {menus
+                .filter(menu => menu.active)
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map(menu => (
+                  <option key={menu.id} value={menu.id}>
+                    {menu.name}
+                  </option>
+                ))}
             </select>
           </div>
 

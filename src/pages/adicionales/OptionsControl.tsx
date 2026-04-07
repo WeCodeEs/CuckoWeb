@@ -43,6 +43,13 @@ export default function OptionsControl() {
     });
   }, [flatOptions, search, filter]);
 
+  const stats = useMemo(() => ({
+    total: flatOptions.length,
+    active: flatOptions.filter(o => o.active).length,
+    inactive: flatOptions.filter(o => !o.active).length,
+    groups: groups.length,
+  }), [flatOptions, groups]);
+
   const handleToggle = async (option: FlatOption) => {
     if (togglingIds.has(option.id)) return;
     setTogglingIds(prev => new Set(prev).add(option.id));
@@ -76,13 +83,6 @@ export default function OptionsControl() {
       </div>
     );
   }
-
-  const stats = useMemo(() => ({
-    total: flatOptions.length,
-    active: flatOptions.filter(o => o.active).length,
-    inactive: flatOptions.filter(o => !o.active).length,
-    groups: groups.length,
-  }), [flatOptions, groups]);
 
   return (
     <div className="p-6 space-y-6">

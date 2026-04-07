@@ -15,6 +15,12 @@ export interface Option {
   active: boolean;
 }
 
+export interface LinkedProduct {
+  id: number;
+  name: string;
+  active: boolean;
+}
+
 export interface OptionGroup {
   id: number;
   name: string;
@@ -24,6 +30,7 @@ export interface OptionGroup {
   created_at: string;
   options: Option[];
   product_count?: number;
+  linked_products?: LinkedProduct[];
 }
 
 export interface OptionInput {
@@ -49,6 +56,7 @@ interface OptionGroupState {
   }) => Promise<number>;
   deleteGroup: (id: number) => Promise<void>;
   toggleGroupActive: (id: number, active: boolean) => Promise<void>;
+  toggleOptionActive: (optionId: number, active: boolean) => Promise<void>;
 }
 
 export const useOptionGroupStore = create<OptionGroupState>((set, get) => ({
@@ -82,21 +90,27 @@ export const useOptionGroupStore = create<OptionGroupState>((set, get) => ({
         console.log(`[fetchGroups] Opcion: id=${opt.id}, group_id=${opt.option_group_id}, name=${opt.name}, active=${opt.active}`);
       });
 
-      const { data: productCounts, error: countError } = await supabase
+      const { data: productLinks, error: countError } = await supabase
         .from('product_option_groups')
-        .select('option_group_id');
+        .select('option_group_id, product:products(id, name, active)');
 
       if (countError) throw countError;
 
-      const countMap: Record<number, number> = {};
-      productCounts?.forEach(pc => {
-        countMap[pc.option_group_id] = (countMap[pc.option_group_id] || 0) + 1;
+      const productMap: Record<number, LinkedProduct[]> = {};
+      productLinks?.forEach(pl => {
+        const gid = pl.option_group_id;
+        if (!productMap[gid]) productMap[gid] = [];
+        const prod = pl.product as unknown as LinkedProduct;
+        if (prod && !productMap[gid].some(p => p.id === prod.id)) {
+          productMap[gid].push(prod);
+        }
       });
 
       const groupsWithOptions: OptionGroup[] = (groups || []).map(group => ({
         ...group,
         options: (options || []).filter(opt => opt.option_group_id === group.id),
-        product_count: countMap[group.id] || 0,
+        product_count: productMap[group.id]?.length || 0,
+        linked_products: productMap[group.id] || [],
       }));
 
       groupsWithOptions.forEach(g => {
@@ -185,6 +199,29 @@ export const useOptionGroupStore = create<OptionGroupState>((set, get) => ({
       }));
     } catch (error: any) {
       console.error('Error al cambiar estado del grupo:', error);
+      throw error;
+    }
+  },
+
+  toggleOptionActive: async (optionId, active) => {
+    try {
+      const { error } = await supabase
+        .from('options')
+        .update({ active })
+        .eq('id', optionId);
+
+      if (error) throw error;
+
+      set(state => ({
+        groups: state.groups.map(g => ({
+          ...g,
+          options: g.options.map(o =>
+            o.id === optionId ? { ...o, active } : o
+          ),
+        })),
+      }));
+    } catch (error: any) {
+      console.error('Error al cambiar estado de la opción:', error);
       throw error;
     }
   },

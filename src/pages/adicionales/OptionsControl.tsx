@@ -3,6 +3,7 @@ import { Search, CircleAlert as AlertCircle } from 'lucide-react';
 import { useOptionGroupStore, type Option, type OptionGroup } from '../../stores/optionGroupStore';
 import { useToast } from '../../components/ui/use-toast';
 import { formatCurrency } from '../../utils/formatCurrency';
+import SkeletonTable from '../../components/skeletons/SkeletonTable';
 
 interface FlatOption extends Option {
   groupName: string;
@@ -58,165 +59,120 @@ export default function OptionsControl() {
     }
   };
 
-  const activeCount = flatOptions.filter(o => o.active).length;
-  const inactiveCount = flatOptions.filter(o => !o.active).length;
-  const ratio = flatOptions.length ? Math.round((activeCount / flatOptions.length) * 100) : 0;
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+        <div className="bg-red-50 dark:bg-darkbg-lighter border border-red-100 dark:border-red-900 rounded-xl p-6 max-w-md text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 dark:text-red-400 mx-auto mb-4" />
+          <p className="text-lg font-medium text-red-800 dark:text-red-400">Error al cargar las opciones</p>
+          <p className="mt-2 text-sm text-red-600 dark:text-red-300">{error}</p>
+          <button
+            onClick={() => fetchGroups()}
+            className="mt-4 px-4 py-2 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900 transition-colors"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white font-sans">
-      <div className="max-w-6xl mx-auto px-6 py-12">
-
-        <div className="mb-14">
-          <p className="text-xs tracking-[0.25em] uppercase text-[#555] mb-3">Panel de disponibilidad</p>
-          <h1 className="text-5xl font-black tracking-tight leading-none text-white">
-            Opciones
-          </h1>
-          <div className="mt-4 h-px bg-gradient-to-r from-white/20 via-white/5 to-transparent" />
-        </div>
-
-        <div className="grid grid-cols-3 gap-px bg-white/5 rounded-2xl overflow-hidden mb-12">
-          <div className="bg-[#0a0a0a] px-8 py-6">
-            <p className="text-[10px] tracking-[0.2em] uppercase text-[#444] mb-2">Total</p>
-            <p className="text-4xl font-black text-white tabular-nums">{flatOptions.length}</p>
-          </div>
-          <div className="bg-[#0a0a0a] px-8 py-6">
-            <p className="text-[10px] tracking-[0.2em] uppercase text-[#444] mb-2">Activas</p>
-            <p className="text-4xl font-black text-emerald-400 tabular-nums">{activeCount}</p>
-          </div>
-          <div className="bg-[#0a0a0a] px-8 py-6">
-            <div className="flex items-end justify-between">
-              <div>
-                <p className="text-[10px] tracking-[0.2em] uppercase text-[#444] mb-2">Inactivas</p>
-                <p className="text-4xl font-black text-[#555] tabular-nums">{inactiveCount}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] tracking-[0.2em] uppercase text-[#444] mb-2">Disponibilidad</p>
-                <p className="text-2xl font-black text-white tabular-nums">{ratio}<span className="text-base font-normal text-[#555]">%</span></p>
-              </div>
-            </div>
-            <div className="mt-3 h-0.5 bg-[#1a1a1a] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-emerald-400 rounded-full transition-all duration-700"
-                style={{ width: `${ratio}%` }}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-3 mb-8">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#444]" />
-            <input
-              type="text"
-              placeholder="Buscar opción o grupo..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 bg-[#111] border border-white/5 rounded-xl text-sm text-white placeholder:text-[#444] focus:outline-none focus:border-white/20 transition-colors"
-            />
-          </div>
-          <div className="flex gap-1 bg-[#111] border border-white/5 rounded-xl p-1">
-            {(['all', 'active', 'inactive'] as const).map(f => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all ${
-                  filter === f
-                    ? 'bg-white text-black'
-                    : 'text-[#555] hover:text-white'
-                }`}
-              >
-                {f === 'all' ? 'Todas' : f === 'active' ? 'Activas' : 'Inactivas'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {loading && (
-          <div className="py-24 text-center">
-            <div className="inline-flex gap-1.5">
-              {[0, 1, 2].map(i => (
-                <div
-                  key={i}
-                  className="w-1.5 h-1.5 rounded-full bg-[#333] animate-bounce"
-                  style={{ animationDelay: `${i * 0.15}s` }}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {error && !loading && (
-          <div className="py-8 flex items-center gap-3 text-red-400">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <span className="text-sm">{error}</span>
-          </div>
-        )}
-
-        {!loading && !error && filtered.length === 0 && (
-          <div className="py-24 text-center text-[#333] text-sm">
-            {search || filter !== 'all' ? 'Sin resultados.' : 'No hay opciones registradas.'}
-          </div>
-        )}
-
-        {!loading && !error && filtered.length > 0 && (
-          <div className="space-y-px">
-            {filtered.map((option, i) => (
-              <div
-                key={option.id}
-                className={`group flex items-center gap-6 px-6 py-4 rounded-xl transition-all duration-200 ${
-                  option.active
-                    ? 'hover:bg-white/[0.03]'
-                    : 'opacity-40 hover:opacity-60'
-                }`}
-              >
-                <span className="text-[#222] text-xs tabular-nums w-5 text-right flex-shrink-0 select-none">
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-semibold truncate transition-colors ${
-                    option.active ? 'text-white' : 'text-[#444] line-through'
-                  }`}>
-                    {option.name}
-                  </p>
-                </div>
-
-                <span className="text-[10px] tracking-widest uppercase text-[#333] font-medium flex-shrink-0 hidden sm:block w-32 truncate text-right">
-                  {option.groupName}
-                </span>
-
-                <span className={`text-xs tabular-nums flex-shrink-0 w-16 text-right font-mono ${
-                  option.active ? 'text-[#555]' : 'text-[#2a2a2a]'
-                }`}>
-                  {option.additional_price > 0 ? `+${formatCurrency(option.additional_price)}` : '—'}
-                </span>
-
-                <button
-                  onClick={() => handleToggle(option)}
-                  disabled={togglingIds.has(option.id)}
-                  className={`flex-shrink-0 w-10 h-6 rounded-full relative transition-all duration-300 focus:outline-none disabled:cursor-not-allowed ${
-                    option.active ? 'bg-emerald-500' : 'bg-[#1a1a1a] border border-white/10'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 w-5 h-5 rounded-full shadow transition-all duration-300 ${
-                      option.active
-                        ? 'left-[calc(100%-1.375rem)] bg-white'
-                        : 'left-0.5 bg-[#333]'
-                    }`}
-                  />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {!loading && !error && filtered.length > 0 && (
-          <p className="mt-8 text-[#222] text-xs text-right tabular-nums">
-            {filtered.length} de {flatOptions.length} opciones
-          </p>
-        )}
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-primary-dark dark:text-white">Control de Opciones</h1>
+        <p className="text-sm text-gray-600 dark:text-gray-300">Activa o desactiva opciones individuales del sistema</p>
       </div>
+
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1 relative">
+          <input
+            type="text"
+            placeholder="Buscar por opción o grupo..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary bg-white dark:bg-darkbg text-gray-900 dark:text-white"
+          />
+          <Search className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+        </div>
+
+        <select
+          value={filter}
+          onChange={e => setFilter(e.target.value as 'all' | 'active' | 'inactive')}
+          className="px-4 py-2 rounded-lg border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary bg-white dark:bg-darkbg text-gray-900 dark:text-white"
+        >
+          <option value="all">Todas</option>
+          <option value="active">Activas</option>
+          <option value="inactive">Inactivas</option>
+        </select>
+      </div>
+
+      {loading ? (
+        <SkeletonTable rows={6} columns={4} hasActions />
+      ) : (
+        <div className="bg-white dark:bg-darkbg-lighter rounded-xl shadow-soft dark:shadow-dark overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-100 dark:divide-darkbg">
+              <thead>
+                <tr className="bg-gray-50/50 dark:bg-darkbg/50">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Opción
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Grupo
+                  </th>
+                  <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Precio Adicional
+                  </th>
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Estado
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-darkbg">
+                {filtered.map((option) => (
+                  <tr
+                    key={option.id}
+                    className="hover:bg-gray-50/50 dark:hover:bg-darkbg/50 transition-colors"
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                      {option.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                      {option.groupName}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900 dark:text-white">
+                      {option.additional_price > 0 ? `+${formatCurrency(option.additional_price)}` : '—'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <button
+                        onClick={() => handleToggle(option)}
+                        disabled={togglingIds.has(option.id)}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                          option.active
+                            ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/30'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                        title={option.active ? 'Clic para desactivar' : 'Clic para activar'}
+                      >
+                        {option.active ? 'Activa' : 'Inactiva'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {filtered.length === 0 && !loading && (
+            <div className="text-center py-12">
+              <p className="text-gray-500 dark:text-gray-400">
+                {search || filter !== 'all' ? 'No hay opciones que coincidan con la búsqueda' : 'No hay opciones registradas'}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

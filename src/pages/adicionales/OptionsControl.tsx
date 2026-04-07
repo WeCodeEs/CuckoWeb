@@ -77,12 +77,44 @@ export default function OptionsControl() {
     );
   }
 
+  const stats = useMemo(() => ({
+    total: flatOptions.length,
+    active: flatOptions.filter(o => o.active).length,
+    inactive: flatOptions.filter(o => !o.active).length,
+    groups: groups.length,
+  }), [flatOptions, groups]);
+
   return (
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-primary-dark dark:text-white">Control de Opciones</h1>
         <p className="text-sm text-gray-600 dark:text-gray-300">Activa o desactiva opciones individuales del sistema</p>
       </div>
+
+      {!loading && flatOptions.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="bg-white dark:bg-darkbg-lighter rounded-xl shadow-soft dark:shadow-dark p-4">
+            <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Total</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">opciones</p>
+          </div>
+          <div className="bg-white dark:bg-darkbg-lighter rounded-xl shadow-soft dark:shadow-dark p-4">
+            <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Activas</p>
+            <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.active}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">disponibles</p>
+          </div>
+          <div className="bg-white dark:bg-darkbg-lighter rounded-xl shadow-soft dark:shadow-dark p-4">
+            <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Inactivas</p>
+            <p className="text-2xl font-bold text-gray-400 dark:text-gray-500">{stats.inactive}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">desactivadas</p>
+          </div>
+          <div className="bg-white dark:bg-darkbg-lighter rounded-xl shadow-soft dark:shadow-dark p-4">
+            <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Grupos</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.groups}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">grupos registrados</p>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1 relative">

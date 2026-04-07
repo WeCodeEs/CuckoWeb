@@ -246,7 +246,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
                 option_group_name,
                 price_at_moment,
                 quantity,
-                option:options!option_id (
+                option:options!order_item_options_option_id_fkey (
                   name,
                   option_group:option_groups (name)
                 )
@@ -320,7 +320,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
                 option_group_name,
                 price_at_moment,
                 quantity,
-                option:options!option_id (
+                option:options!order_item_options_option_id_fkey (
                   name,
                   option_group:option_groups (name)
                 )

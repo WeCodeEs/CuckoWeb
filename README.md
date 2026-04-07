@@ -1,4 +1,4 @@
-# 🍽️ Cuckoo Web - Cafeteria Management System
+# 🍽️ Cuckoo Web - Cafeteria Management System Prueba
 
 Aplicación web construida con Vite + React + TypeScript. Permite la gestión de productos, pedidos y operaciones internas de la cafetería para Cuckoo
 

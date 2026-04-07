@@ -157,6 +157,18 @@ export const useOptionGroupStore = create<OptionGroupState>((set, get) => ({
     try {
       set({ loading: true, error: null });
 
+      const { count, error: countError } = await supabase
+        .from('product_option_groups')
+        .select('*', { count: 'exact', head: true })
+        .eq('option_group_id', id);
+
+      if (countError) throw countError;
+
+      if ((count ?? 0) > 0) {
+        set({ loading: false });
+        throw new Error('LINKED_PRODUCTS');
+      }
+
       const { error } = await supabase
         .from('option_groups')
         .delete()
@@ -166,10 +178,12 @@ export const useOptionGroupStore = create<OptionGroupState>((set, get) => ({
 
       await get().fetchGroups();
     } catch (error: any) {
-      set({
-        error: error.message || 'Error al eliminar el grupo',
-        loading: false,
-      });
+      if (error.message !== 'LINKED_PRODUCTS') {
+        set({
+          error: error.message || 'Error al eliminar el grupo',
+          loading: false,
+        });
+      }
       throw error;
     }
   },

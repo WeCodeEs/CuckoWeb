@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, CircleAlert as AlertCircle, Search, ChevronRight, ChevronDown, GripVertical, X, Check, ListChecks, Package, ExternalLink } from 'lucide-react';
+import { Plus, Pencil, CircleAlert as AlertCircle, Search, ChevronRight, ChevronDown, GripVertical, X, Check, ListChecks, Package, ExternalLink, Trash2, ShieldAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useOptionGroupStore, type OptionGroup, type OptionInput } from '../../stores/optionGroupStore';
 import { useToast } from '../../components/ui/use-toast';
@@ -118,6 +118,7 @@ export default function OptionLibrary() {
     fetchGroups,
     toggleGroupActive,
     saveGroupWithOptions,
+    deleteGroup,
   } = useOptionGroupStore();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -139,6 +140,9 @@ export default function OptionLibrary() {
   const [saving, setSaving] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [showLinkedProducts, setShowLinkedProducts] = useState(false);
+  const [groupToDelete, setGroupToDelete] = useState<OptionGroup | null>(null);
+  const [groupBlocked, setGroupBlocked] = useState<OptionGroup | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
 
   const sensors = useSensors(
@@ -364,6 +368,45 @@ export default function OptionLibrary() {
     setIsCreating(true);
   };
 
+  const handleTrashClick = (e: React.MouseEvent, group: OptionGroup) => {
+    e.stopPropagation();
+    if ((group.product_count || 0) > 0) {
+      setGroupBlocked(group);
+    } else {
+      setGroupToDelete(group);
+    }
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!groupToDelete) return;
+    try {
+      setIsDeleting(true);
+      await deleteGroup(groupToDelete.id);
+      if (selectedGroup?.id === groupToDelete.id) {
+        setSelectedGroup(null);
+        setIsCreating(false);
+      }
+      toast({
+        title: 'Grupo eliminado',
+        description: `"${groupToDelete.name}" se ha eliminado exitosamente`,
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al eliminar el grupo';
+      if (message === 'LINKED_PRODUCTS') {
+        setGroupBlocked(groupToDelete);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: message,
+        });
+      }
+    } finally {
+      setGroupToDelete(null);
+      setIsDeleting(false);
+    }
+  };
+
   const validOptionCount = optionRows.filter(r => r.name.trim() !== '').length;
   const showPanel = selectedGroup !== null || isCreating;
 
@@ -425,14 +468,14 @@ export default function OptionLibrary() {
             ) : (
               <div className="p-2">
                 {filteredGroups.map((group) => (
-                  <button
+                  <div
                     key={group.id}
-                    onClick={() => { setSelectedGroup(group); setIsCreating(false); }}
-                    className={`w-full text-left p-3 rounded-lg mb-1 transition-all ${
+                    className={`group/item w-full text-left p-3 rounded-lg mb-1 transition-all cursor-pointer ${
                       selectedGroup?.id === group.id
                         ? 'bg-primary/10 dark:bg-secondary/10 border-l-4 border-primary dark:border-secondary'
                         : 'hover:bg-gray-50 dark:hover:bg-darkbg/50'
                     } ${!group.active ? 'opacity-60' : ''}`}
+                    onClick={() => { setSelectedGroup(group); setIsCreating(false); }}
                   >
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
@@ -456,9 +499,18 @@ export default function OptionLibrary() {
                           )}
                         </div>
                       </div>
-                      <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${selectedGroup?.id === group.id ? 'rotate-90' : ''}`} />
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={(e) => handleTrashClick(e, group)}
+                          className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover/item:opacity-100"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                        <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${selectedGroup?.id === group.id ? 'rotate-90' : ''}`} />
+                      </div>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -737,6 +789,106 @@ export default function OptionLibrary() {
           </div>
         )}
       </div>
+
+      {groupToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => !isDeleting && setGroupToDelete(null)}
+          />
+          <div className="relative bg-white dark:bg-darkbg-lighter rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 animate-in fade-in zoom-in duration-200">
+            <button
+              onClick={() => !isDeleting && setGroupToDelete(null)}
+              className="absolute top-4 right-4 p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-darkbg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="flex items-start gap-4 mb-4">
+              <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
+                <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  Eliminar grupo de opciones
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  El grupo <span className="font-medium">"{groupToDelete.name}"</span> y todas sus opciones se eliminaran permanentemente. Esta accion no se puede deshacer.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setGroupToDelete(null)}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-darkbg hover:bg-gray-200 dark:hover:bg-darkbg/80 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteGroup}
+                disabled={isDeleting}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Eliminando...
+                  </>
+                ) : (
+                  'Eliminar'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {groupBlocked && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setGroupBlocked(null)}
+          />
+          <div className="relative bg-white dark:bg-darkbg-lighter rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 animate-in fade-in zoom-in duration-200">
+            <button
+              onClick={() => setGroupBlocked(null)}
+              className="absolute top-4 right-4 p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-darkbg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="flex items-start gap-4 mb-4">
+              <div className="p-3 bg-amber-100 dark:bg-amber-900/20 rounded-full">
+                <ShieldAlert className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  No se puede eliminar: Grupo en uso
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Este grupo no puede eliminarse porque esta siendo utilizado por los siguientes productos:
+                </p>
+              </div>
+            </div>
+            <div className="space-y-1 max-h-48 overflow-y-auto mb-6">
+              {groupBlocked.linked_products?.map(product => (
+                <div
+                  key={product.id}
+                  className="flex items-center gap-2 py-2 px-3 rounded-lg bg-gray-50 dark:bg-darkbg"
+                >
+                  <span className={`flex-shrink-0 w-1.5 h-1.5 rounded-full ${product.active ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                  <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{product.name}</span>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => setGroupBlocked(null)}
+              className="w-full px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-darkbg hover:bg-gray-200 dark:hover:bg-darkbg/80 rounded-lg transition-colors"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

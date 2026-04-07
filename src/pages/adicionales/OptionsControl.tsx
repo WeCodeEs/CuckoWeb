@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Search, ToggleLeft, ToggleRight, CircleAlert as AlertCircle } from 'lucide-react';
+import { Search, CircleAlert as AlertCircle } from 'lucide-react';
 import { useOptionGroupStore, type Option, type OptionGroup } from '../../stores/optionGroupStore';
 import { useToast } from '../../components/ui/use-toast';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -14,6 +14,7 @@ export default function OptionsControl() {
   const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [togglingIds, setTogglingIds] = useState<Set<number>>(new Set());
+  const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
   useEffect(() => {
     fetchGroups();
@@ -23,11 +24,7 @@ export default function OptionsControl() {
     const result: FlatOption[] = [];
     groups.forEach((group: OptionGroup) => {
       group.options.forEach((option: Option) => {
-        result.push({
-          ...option,
-          groupName: group.name,
-          groupActive: group.active,
-        });
+        result.push({ ...option, groupName: group.name, groupActive: group.active });
       });
     });
     return result.sort((a, b) => a.name.localeCompare(b.name));
@@ -35,13 +32,15 @@ export default function OptionsControl() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return flatOptions;
-    return flatOptions.filter(
-      o =>
-        o.name.toLowerCase().includes(q) ||
-        o.groupName.toLowerCase().includes(q)
-    );
-  }, [flatOptions, search]);
+    return flatOptions.filter(o => {
+      const matchSearch = !q || o.name.toLowerCase().includes(q) || o.groupName.toLowerCase().includes(q);
+      const matchFilter =
+        filter === 'all' ||
+        (filter === 'active' && o.active) ||
+        (filter === 'inactive' && !o.active);
+      return matchSearch && matchFilter;
+    });
+  }, [flatOptions, search, filter]);
 
   const handleToggle = async (option: FlatOption) => {
     if (togglingIds.has(option.id)) return;
@@ -53,157 +52,169 @@ export default function OptionsControl() {
         description: `"${option.name}" ahora está ${!option.active ? 'activa' : 'inactiva'}.`,
       });
     } catch {
-      toast({
-        title: 'Error',
-        description: 'No se pudo cambiar el estado de la opción.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'No se pudo cambiar el estado.', variant: 'destructive' });
     } finally {
-      setTogglingIds(prev => {
-        const next = new Set(prev);
-        next.delete(option.id);
-        return next;
-      });
+      setTogglingIds(prev => { const n = new Set(prev); n.delete(option.id); return n; });
     }
   };
 
   const activeCount = flatOptions.filter(o => o.active).length;
   const inactiveCount = flatOptions.filter(o => !o.active).length;
+  const ratio = flatOptions.length ? Math.round((activeCount / flatOptions.length) * 100) : 0;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Control de Opciones</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Activa o desactiva opciones individuales sin perder su relación con el grupo.
-        </p>
-      </div>
+    <div className="min-h-screen bg-[#0a0a0a] text-white font-sans">
+      <div className="max-w-6xl mx-auto px-6 py-12">
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-white dark:bg-darkbg-dark rounded-xl border border-gray-200 dark:border-darkbg p-4">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{flatOptions.length}</p>
+        <div className="mb-14">
+          <p className="text-xs tracking-[0.25em] uppercase text-[#555] mb-3">Panel de disponibilidad</p>
+          <h1 className="text-5xl font-black tracking-tight leading-none text-white">
+            Opciones
+          </h1>
+          <div className="mt-4 h-px bg-gradient-to-r from-white/20 via-white/5 to-transparent" />
         </div>
-        <div className="bg-white dark:bg-darkbg-dark rounded-xl border border-gray-200 dark:border-darkbg p-4">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Activas</p>
-          <p className="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{activeCount}</p>
-        </div>
-        <div className="bg-white dark:bg-darkbg-dark rounded-xl border border-gray-200 dark:border-darkbg p-4">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Inactivas</p>
-          <p className="mt-1 text-2xl font-bold text-gray-400 dark:text-gray-500">{inactiveCount}</p>
-        </div>
-      </div>
 
-      <div className="bg-white dark:bg-darkbg-dark rounded-xl border border-gray-200 dark:border-darkbg overflow-hidden">
-        <div className="p-4 border-b border-gray-100 dark:border-darkbg">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <div className="grid grid-cols-3 gap-px bg-white/5 rounded-2xl overflow-hidden mb-12">
+          <div className="bg-[#0a0a0a] px-8 py-6">
+            <p className="text-[10px] tracking-[0.2em] uppercase text-[#444] mb-2">Total</p>
+            <p className="text-4xl font-black text-white tabular-nums">{flatOptions.length}</p>
+          </div>
+          <div className="bg-[#0a0a0a] px-8 py-6">
+            <p className="text-[10px] tracking-[0.2em] uppercase text-[#444] mb-2">Activas</p>
+            <p className="text-4xl font-black text-emerald-400 tabular-nums">{activeCount}</p>
+          </div>
+          <div className="bg-[#0a0a0a] px-8 py-6">
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="text-[10px] tracking-[0.2em] uppercase text-[#444] mb-2">Inactivas</p>
+                <p className="text-4xl font-black text-[#555] tabular-nums">{inactiveCount}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] tracking-[0.2em] uppercase text-[#444] mb-2">Disponibilidad</p>
+                <p className="text-2xl font-black text-white tabular-nums">{ratio}<span className="text-base font-normal text-[#555]">%</span></p>
+              </div>
+            </div>
+            <div className="mt-3 h-0.5 bg-[#1a1a1a] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-emerald-400 rounded-full transition-all duration-700"
+                style={{ width: `${ratio}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 mb-8">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#444]" />
             <input
               type="text"
-              placeholder="Buscar por opción o grupo..."
+              placeholder="Buscar opción o grupo..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-darkbg bg-gray-50 dark:bg-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors"
+              className="w-full pl-11 pr-4 py-3 bg-[#111] border border-white/5 rounded-xl text-sm text-white placeholder:text-[#444] focus:outline-none focus:border-white/20 transition-colors"
             />
+          </div>
+          <div className="flex gap-1 bg-[#111] border border-white/5 rounded-xl p-1">
+            {(['all', 'active', 'inactive'] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all ${
+                  filter === f
+                    ? 'bg-white text-black'
+                    : 'text-[#555] hover:text-white'
+                }`}
+              >
+                {f === 'all' ? 'Todas' : f === 'active' ? 'Activas' : 'Inactivas'}
+              </button>
+            ))}
           </div>
         </div>
 
         {loading && (
-          <div className="p-8 text-center text-sm text-gray-400 dark:text-gray-500">
-            Cargando opciones...
+          <div className="py-24 text-center">
+            <div className="inline-flex gap-1.5">
+              {[0, 1, 2].map(i => (
+                <div
+                  key={i}
+                  className="w-1.5 h-1.5 rounded-full bg-[#333] animate-bounce"
+                  style={{ animationDelay: `${i * 0.15}s` }}
+                />
+              ))}
+            </div>
           </div>
         )}
 
         {error && !loading && (
-          <div className="p-6 flex items-center gap-3 text-red-600 dark:text-red-400">
+          <div className="py-8 flex items-center gap-3 text-red-400">
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <span className="text-sm">{error}</span>
           </div>
         )}
 
         {!loading && !error && filtered.length === 0 && (
-          <div className="p-8 text-center text-sm text-gray-400 dark:text-gray-500">
-            {search ? 'No se encontraron opciones con ese criterio.' : 'No hay opciones registradas.'}
+          <div className="py-24 text-center text-[#333] text-sm">
+            {search || filter !== 'all' ? 'Sin resultados.' : 'No hay opciones registradas.'}
           </div>
         )}
 
         {!loading && !error && filtered.length > 0 && (
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50 dark:bg-darkbg">
-                <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-5 py-3">
-                  Opción
-                </th>
-                <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-5 py-3">
-                  Grupo
-                </th>
-                <th className="text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-5 py-3">
-                  Precio adicional
-                </th>
-                <th className="text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-5 py-3">
-                  Estado
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-darkbg">
-              {filtered.map(option => (
-                <tr
-                  key={option.id}
-                  className={`transition-colors ${
-                    option.active
-                      ? 'hover:bg-gray-50 dark:hover:bg-darkbg/50'
-                      : 'bg-gray-50/60 dark:bg-darkbg/30 hover:bg-gray-100/60 dark:hover:bg-darkbg/50'
+          <div className="space-y-px">
+            {filtered.map((option, i) => (
+              <div
+                key={option.id}
+                className={`group flex items-center gap-6 px-6 py-4 rounded-xl transition-all duration-200 ${
+                  option.active
+                    ? 'hover:bg-white/[0.03]'
+                    : 'opacity-40 hover:opacity-60'
+                }`}
+              >
+                <span className="text-[#222] text-xs tabular-nums w-5 text-right flex-shrink-0 select-none">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-semibold truncate transition-colors ${
+                    option.active ? 'text-white' : 'text-[#444] line-through'
+                  }`}>
+                    {option.name}
+                  </p>
+                </div>
+
+                <span className="text-[10px] tracking-widest uppercase text-[#333] font-medium flex-shrink-0 hidden sm:block w-32 truncate text-right">
+                  {option.groupName}
+                </span>
+
+                <span className={`text-xs tabular-nums flex-shrink-0 w-16 text-right font-mono ${
+                  option.active ? 'text-[#555]' : 'text-[#2a2a2a]'
+                }`}>
+                  {option.additional_price > 0 ? `+${formatCurrency(option.additional_price)}` : '—'}
+                </span>
+
+                <button
+                  onClick={() => handleToggle(option)}
+                  disabled={togglingIds.has(option.id)}
+                  className={`flex-shrink-0 w-10 h-6 rounded-full relative transition-all duration-300 focus:outline-none disabled:cursor-not-allowed ${
+                    option.active ? 'bg-emerald-500' : 'bg-[#1a1a1a] border border-white/10'
                   }`}
                 >
-                  <td className="px-5 py-3.5">
-                    <span className={`text-sm font-medium ${option.active ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 line-through'}`}>
-                      {option.name}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${
-                      option.groupActive
-                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
-                        : 'bg-gray-100 text-gray-500 dark:bg-darkbg dark:text-gray-500'
-                    }`}>
-                      {option.groupName}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5 text-right">
-                    <span className={`text-sm ${option.active ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600'}`}>
-                      {option.additional_price > 0 ? `+${formatCurrency(option.additional_price)}` : '—'}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => handleToggle(option)}
-                        disabled={togglingIds.has(option.id)}
-                        title={option.active ? 'Desactivar opción' : 'Activar opción'}
-                        className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all ${
-                          option.active
-                            ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
-                            : 'border-gray-200 dark:border-darkbg bg-gray-100 dark:bg-darkbg text-gray-500 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-darkbg/80'
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
-                      >
-                        {option.active ? (
-                          <>
-                            <ToggleRight className="w-4 h-4" />
-                            Activa
-                          </>
-                        ) : (
-                          <>
-                            <ToggleLeft className="w-4 h-4" />
-                            Inactiva
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  <span
+                    className={`absolute top-0.5 w-5 h-5 rounded-full shadow transition-all duration-300 ${
+                      option.active
+                        ? 'left-[calc(100%-1.375rem)] bg-white'
+                        : 'left-0.5 bg-[#333]'
+                    }`}
+                  />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!loading && !error && filtered.length > 0 && (
+          <p className="mt-8 text-[#222] text-xs text-right tabular-nums">
+            {filtered.length} de {flatOptions.length} opciones
+          </p>
         )}
       </div>
     </div>

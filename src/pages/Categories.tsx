@@ -1,26 +1,29 @@
 import React, { useEffect, useMemo } from 'react';
-import { Plus, Pencil, CircleAlert as AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, CircleAlert as AlertCircle } from 'lucide-react';
 import { useCategoryStore, Category } from '../stores/categoryStore';
 import { useProductStore } from '../stores/productStore';
 import CategoryModal from '../components/CategoryModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import SkeletonTable from '../components/skeletons/SkeletonTable';
 import { getCategoryNameFrequencies, formatCategoryName } from '../utils/categoryUtils';
 
 export default function Categories() {
-  const { 
+  const {
     categories,
     loading,
     error,
     isModalOpen,
     fetchCategories,
     toggleCategoryStatus,
+    deleteCategory,
     setSelectedCategory,
     setIsModalOpen
   } = useCategoryStore();
 
   const { deactivateProductsByCategory, fetchProducts } = useProductStore();
+  const [categoryToDelete, setCategoryToDelete] = React.useState<Category | null>(null);
 
   useEffect(() => {
     fetchCategories();
@@ -61,6 +64,18 @@ export default function Categories() {
       }
     } catch (err) {
       console.error("Error al cambiar el estado de la categoría:", err);
+    }
+  };
+
+  const handleDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+    try {
+      await deleteCategory(categoryToDelete.id);
+      fetchProducts();
+    } catch (err) {
+      console.error('Error al eliminar la categoria:', err);
+    } finally {
+      setCategoryToDelete(null);
     }
   };
 
@@ -162,6 +177,13 @@ export default function Categories() {
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
+                        <button
+                          onClick={() => setCategoryToDelete(category)}
+                          className="p-2 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -179,6 +201,16 @@ export default function Categories() {
       )}
 
       {isModalOpen && <CategoryModal onClose={() => setIsModalOpen(false)} />}
+
+      <ConfirmationModal
+        isOpen={!!categoryToDelete}
+        onClose={() => setCategoryToDelete(null)}
+        onConfirm={handleDeleteCategory}
+        title="Eliminar categoria"
+        message={`Esta accion es permanente. La categoria "${categoryToDelete?.name}" y todos sus productos seran eliminados. Los pedidos anteriores conservaran su historial.`}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+      />
     </div>
   );
 }

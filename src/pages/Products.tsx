@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { Plus, Pencil, CircleAlert as AlertCircle, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, CircleAlert as AlertCircle, Search } from 'lucide-react';
 import { useProductStore, Product } from '../stores/productStore';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -7,16 +7,18 @@ import { formatCurrency } from '../utils/formatCurrency';
 import { getProductCategoryNameFrequencies, formatProductCategoryName } from '../utils/categoryUtils';
 import SkeletonTable from '../components/skeletons/SkeletonTable';
 import ProductModal from '../components/ProductModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 import { useToast } from '../components/ui/use-toast';
 
 export default function Products() {
-  const { 
+  const {
     products,
     loading,
     error,
     isModalOpen,
     fetchProducts,
     toggleProductStatus,
+    deleteProduct,
     setSelectedProduct,
     setIsModalOpen
   } = useProductStore();
@@ -26,6 +28,7 @@ export default function Products() {
   const [selectedCategory, setSelectedCategory] = React.useState<string>('all');
   const [sortBy, setSortBy] = React.useState<'category' | 'created_at'>('category');
   const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('asc');
+  const [productToDelete, setProductToDelete] = React.useState<Product | null>(null);
 
   useEffect(() => {
     fetchProducts();
@@ -54,6 +57,25 @@ export default function Products() {
       await toggleProductStatus(product.id, newStatus);
     } catch (error) {
       console.error("Error al cambiar el estado del producto:", error);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!productToDelete) return;
+    try {
+      await deleteProduct(productToDelete.id);
+      toast({
+        title: 'Producto eliminado',
+        description: `"${productToDelete.name}" fue eliminado. Los pedidos anteriores conservan su historial.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error al eliminar',
+        description: err.message || 'No se pudo eliminar el producto.',
+      });
+    } finally {
+      setProductToDelete(null);
     }
   };
 
@@ -286,7 +308,14 @@ export default function Products() {
                           title="Editar"
                         >
                           <Pencil className="w-4 h-4" />
-                        </button>                                               
+                        </button>
+                        <button
+                          onClick={() => setProductToDelete(product)}
+                          className="p-2 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -306,6 +335,16 @@ export default function Products() {
       )}
 
       {isModalOpen && <ProductModal onClose={() => setIsModalOpen(false)} />}
+
+      <ConfirmationModal
+        isOpen={!!productToDelete}
+        onClose={() => setProductToDelete(null)}
+        onConfirm={handleDelete}
+        title="Eliminar producto"
+        message={`Esta accion es permanente. "${productToDelete?.name}" sera eliminado y ya no estara disponible para nuevos pedidos. Los pedidos anteriores que contengan este producto conservaran su historial.`}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+      />
     </div>
   );
 }

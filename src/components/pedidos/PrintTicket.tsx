@@ -5,16 +5,18 @@ import { formatCurrency } from '../../utils/formatCurrency';
 
 interface OrderOption {
   id: number;
-  option: {
+  option_name?: string;
+  option?: {
     name: string;
-  };
+  } | null;
 }
 
 interface OrderDetail {
   quantity: number;
-  product: {
+  product_name?: string;
+  product?: {
     name: string;
-  };
+  } | null;
   unit_price: number;
   subtotal: number;
   options?: OrderOption[];
@@ -56,21 +58,17 @@ export default function PrintTicket({ order, isTest = false }: Props) {
     details: [
       {
         quantity: 1,
-        product: {
-          name: 'Café Americano',
-        },
+        product_name: 'Café Americano',
         unit_price: 15.5,
         subtotal: 15.5,
         options: [
-          { id: 1, option: { name: 'Grande' } },
-          { id: 2, option: { name: 'Leche de almendra' } },
+          { id: 1, option_name: 'Grande' },
+          { id: 2, option_name: 'Leche de almendra' },
         ],
       },
       {
         quantity: 2,
-        product: {
-          name: 'Pan Dulce',
-        },
+        product_name: 'Pan Dulce',
         unit_price: 5,
         subtotal: 10,
       },
@@ -154,13 +152,13 @@ export default function PrintTicket({ order, isTest = false }: Props) {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ maxWidth: '60%', wordWrap: 'break-word' }}>
-                {detail.quantity}x {detail.product.name}
+                {detail.quantity}x {detail.product_name || detail.product?.name || 'Producto eliminado'}
               </span>
               <span>{formatCurrency(detail.subtotal)}</span>
             </div>
             {detail.options && detail.options.length > 0 && (
               <div style={{ paddingLeft: 12, color: 'black', fontSize: 14, fontWeight: 'normal' }}>
-                {detail.options.map(opt => opt.option.name).join(', ')}
+                {detail.options.map(opt => opt.option_name || opt.option?.name || 'Opcion eliminada').join(', ')}
               </div>
             )}
           </div>

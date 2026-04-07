@@ -28,6 +28,7 @@ interface CategoryState {
   fetchCategories: () => Promise<void>;
   createCategory: (category: CategoryForm) => Promise<void>;
   updateCategory: (id: number, category: CategoryForm) => Promise<void>;
+  deleteCategory: (id: number) => Promise<void>;
   setSelectedCategory: (category: Category | null) => void;
   setIsModalOpen: (isOpen: boolean) => void;
   toggleCategoryStatus: (id: number, active: boolean) => Promise<void>;
@@ -112,6 +113,30 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
         error: error.message || 'Error al actualizar la categoría',
         loading: false 
       });
+    }
+  },
+
+  deleteCategory: async (id: number) => {
+    try {
+      set({ loading: true, error: null });
+
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      set((state) => ({
+        categories: state.categories.filter(c => c.id !== id),
+        loading: false,
+      }));
+    } catch (error: any) {
+      set({
+        error: error.message || 'Error al eliminar la categoria',
+        loading: false,
+      });
+      throw error;
     }
   },
 

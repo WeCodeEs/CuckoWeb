@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, CircleAlert as AlertCircle, Search, ChevronRight, GripVertical, X, Check, ListChecks } from 'lucide-react';
+import { Plus, Pencil, CircleAlert as AlertCircle, Search, ChevronRight, ChevronDown, GripVertical, X, Check, ListChecks, Package, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useOptionGroupStore, type OptionGroup, type OptionInput } from '../../stores/optionGroupStore';
 import { useToast } from '../../components/ui/use-toast';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -137,6 +138,8 @@ export default function OptionLibrary() {
 
   const [saving, setSaving] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [showLinkedProducts, setShowLinkedProducts] = useState(false);
+  const navigate = useNavigate();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -180,6 +183,7 @@ export default function OptionLibrary() {
       setOptionRows([{ tempId: generateTempId(), name: '', additional_price: '' }]);
     }
     setFormErrors({});
+    setShowLinkedProducts(false);
   }, [selectedGroup, isCreating]);
 
   const handleToggleGroupActive = async (e: React.MouseEvent, group: OptionGroup) => {
@@ -445,6 +449,11 @@ export default function OptionLibrary() {
                           <span className="text-xs text-gray-400 dark:text-gray-500">
                             {getSelectionText(group)}
                           </span>
+                          {(group.product_count || 0) > 0 && (
+                            <span className="text-xs text-primary/70 dark:text-secondary/70">
+                              {group.product_count} {group.product_count === 1 ? 'producto' : 'productos'}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${selectedGroup?.id === group.id ? 'rotate-90' : ''}`} />
@@ -592,6 +601,57 @@ export default function OptionLibrary() {
               <div className="p-3 bg-gray-50 dark:bg-darkbg rounded-lg">
                 <p className="text-sm text-gray-600 dark:text-gray-400">{getSelectionDescription()}</p>
               </div>
+
+              {selectedGroup && (
+                <div className="border-t border-gray-100 dark:border-darkbg pt-5">
+                  <button
+                    type="button"
+                    onClick={() => setShowLinkedProducts(prev => !prev)}
+                    className="w-full flex items-center justify-between group/linked"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Package className="w-4 h-4 text-primary dark:text-secondary" />
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white">Productos vinculados</span>
+                      <span className="text-xs bg-gray-100 dark:bg-darkbg text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">
+                        {selectedGroup.product_count || 0}
+                      </span>
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showLinkedProducts ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {showLinkedProducts && (
+                    <div className="mt-3">
+                      {(selectedGroup.linked_products?.length || 0) === 0 ? (
+                        <p className="text-xs text-gray-400 dark:text-gray-500 italic py-2">
+                          Ningun producto usa este grupo todavia
+                        </p>
+                      ) : (
+                        <div className="space-y-1 max-h-40 overflow-y-auto">
+                          {selectedGroup.linked_products?.map(product => (
+                            <div
+                              key={product.id}
+                              className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-gray-50 dark:bg-darkbg group/product"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className={`flex-shrink-0 w-1.5 h-1.5 rounded-full ${product.active ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                                <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{product.name}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => navigate('/products')}
+                                className="flex-shrink-0 p-1 text-gray-300 dark:text-gray-600 hover:text-primary dark:hover:text-secondary opacity-0 group-hover/product:opacity-100 transition-opacity"
+                                title="Ver producto"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="border-t border-gray-100 dark:border-darkbg pt-5">
                 <div className="flex items-center justify-between mb-4">

@@ -28,7 +28,7 @@ export default function OptionsControl() {
         result.push({ ...option, groupName: group.name, groupActive: group.active });
       });
     });
-    return result.sort((a, b) => a.name.localeCompare(b.name));
+    return result.sort((a, b) => a.groupName.localeCompare(b.groupName) || a.name.localeCompare(b.name));
   }, [groups]);
 
   const filtered = useMemo(() => {

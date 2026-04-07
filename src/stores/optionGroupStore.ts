@@ -49,6 +49,7 @@ interface OptionGroupState {
   }) => Promise<number>;
   deleteGroup: (id: number) => Promise<void>;
   toggleGroupActive: (id: number, active: boolean) => Promise<void>;
+  toggleOptionActive: (optionId: number, active: boolean) => Promise<void>;
 }
 
 export const useOptionGroupStore = create<OptionGroupState>((set, get) => ({
@@ -185,6 +186,29 @@ export const useOptionGroupStore = create<OptionGroupState>((set, get) => ({
       }));
     } catch (error: any) {
       console.error('Error al cambiar estado del grupo:', error);
+      throw error;
+    }
+  },
+
+  toggleOptionActive: async (optionId, active) => {
+    try {
+      const { error } = await supabase
+        .from('options')
+        .update({ active })
+        .eq('id', optionId);
+
+      if (error) throw error;
+
+      set(state => ({
+        groups: state.groups.map(g => ({
+          ...g,
+          options: g.options.map(o =>
+            o.id === optionId ? { ...o, active } : o
+          ),
+        })),
+      }));
+    } catch (error: any) {
+      console.error('Error al cambiar estado de la opción:', error);
       throw error;
     }
   },

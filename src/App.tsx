@@ -11,6 +11,7 @@ import Usuarios from './pages/Usuarios';
 import Alumnos from './pages/Students';
 import Settings from './pages/Settings';
 import OptionLibrary from './pages/adicionales/OptionLibrary';
+import OptionsControl from './pages/adicionales/OptionsControl';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Toaster } from './components/ui/toaster';
 
@@ -42,7 +43,8 @@ function App() {
           <Route path="menus" element={<Menus />} />
           <Route path="categorias" element={<Categories />} />
           <Route path="adicionales">
-            <Route path="opciones" element={<OptionLibrary />} />
+            <Route index element={<OptionLibrary />} />
+            <Route path="opciones" element={<OptionsControl />} />
           </Route>
           <Route
             path="usuarios"

@@ -638,7 +638,7 @@ export default function OptionLibrary() {
                               </div>
                               <button
                                 type="button"
-                                onClick={() => navigate('/products')}
+                                onClick={() => navigate('/productos')}
                                 className="flex-shrink-0 p-1 text-gray-300 dark:text-gray-600 hover:text-primary dark:hover:text-secondary opacity-0 group-hover/product:opacity-100 transition-opacity"
                                 title="Ver producto"
                               >

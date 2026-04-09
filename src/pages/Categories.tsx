@@ -1,13 +1,14 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Plus, Pencil, Trash2, CircleAlert as AlertCircle } from 'lucide-react';
 import { useCategoryStore, Category } from '../stores/categoryStore';
-import { useProductStore } from '../stores/productStore';
+import { useProductStore, Product } from '../stores/productStore';
 import CategoryModal from '../components/CategoryModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import SkeletonTable from '../components/skeletons/SkeletonTable';
 import { getCategoryNameFrequencies, formatCategoryName } from '../utils/categoryUtils';
+import { useToast } from '../components/ui/use-toast';
 
 export default function Categories() {
   const {
@@ -22,8 +23,10 @@ export default function Categories() {
     setIsModalOpen
   } = useCategoryStore();
 
-  const { deactivateProductsByCategory, fetchProducts } = useProductStore();
-  const [categoryToDelete, setCategoryToDelete] = React.useState<Category | null>(null);
+  const { products, deactivateProductsByCategory, fetchProducts } = useProductStore();
+  const { toast } = useToast();
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -67,14 +70,35 @@ export default function Categories() {
     }
   };
 
+  const categoryProducts = useMemo(() => {
+    if (!categoryToDelete) return [];
+    return products.filter(p => p.category_id === categoryToDelete.id);
+  }, [categoryToDelete, products]);
+
   const handleDeleteCategory = async () => {
     if (!categoryToDelete) return;
+    setIsDeleting(true);
     try {
+      const name = categoryToDelete.name;
+      const prodCount = categoryProducts.length;
+
       await deleteCategory(categoryToDelete.id);
       fetchProducts();
-    } catch (err) {
-      console.error('Error al eliminar la categoria:', err);
+
+      toast({
+        title: 'Categoria eliminada',
+        description: prodCount > 0
+          ? `"${name}" fue eliminada junto con ${prodCount} ${prodCount === 1 ? 'producto' : 'productos'}.`
+          : `"${name}" fue eliminada.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error al eliminar',
+        description: err.message || 'No se pudo eliminar la categoria.',
+      });
     } finally {
+      setIsDeleting(false);
       setCategoryToDelete(null);
     }
   };
@@ -207,10 +231,33 @@ export default function Categories() {
         onClose={() => setCategoryToDelete(null)}
         onConfirm={handleDeleteCategory}
         title="Eliminar categoria"
-        message={`Esta accion es permanente. La categoria "${categoryToDelete?.name}" y todos sus productos seran eliminados. Los pedidos anteriores conservaran su historial.`}
+        message={
+          categoryProducts.length > 0
+            ? `La categoria "${categoryToDelete?.name}" contiene ${categoryProducts.length} ${categoryProducts.length === 1 ? 'producto' : 'productos'}. Al eliminarla, se borraran todos los productos asociados de forma permanente. Los pedidos anteriores conservaran su historial.`
+            : `La categoria "${categoryToDelete?.name}" sera eliminada permanentemente.`
+        }
         confirmText="Eliminar"
         cancelText="Cancelar"
-      />
+        variant="danger"
+        isLoading={isDeleting}
+      >
+        {categoryProducts.length > 0 && (
+          <div className="mt-2 mb-2 max-h-32 overflow-y-auto rounded-lg border border-gray-200 dark:border-darkbg divide-y divide-gray-100 dark:divide-darkbg">
+            {categoryProducts.map(product => (
+              <div key={product.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                <span className="text-gray-700 dark:text-gray-300">{product.name}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  product.active
+                    ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                }`}>
+                  {product.active ? 'Activo' : 'Inactivo'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </ConfirmationModal>
     </div>
   );
 }

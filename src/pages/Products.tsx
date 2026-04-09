@@ -29,6 +29,7 @@ export default function Products() {
   const [sortBy, setSortBy] = React.useState<'category' | 'created_at'>('category');
   const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('asc');
   const [productToDelete, setProductToDelete] = React.useState<Product | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -62,11 +63,13 @@ export default function Products() {
 
   const handleDelete = async () => {
     if (!productToDelete) return;
+    setIsDeleting(true);
     try {
+      const name = productToDelete.name;
       await deleteProduct(productToDelete.id);
       toast({
         title: 'Producto eliminado',
-        description: `"${productToDelete.name}" fue eliminado. Los pedidos anteriores conservan su historial.`,
+        description: `"${name}" fue eliminado. Los pedidos anteriores conservan su historial.`,
       });
     } catch (err: any) {
       toast({
@@ -75,6 +78,7 @@ export default function Products() {
         description: err.message || 'No se pudo eliminar el producto.',
       });
     } finally {
+      setIsDeleting(false);
       setProductToDelete(null);
     }
   };
@@ -341,9 +345,11 @@ export default function Products() {
         onClose={() => setProductToDelete(null)}
         onConfirm={handleDelete}
         title="Eliminar producto"
-        message={`Esta accion es permanente. "${productToDelete?.name}" sera eliminado y ya no estara disponible para nuevos pedidos. Los pedidos anteriores que contengan este producto conservaran su historial.`}
+        message={`Esta accion es permanente. "${productToDelete?.name}" sera eliminado del catalogo. Los pedidos anteriores conservaran su historial.`}
         confirmText="Eliminar"
         cancelText="Cancelar"
+        variant="danger"
+        isLoading={isDeleting}
       />
     </div>
   );

@@ -65,8 +65,7 @@ export default function Menus() {
       const prodCount = menuStats.productCount;
 
       await deleteMenu(menuToDelete.id);
-      fetchCategories();
-      fetchProducts();
+      await Promise.all([fetchCategories(), fetchProducts()]);
 
       toast({
         title: 'Menú eliminado',
@@ -99,9 +98,7 @@ export default function Menus() {
 
     try {
       await toggleMenuStatus(menu.id, newStatus);
-
-      fetchCategories();
-      fetchProducts();
+      await Promise.all([fetchCategories(), fetchProducts()]);
       
     } catch (err) {
       console.error("Error al cambiar el estado del menú:", err);

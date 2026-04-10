@@ -384,7 +384,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
       if (error) throw error;
 
-      get().fetchProducts();
+      await get().fetchProducts();
     } catch (error: any) {
       set({
         error: error.message || 'Error al eliminar el producto',

@@ -1,12 +1,14 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Plus, Pencil, CircleAlert as AlertCircle } from 'lucide-react';
 import { useCategoryStore, Category } from '../stores/categoryStore';
 import { useProductStore } from '../stores/productStore';
 import CategoryModal from '../components/CategoryModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import SkeletonTable from '../components/skeletons/SkeletonTable';
 import { getCategoryNameFrequencies, formatCategoryName } from '../utils/categoryUtils';
+import { useToast } from '../components/ui/use-toast';
 
 export default function Categories() {
   const { 
@@ -21,6 +23,8 @@ export default function Categories() {
   } = useCategoryStore();
 
   const { deactivateProductsByCategory, fetchProducts } = useProductStore();
+  const { toast } = useToast();
+  const [categoryToDeactivate, setCategoryToDeactivate] = useState<Category | null>(null);
 
   useEffect(() => {
     fetchCategories();
@@ -35,29 +39,30 @@ export default function Categories() {
     setIsModalOpen(true);
   };
 
-  const handleToggleStatus = async (category: Category) => {
+  const handleToggleStatus = (category: Category) => {
     const newStatus = !category.active;
 
     if (newStatus === true) {
       if (category.menu && !category.menu.active) {
-        alert(`No se puede activar la categoría "${category.name}" porque el menú "${category.menu.name}" está desactivado.`);
-        return; 
+        toast({
+          variant: 'destructive',
+          title: 'No se puede activar',
+          description: `La categoría "${category.name}" no se puede activar porque el menú "${category.menu.name}" está desactivado.`,
+        });
+        return;
       }
+      performToggle(category, true);
+    } else {
+      setCategoryToDeactivate(category);
     }
-    
-    if (newStatus === false) {
-      const confirmed = window.confirm(
-        `¿Estás seguro de que deseas desactivar la categoría "${category.name}"? \n\nTodos los productos dentro de esta categoría también se desactivarán.`
-      );
-      if (!confirmed) return;
-    }
+  };
 
+  const performToggle = async (category: Category, newStatus: boolean) => {
     try {
       await toggleCategoryStatus(category.id, newStatus);
-      
       if (newStatus === false) {
         await deactivateProductsByCategory(category.id);
-        fetchProducts(); 
+        fetchProducts();
       }
     } catch (err) {
       console.error("Error al cambiar el estado de la categoría:", err);
@@ -179,6 +184,20 @@ export default function Categories() {
       )}
 
       {isModalOpen && <CategoryModal onClose={() => setIsModalOpen(false)} />}
+
+      <ConfirmationModal
+        isOpen={!!categoryToDeactivate}
+        onClose={() => setCategoryToDeactivate(null)}
+        onConfirm={() => {
+          if (categoryToDeactivate) {
+            performToggle(categoryToDeactivate, false);
+          }
+        }}
+        title="Desactivar categoría"
+        message={`¿Estás seguro de que deseas desactivar la categoría "${categoryToDeactivate?.name}"? Todos los productos dentro de esta categoría también se desactivarán.`}
+        confirmText="Desactivar"
+        cancelText="Cancelar"
+      />
     </div>
   );
 }

@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
-import { Plus, Pencil, AlertCircle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Plus, Pencil, CircleAlert as AlertCircle } from 'lucide-react';
 import { useMenuStore, Menu } from '../stores/menuStore';
 import { useCategoryStore } from '../stores/categoryStore';
 import { useProductStore } from '../stores/productStore';
 import MenuModal from '../components/MenuModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import SkeletonTable from '../components/skeletons/SkeletonTable';
@@ -22,6 +23,7 @@ export default function Menus() {
 
   const { fetchCategories } = useCategoryStore();
   const { fetchProducts } = useProductStore();
+  const [menuToDeactivate, setMenuToDeactivate] = useState<Menu | null>(null);
 
   useEffect(() => {
     fetchMenus();
@@ -32,22 +34,20 @@ export default function Menus() {
     setIsModalOpen(true);
   };
 
-  const handleToggleStatus = async (menu: Menu) => {
+  const handleToggleStatus = (menu: Menu) => {
     const newStatus = !menu.active;
-
     if (newStatus === false) {
-      const confirmed = window.confirm(
-        `¿Estás seguro de que deseas desactivar el menú "${menu.name}"? \n\nTodas sus categorías y productos también se desactivarán.`
-      );
-      if (!confirmed) return;
+      setMenuToDeactivate(menu);
+    } else {
+      performToggle(menu, true);
     }
+  };
 
+  const performToggle = async (menu: Menu, newStatus: boolean) => {
     try {
       await toggleMenuStatus(menu.id, newStatus);
-
       fetchCategories();
       fetchProducts();
-      
     } catch (err) {
       console.error("Error al cambiar el estado del menú:", err);
     }
@@ -168,6 +168,20 @@ export default function Menus() {
       )}
 
       {isModalOpen && <MenuModal onClose={() => setIsModalOpen(false)} />}
+
+      <ConfirmationModal
+        isOpen={!!menuToDeactivate}
+        onClose={() => setMenuToDeactivate(null)}
+        onConfirm={() => {
+          if (menuToDeactivate) {
+            performToggle(menuToDeactivate, false);
+          }
+        }}
+        title="Desactivar menu"
+        message={`¿Estas seguro de que deseas desactivar el menu "${menuToDeactivate?.name}"? Todas sus categorias y productos tambien se desactivaran.`}
+        confirmText="Desactivar"
+        cancelText="Cancelar"
+      />
     </div>
   );
 }

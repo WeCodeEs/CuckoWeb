@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import NotificationModal from './NotificationModal';
 import { getScheduledOrderAlert } from '../../utils/timeAlerts';
+import { useToast } from '../ui/use-toast';
 
 
 interface Props {
@@ -22,6 +23,7 @@ const statusOptions: { value: OrderStatus; label: string; icon: React.ComponentT
 ];
 
 export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) {
+  const { toast } = useToast();
   const { fetchNotificationsByOrder } = useOrderStore();
   const [notifications, setNotifications] = React.useState<OrderNotification[]>([]);
   const [showNotificationModal, setShowNotificationModal] = React.useState(false);
@@ -63,7 +65,7 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
     // Get the iframe document
     const doc = iframe.contentWindow?.document;
     if (!doc) {
-      alert('Error al preparar la impresión');
+      toast({ variant: 'destructive', title: 'Error', description: 'Error al preparar la impresion' });
       return;
     }
 

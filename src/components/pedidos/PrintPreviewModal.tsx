@@ -1,12 +1,15 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import PrintTicket from './PrintTicket';
+import { useToast } from '../ui/use-toast';
 
 interface Props {
   onClose: () => void;
 }
 
 export default function PrintPreviewModal({ onClose }: Props) {
+  const { toast } = useToast();
+
   const handlePrint = () => {
     // Create an iframe for printing
     const iframe = document.createElement('iframe');
@@ -16,7 +19,7 @@ export default function PrintPreviewModal({ onClose }: Props) {
     // Get the iframe document
     const doc = iframe.contentWindow?.document;
     if (!doc) {
-      alert('Error al preparar la impresión');
+      toast({ variant: 'destructive', title: 'Error', description: 'Error al preparar la impresion' });
       return;
     }
 

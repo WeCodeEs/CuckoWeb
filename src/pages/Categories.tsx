@@ -86,7 +86,7 @@ export default function Categories() {
       fetchProducts();
 
       toast({
-        title: 'Categoria eliminada',
+        title: 'Categoría eliminada',
         description: prodCount > 0
           ? `"${name}" fue eliminada junto con ${prodCount} ${prodCount === 1 ? 'producto' : 'productos'}.`
           : `"${name}" fue eliminada.`,
@@ -95,7 +95,7 @@ export default function Categories() {
       toast({
         variant: 'destructive',
         title: 'Error al eliminar',
-        description: err.message || 'No se pudo eliminar la categoria.',
+        description: err.message || 'No se pudo eliminar la categoría.',
       });
     } finally {
       setIsDeleting(false);
@@ -230,11 +230,11 @@ export default function Categories() {
         isOpen={!!categoryToDelete}
         onClose={() => setCategoryToDelete(null)}
         onConfirm={handleDeleteCategory}
-        title="Eliminar categoria"
+        title="Eliminar categoría"
         message={
           categoryProducts.length > 0
-            ? `La categoria "${categoryToDelete?.name}" contiene ${categoryProducts.length} ${categoryProducts.length === 1 ? 'producto' : 'productos'}. Al eliminarla, se borraran todos los productos asociados de forma permanente. Los pedidos anteriores conservaran su historial.`
-            : `La categoria "${categoryToDelete?.name}" sera eliminada permanentemente.`
+            ? `La categoría "${categoryToDelete?.name}" contiene ${categoryProducts.length} ${categoryProducts.length === 1 ? 'producto' : 'productos'}. Al eliminarla, se borrarán todos los productos asociados de forma permanente. Los pedidos anteriores conservarán su historial.`
+            : `La categoría "${categoryToDelete?.name}" será eliminada permanentemente.`
         }
         confirmText="Eliminar"
         cancelText="Cancelar"

@@ -20,7 +20,7 @@ export default function DeleteMenuModal({
   const [confirmName, setConfirmName] = useState('');
   const [showProducts, setShowProducts] = useState(false);
 
-  const nameMatches = confirmName === menu.name;
+  const nameMatches = confirmName.trim() === menu.name;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -44,12 +44,12 @@ export default function DeleteMenuModal({
           </div>
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              Eliminar menu
+              Eliminar menú
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-300">
               {stats && (stats.categoryCount > 0 || stats.productCount > 0)
-                ? `Esta a punto de eliminar el menu "${menu.name}" junto con ${stats.categoryCount} ${stats.categoryCount === 1 ? 'categoria' : 'categorias'} y ${stats.productCount} ${stats.productCount === 1 ? 'producto' : 'productos'}. Esta accion es irreversible.`
-                : `Esta a punto de eliminar el menu "${menu.name}". Esta accion es irreversible.`
+                ? `Está a punto de eliminar el menú "${menu.name}" junto con ${stats.categoryCount} ${stats.categoryCount === 1 ? 'categoría' : 'categorías'} y ${stats.productCount} ${stats.productCount === 1 ? 'producto' : 'productos'}. Esta acción es irreversible.`
+                : `Está a punto de eliminar el menú "${menu.name}". Esta acción es irreversible.`
               }
             </p>
           </div>
@@ -63,7 +63,7 @@ export default function DeleteMenuModal({
               className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
             >
               {showProducts ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              Ver productos que seran eliminados ({stats.productCount})
+              Ver productos que serán eliminados ({stats.productCount})
             </button>
             {showProducts && (
               <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-gray-200 dark:border-darkbg divide-y divide-gray-100 dark:divide-darkbg">
@@ -112,7 +112,7 @@ export default function DeleteMenuModal({
             className="flex-1 px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20"
           >
             {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-            {isLoading ? 'Eliminando...' : 'Eliminar menu'}
+            {isLoading ? 'Eliminando...' : 'Eliminar menú'}
           </button>
         </div>
       </div>

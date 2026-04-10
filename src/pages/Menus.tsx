@@ -64,16 +64,16 @@ export default function Menus() {
       fetchProducts();
 
       toast({
-        title: 'Menu eliminado',
+        title: 'Menú eliminado',
         description: catCount > 0 || prodCount > 0
-          ? `"${name}" fue eliminado junto con ${catCount} ${catCount === 1 ? 'categoria' : 'categorias'} y ${prodCount} ${prodCount === 1 ? 'producto' : 'productos'}.`
+          ? `"${name}" fue eliminado junto con ${catCount} ${catCount === 1 ? 'categoría' : 'categorías'} y ${prodCount} ${prodCount === 1 ? 'producto' : 'productos'}.`
           : `"${name}" fue eliminado.`,
       });
     } catch (err: any) {
       toast({
         variant: 'destructive',
         title: 'Error al eliminar',
-        description: err.message || 'No se pudo eliminar el menu.',
+        description: err.message || 'No se pudo eliminar el menú.',
       });
     } finally {
       setIsDeleting(false);

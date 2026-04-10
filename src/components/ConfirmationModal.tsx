@@ -11,6 +11,7 @@ interface ConfirmationModalProps {
   cancelText?: string;
   variant?: 'warning' | 'danger';
   isLoading?: boolean;
+  loadingText?: string;
   children?: React.ReactNode;
 }
 
@@ -24,6 +25,7 @@ export default function ConfirmationModal({
   cancelText = 'Cancelar',
   variant = 'warning',
   isLoading = false,
+  loadingText = 'Eliminando...',
   children,
 }: ConfirmationModalProps) {
   if (!isOpen) return null;
@@ -80,7 +82,7 @@ export default function ConfirmationModal({
             }`}
           >
             {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-            {isLoading ? 'Eliminando...' : confirmText}
+            {isLoading ? loadingText : confirmText}
           </button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Plus, Pencil, CircleAlert as AlertCircle, Search, ChevronRight, ChevronDown, GripVertical, X, Check, ListChecks, Package, ExternalLink, Trash2, ShieldAlert } from 'lucide-react';
+import ConfirmationModal from '../../components/ConfirmationModal';
 import { useNavigate } from 'react-router-dom';
 import { useOptionGroupStore, type OptionGroup, type OptionInput } from '../../stores/optionGroupStore';
 import { useToast } from '../../components/ui/use-toast';
@@ -790,58 +791,16 @@ export default function OptionLibrary() {
         )}
       </div>
 
-      {groupToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => !isDeleting && setGroupToDelete(null)}
-          />
-          <div className="relative bg-white dark:bg-darkbg-lighter rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 animate-in fade-in zoom-in duration-200">
-            <button
-              onClick={() => !isDeleting && setGroupToDelete(null)}
-              className="absolute top-4 right-4 p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-darkbg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <div className="flex items-start gap-4 mb-4">
-              <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
-                <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  Eliminar grupo de opciones
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  El grupo <span className="font-medium">"{groupToDelete.name}"</span> y todas sus opciones se eliminaran permanentemente. Esta accion no se puede deshacer.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setGroupToDelete(null)}
-                disabled={isDeleting}
-                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-darkbg hover:bg-gray-200 dark:hover:bg-darkbg/80 rounded-lg transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleDeleteGroup}
-                disabled={isDeleting}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
-              >
-                {isDeleting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Eliminando...
-                  </>
-                ) : (
-                  'Eliminar'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationModal
+        isOpen={!!groupToDelete}
+        onClose={() => setGroupToDelete(null)}
+        onConfirm={handleDeleteGroup}
+        title="Eliminar grupo de opciones"
+        message={`El grupo "${groupToDelete?.name}" y todas sus opciones se eliminarán permanentemente. Esta acción no se puede deshacer.`}
+        confirmText="Eliminar"
+        variant="danger"
+        isLoading={isDeleting}
+      />
 
       {groupBlocked && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -865,7 +824,7 @@ export default function OptionLibrary() {
                   No se puede eliminar: Grupo en uso
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Este grupo no puede eliminarse porque esta siendo utilizado por los siguientes productos:
+                  Este grupo no puede eliminarse porque está siendo utilizado por los siguientes productos:
                 </p>
               </div>
             </div>

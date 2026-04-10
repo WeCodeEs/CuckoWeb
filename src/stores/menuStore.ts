@@ -193,7 +193,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       await get().fetchMenus();
     } catch (error: any) {
       set({
-        error: error.message || 'Error al eliminar el menu',
+        error: error.message || 'Error al eliminar el menú',
         loading: false,
       });
       throw error;

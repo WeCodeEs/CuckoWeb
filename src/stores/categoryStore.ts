@@ -127,13 +127,10 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 
       if (error) throw error;
 
-      set((state) => ({
-        categories: state.categories.filter(c => c.id !== id),
-        loading: false,
-      }));
+      await get().fetchCategories();
     } catch (error: any) {
       set({
-        error: error.message || 'Error al eliminar la categoria',
+        error: error.message || 'Error al eliminar la categoría',
         loading: false,
       });
       throw error;

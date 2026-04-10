@@ -52,8 +52,16 @@ export default function Products() {
 
     try {
       await toggleProductStatus(product.id, newStatus);
-    } catch (error) {
-      console.error("Error al cambiar el estado del producto:", error);
+      toast({
+        title: newStatus ? 'Producto activado' : 'Producto desactivado',
+        description: `"${product.name}" se ${newStatus ? 'activó' : 'desactivó'} correctamente.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error al cambiar estado',
+        description: error?.message || 'No se pudo cambiar el estado del producto.',
+      });
     }
   };
 

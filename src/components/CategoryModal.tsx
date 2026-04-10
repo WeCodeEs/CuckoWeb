@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { useCategoryStore } from '../stores/categoryStore';
 import { useMenuStore } from '../stores/menuStore';
+import { useToast } from './ui/use-toast';
 
 interface Props {
   onClose: () => void;
@@ -10,6 +11,7 @@ interface Props {
 export default function CategoryModal({ onClose }: Props) {
   const { selectedCategory, createCategory, updateCategory } = useCategoryStore();
   const { menus, fetchMenus } = useMenuStore();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: selectedCategory?.name || '',
     menu_id: selectedCategory?.menu_id || 0,
@@ -25,12 +27,18 @@ export default function CategoryModal({ onClose }: Props) {
     try {
       if (selectedCategory) {
         await updateCategory(selectedCategory.id, formData);
+        toast({ title: 'Categoría actualizada', description: 'Los cambios se guardaron correctamente.' });
       } else {
         await createCategory(formData);
+        toast({ title: 'Categoría creada', description: 'La categoría se creó correctamente.' });
       }
       onClose();
-    } catch (error) {
-      console.error('Error saving category:', error);
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error al guardar',
+        description: error?.message || 'No se pudo guardar la categoría.',
+      });
     }
   };
 

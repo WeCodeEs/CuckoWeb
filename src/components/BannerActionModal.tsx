@@ -120,6 +120,11 @@ export default function BannerActionModal({ banner, onClose }: Props) {
       if (error) {
         console.error('Error desde manage-banners (UPDATE_ACTION):', error);
         setFormError(error.message || 'No se pudo actualizar la acción del banner.');
+        toast({
+          variant: 'destructive',
+          title: 'Error al actualizar',
+          description: error.message || 'No se pudo actualizar la acción del banner.',
+        });
         return;
       }
 
@@ -134,6 +139,11 @@ export default function BannerActionModal({ banner, onClose }: Props) {
     } catch (err: any) {
       console.error('Error al actualizar acción de banner:', err);
       setFormError(err.message || 'No se pudo actualizar la acción del banner.');
+      toast({
+        variant: 'destructive',
+        title: 'Error al actualizar',
+        description: err.message || 'No se pudo actualizar la acción del banner.',
+      });
     } finally {
       setSaving(false);
     }

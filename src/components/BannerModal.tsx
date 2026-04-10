@@ -136,6 +136,11 @@ const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     } catch (error: any) {
       console.error('Error creando banner:', error);
       setFormError(error.message || 'No se pudo agregar el banner.');
+      toast({
+        variant: 'destructive',
+        title: 'Error al crear banner',
+        description: error.message || 'No se pudo agregar el banner.',
+      });
     } finally {
       setLoading(false);
     }

@@ -8,6 +8,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import SkeletonTable from '../components/skeletons/SkeletonTable';
+import { useToast } from '../components/ui/use-toast';
 
 export default function Menus() {
   const { 
@@ -23,6 +24,7 @@ export default function Menus() {
 
   const { fetchCategories } = useCategoryStore();
   const { fetchProducts } = useProductStore();
+  const { toast } = useToast();
   const [menuToDeactivate, setMenuToDeactivate] = useState<Menu | null>(null);
 
   useEffect(() => {
@@ -48,8 +50,16 @@ export default function Menus() {
       await toggleMenuStatus(menu.id, newStatus);
       fetchCategories();
       fetchProducts();
-    } catch (err) {
-      console.error("Error al cambiar el estado del menú:", err);
+      toast({
+        title: newStatus ? 'Menu activado' : 'Menu desactivado',
+        description: `"${menu.name}" se ${newStatus ? 'activó' : 'desactivó'} correctamente.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error al cambiar estado',
+        description: err?.message || 'No se pudo cambiar el estado del menu.',
+      });
     }
   };
 

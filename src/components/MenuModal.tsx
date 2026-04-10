@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
-import { 
-  X, ChevronDown, ChevronUp, ForkKnife, Apple, Banana, Beef, Beer, CakeSlice, Candy, Carrot,
-  Cherry, Citrus, Coffee, Cookie, Croissant, CupSoda, Egg, Fish, Grape, 
-  IceCream, Leaf, Milk, Pizza, Salad, Sandwich, Soup, Wine, Bean, ChefHat, EggFried, Ham, Popcorn, Vegan, Wheat
-} from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Forklift as ForkKnife, Apple, Banana, Beef, Beer, CakeSlice, Candy, Carrot, Cherry, Citrus, Coffee, Cookie, Croissant, CupSoda, Egg, Fish, Grape, IceCreamBowl as IceCream, Leaf, Milk, Pizza, Salad, Sandwich, Soup, Wine, Bean, ChefHat, EggFried, Ham, Popcorn, Vegan, Wheat } from 'lucide-react';
 import { useMenuStore } from '../stores/menuStore';
+import { useToast } from './ui/use-toast';
 
 const foodIcons: { [key: string]: React.ElementType } = {
   ForkKnife, ChefHat, Pizza, Sandwich, Soup, Salad, Beef, Fish,
@@ -24,6 +21,7 @@ interface Props {
 
 export default function MenuModal({ onClose }: Props) {
   const { selectedMenu, createMenu, updateMenu } = useMenuStore();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: selectedMenu?.name || '',
     description: selectedMenu?.description || '',
@@ -43,12 +41,18 @@ export default function MenuModal({ onClose }: Props) {
     try {
       if (selectedMenu) {
         await updateMenu(selectedMenu.id, formData);
+        toast({ title: 'Menu actualizado', description: 'Los cambios se guardaron correctamente.' });
       } else {
         await createMenu(formData);
+        toast({ title: 'Menu creado', description: 'El menu se creó correctamente.' });
       }
       onClose();
-    } catch (error) {
-      console.error('Error saving menu:', error);
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error al guardar',
+        description: error?.message || 'No se pudo guardar el menu.',
+      });
     }
   };
 

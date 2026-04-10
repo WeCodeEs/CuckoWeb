@@ -64,8 +64,16 @@ export default function Categories() {
         await deactivateProductsByCategory(category.id);
         fetchProducts();
       }
-    } catch (err) {
-      console.error("Error al cambiar el estado de la categoría:", err);
+      toast({
+        title: newStatus ? 'Categoría activada' : 'Categoría desactivada',
+        description: `"${category.name}" se ${newStatus ? 'activó' : 'desactivó'} correctamente.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error al cambiar estado',
+        description: err?.message || 'No se pudo cambiar el estado de la categoría.',
+      });
     }
   };
 

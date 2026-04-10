@@ -48,6 +48,11 @@ export default function Menus() {
       setMenuToDelete(menu);
     } catch (err) {
       console.error('Error al obtener estadisticas del menu:', err);
+      toast({
+        title: 'Error',
+        description: 'No se pudo obtener la información del menú.',
+        variant: 'destructive',
+      });
     }
   };
 

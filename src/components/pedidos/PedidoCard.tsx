@@ -201,11 +201,11 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
           {order.details.slice(0, 3).map((detail) => (
             <div key={detail.id}>
               <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">
-                {detail.quantity}x {detail.product.name}
+                {detail.quantity}x {detail.product_name || detail.product?.name || 'Producto eliminado'}
               </p>
               {detail.options && detail.options.length > 0 && (
                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5">
-                  {detail.options.map(opt => opt.option.name).join(', ')}
+                  {detail.options.map(opt => opt.option_name || opt.option?.name || 'Opcion eliminada').join(', ')}
                 </p>
               )}
             </div>

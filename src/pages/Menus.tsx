@@ -1,27 +1,36 @@
-import React, { useEffect } from 'react';
-import { Plus, Pencil, AlertCircle } from 'lucide-react';
-import { useMenuStore, Menu } from '../stores/menuStore';
+import React, { useEffect, useState } from 'react';
+import { Plus, Pencil, Trash2, CircleAlert as AlertCircle } from 'lucide-react';
+import { useMenuStore, Menu, MenuStats } from '../stores/menuStore';
 import { useCategoryStore } from '../stores/categoryStore';
 import { useProductStore } from '../stores/productStore';
 import MenuModal from '../components/MenuModal';
+import DeleteMenuModal from '../components/DeleteMenuModal';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import SkeletonTable from '../components/skeletons/SkeletonTable';
+import { useToast } from '../components/ui/use-toast';
 
 export default function Menus() {
-  const { 
+  const {
     menus,
     loading,
     error,
     isModalOpen,
     fetchMenus,
     toggleMenuStatus,
+    deleteMenu,
+    getMenuStats,
     setSelectedMenu,
     setIsModalOpen
   } = useMenuStore();
 
   const { fetchCategories } = useCategoryStore();
   const { fetchProducts } = useProductStore();
+  const { toast } = useToast();
+
+  const [menuToDelete, setMenuToDelete] = useState<Menu | null>(null);
+  const [menuStats, setMenuStats] = useState<MenuStats | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchMenus();
@@ -30,6 +39,51 @@ export default function Menus() {
   const handleEdit = (menu: Menu) => {
     setSelectedMenu(menu);
     setIsModalOpen(true);
+  };
+
+  const handleRequestDelete = async (menu: Menu) => {
+    try {
+      const stats = await getMenuStats(menu.id);
+      setMenuStats(stats);
+      setMenuToDelete(menu);
+    } catch (err) {
+      console.error('Error al obtener estadisticas del menu:', err);
+      toast({
+        title: 'Error',
+        description: 'No se pudo obtener la información del menú.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!menuToDelete || !menuStats) return;
+    setIsDeleting(true);
+    try {
+      const name = menuToDelete.name;
+      const catCount = menuStats.categoryCount;
+      const prodCount = menuStats.productCount;
+
+      await deleteMenu(menuToDelete.id);
+      await Promise.all([fetchCategories(), fetchProducts()]);
+
+      toast({
+        title: 'Menú eliminado',
+        description: catCount > 0 || prodCount > 0
+          ? `"${name}" fue eliminado junto con ${catCount} ${catCount === 1 ? 'categoría' : 'categorías'} y ${prodCount} ${prodCount === 1 ? 'producto' : 'productos'}.`
+          : `"${name}" fue eliminado.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error al eliminar',
+        description: err.message || 'No se pudo eliminar el menú.',
+      });
+    } finally {
+      setIsDeleting(false);
+      setMenuToDelete(null);
+      setMenuStats(null);
+    }
   };
 
   const handleToggleStatus = async (menu: Menu) => {
@@ -44,9 +98,7 @@ export default function Menus() {
 
     try {
       await toggleMenuStatus(menu.id, newStatus);
-
-      fetchCategories();
-      fetchProducts();
+      await Promise.all([fetchCategories(), fetchProducts()]);
       
     } catch (err) {
       console.error("Error al cambiar el estado del menú:", err);
@@ -150,7 +202,14 @@ export default function Menus() {
                           title="Editar"
                         >
                           <Pencil className="w-4 h-4" />
-                        </button>                        
+                        </button>
+                        <button
+                          onClick={() => handleRequestDelete(menu)}
+                          className="p-2 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -168,6 +227,16 @@ export default function Menus() {
       )}
 
       {isModalOpen && <MenuModal onClose={() => setIsModalOpen(false)} />}
+
+      {menuToDelete && (
+        <DeleteMenuModal
+          menu={menuToDelete}
+          stats={menuStats}
+          isLoading={isDeleting}
+          onClose={() => { setMenuToDelete(null); setMenuStats(null); }}
+          onConfirm={handleConfirmDelete}
+        />
+      )}
     </div>
   );
 }

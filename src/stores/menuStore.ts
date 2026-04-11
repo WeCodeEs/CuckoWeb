@@ -17,6 +17,12 @@ interface MenuForm {
   icon_name: string;
 }
 
+export interface MenuStats {
+  categoryCount: number;
+  productCount: number;
+  products: Array<{ id: number; name: string; active: boolean }>;
+}
+
 interface MenuState {
   menus: Menu[];
   loading: boolean;
@@ -26,6 +32,8 @@ interface MenuState {
   fetchMenus: () => Promise<void>;
   createMenu: (menu: MenuForm) => Promise<void>;
   updateMenu: (id: number, menu: MenuForm) => Promise<void>;
+  deleteMenu: (id: number) => Promise<void>;
+  getMenuStats: (id: number) => Promise<MenuStats>;
   setSelectedMenu: (menu: Menu | null) => void;
   setIsModalOpen: (isOpen: boolean) => void;
   toggleMenuStatus: (menuId: number, newStatus: boolean) => Promise<void>;
@@ -140,6 +148,54 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       }));
     } catch (error: any) {
       console.error("Error al cambiar el estado del menú y su cascada:", error);
+      throw error;
+    }
+  },
+
+  getMenuStats: async (id: number) => {
+    const { data: categories, error: catError } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('menu_id', id);
+
+    if (catError) throw catError;
+
+    const categoryIds = (categories || []).map(c => c.id);
+    if (categoryIds.length === 0) {
+      return { categoryCount: 0, productCount: 0, products: [] };
+    }
+
+    const { data: products, error: prodError } = await supabase
+      .from('products')
+      .select('id, name, active')
+      .in('category_id', categoryIds);
+
+    if (prodError) throw prodError;
+
+    return {
+      categoryCount: categoryIds.length,
+      productCount: (products || []).length,
+      products: products || [],
+    };
+  },
+
+  deleteMenu: async (id: number) => {
+    try {
+      set({ loading: true, error: null });
+
+      const { error } = await supabase
+        .from('menus')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await get().fetchMenus();
+    } catch (error: any) {
+      set({
+        error: error.message || 'Error al eliminar el menú',
+        loading: false,
+      });
       throw error;
     }
   },

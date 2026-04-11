@@ -95,11 +95,11 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
           ${order.details.map(detail => `
             <div style="font-size: 14px; margin-bottom: 4px;">
               <div style="display: flex; justify-content: space-between;">
-                <span style="max-width: 60%; word-wrap: break-word;">${detail.quantity}x ${detail.product.name}</span>
+                <span style="max-width: 60%; word-wrap: break-word;">${detail.quantity}x ${detail.product_name || detail.product?.name || 'Producto eliminado'}</span>
                 <span>${formatCurrency(detail.subtotal)}</span>
               </div>
               ${detail.options && detail.options.length
-                ? `<div style="padding-left: 12px; color: #000; font-size: 14px;">${detail.options.map(opt => opt.option.name).join(', ')}</div>`
+                ? `<div style="padding-left: 12px; color: #000; font-size: 14px;">${detail.options.map(opt => opt.option_name || opt.option?.name || 'Opcion eliminada').join(', ')}</div>`
                 : ''}
             </div>
           `).join('')}
@@ -298,12 +298,12 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <p className="text-gray-900 dark:text-white font-semibold">
-                          {detail.quantity}x {detail.product?.name || 'Producto'}
+                          {detail.quantity}x {detail.product_name || detail.product?.name || 'Producto eliminado'}
                         </p>
                         {detail.options && detail.options.length > 0 && (
                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 flex items-center gap-1.5">
                             <span className="inline-block w-1 h-1 rounded-full bg-gray-400"></span>
-                            {detail.options.map(opt => opt.option.name).join(', ')}
+                            {detail.options.map(opt => opt.option_name || opt.option?.name || 'Opcion eliminada').join(', ')}
                           </p>
                         )}
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">

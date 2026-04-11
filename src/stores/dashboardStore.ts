@@ -134,29 +134,30 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
           quantity,
           subtotal,
           product_id,
+          product_name,
           product:products(name),
           order:orders!inner(created_at, payment_status)
         `)
-        .eq('order.payment_status', 'paid') // Solo pedidos 'paid'
+        .eq('order.payment_status', 'paid')
         .gte('order.created_at', dateRange.startDate.toISOString())
         .lte('order.created_at', dateRange.endDate.toISOString());
 
       if (topProductsError) throw topProductsError;
 
-      const productMap = new Map<number, { name: string; quantity: number; total: number }>();
+      const productMap = new Map<string, { name: string; quantity: number; total: number }>();
 
       topProductsData?.forEach(item => {
-        const productId = item.product_id;
-        const productName = item.product?.name || 'Unknown Product';
+        const productName = item.product_name || (item.product as any)?.name || 'Producto eliminado';
+        const groupKey = item.product_id != null ? `id:${item.product_id}` : `name:${productName}`;
         const quantity = item.quantity || 0;
         const subtotal = item.subtotal || 0;
 
-        if (productMap.has(productId)) {
-          const existing = productMap.get(productId)!;
+        if (productMap.has(groupKey)) {
+          const existing = productMap.get(groupKey)!;
           existing.quantity += quantity;
           existing.total += subtotal;
         } else {
-          productMap.set(productId, {
+          productMap.set(groupKey, {
             name: productName,
             quantity,
             total: subtotal

@@ -78,6 +78,7 @@ interface ProductState {
   createProduct: (product: ProductForm, imageFile?: File) => Promise<void>;
   updateProduct: (id: number, product: ProductForm, imageFile?: File) => Promise<void>;
   deleteProduct: (id: number) => Promise<void>;
+  deactivateProductsByCategory: (categoryId: number) => Promise<void>;
   setSelectedProduct: (product: Product | null) => void;
   setIsModalOpen: (isOpen: boolean) => void;
   uploadImage: (file: File) => Promise<string>;
@@ -383,12 +384,32 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
       if (error) throw error;
 
-      get().fetchProducts();
+      await get().fetchProducts();
     } catch (error: any) {
       set({
         error: error.message || 'Error al eliminar el producto',
         loading: false,
       });
+      throw error;
+    }
+  },
+
+  deactivateProductsByCategory: async (categoryId: number) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ active: false })
+        .eq('category_id', categoryId);
+
+      if (error) throw error;
+
+      set((state) => ({
+        products: state.products.map(p =>
+          p.category_id === categoryId ? { ...p, active: false } : p
+        ),
+      }));
+    } catch (error: any) {
+      console.error('Error al desactivar productos de la categoria:', error);
       throw error;
     }
   },

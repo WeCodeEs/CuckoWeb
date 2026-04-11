@@ -26,26 +26,30 @@ function sortOrders(orders: Order[]): Order[] {
 
 export interface OrderItemOption {
   id: number;
-  option_id: number;
+  option_id: number | null;
   price_at_moment: number;
   quantity: number;
+  option_name: string;
+  option_group_name: string;
   option: {
     name: string;
     option_group: {
       name: string;
     };
-  };
+  } | null;
 }
 
 export interface OrderDetail {
   id: number;
-  product_id: number;
+  product_id: number | null;
   quantity: number;
   unit_price: number;
   subtotal: number;
+  product_name: string;
+  product_image_url: string | null;
   product: {
     name: string;
-  };
+  } | null;
   options?: OrderItemOption[];
 }
 
@@ -166,21 +170,29 @@ export const useOrderStore = create<OrderStore>((set, get) => {
     return data.map((order: any) => {
       if (order.details) {
         order.details = order.details.map((detail: any) => {
+          const productName = detail.product_name || detail.product?.name || 'Producto eliminado';
+          const productImageUrl = detail.product_image_url ?? null;
           if (detail.options) {
             detail.options = detail.options.map((opt: any) => ({
               id: opt.id,
               option_id: opt.option_id,
+              option_name: opt.option_name || opt.option?.name || 'Opcion eliminada',
+              option_group_name: opt.option_group_name || opt.option?.option_group?.name || '',
               price_at_moment: opt.price_at_moment,
               quantity: opt.quantity,
-              option: {
-                name: opt.option?.name || '',
+              option: opt.option ? {
+                name: opt.option.name,
                 option_group: {
-                  name: opt.option?.option_group?.name || ''
+                  name: opt.option.option_group?.name || ''
                 }
-              }
+              } : null
             }));
           }
-          return detail;
+          return {
+            ...detail,
+            product_name: productName,
+            product_image_url: productImageUrl,
+          };
         });
       }
       return order;
@@ -221,6 +233,8 @@ export const useOrderStore = create<OrderStore>((set, get) => {
             details:order_details (
               id,
               product_id,
+              product_name,
+              product_image_url,
               quantity,
               unit_price,
               subtotal,
@@ -228,9 +242,11 @@ export const useOrderStore = create<OrderStore>((set, get) => {
               options:order_item_options (
                 id,
                 option_id,
+                option_name,
+                option_group_name,
                 price_at_moment,
                 quantity,
-                option:options (
+                option:options!order_item_options_option_id_fkey (
                   name,
                   option_group:option_groups (name)
                 )
@@ -291,6 +307,8 @@ export const useOrderStore = create<OrderStore>((set, get) => {
             details:order_details (
               id,
               product_id,
+              product_name,
+              product_image_url,
               quantity,
               unit_price,
               subtotal,
@@ -298,9 +316,11 @@ export const useOrderStore = create<OrderStore>((set, get) => {
               options:order_item_options (
                 id,
                 option_id,
+                option_name,
+                option_group_name,
                 price_at_moment,
                 quantity,
-                option:options (
+                option:options!order_item_options_option_id_fkey (
                   name,
                   option_group:option_groups (name)
                 )

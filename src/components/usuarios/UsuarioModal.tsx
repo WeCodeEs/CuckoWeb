@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useUsuariosStore } from '../../stores/usuariosStore';
+import { useToast } from '../../components/ui/use-toast';
 
 const strongPassword = (p: string) =>
   typeof p === 'string'
@@ -15,6 +16,7 @@ interface Props {
 
 export default function UsuarioModal({ onClose }: Props) {
   const { selectedUser, createUsuario, updateUsuario } = useUsuariosStore();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     full_name: selectedUser?.full_name || '',
     email: selectedUser?.email || '',
@@ -56,6 +58,10 @@ export default function UsuarioModal({ onClose }: Props) {
         }
 
         await updateUsuario(updateData);
+        toast({
+          title: 'Usuario actualizado',
+          description: `"${formData.full_name}" fue actualizado correctamente.`,
+        });
       } else {
         await createUsuario({
           email: formData.email.trim().toLowerCase(),
@@ -64,10 +70,18 @@ export default function UsuarioModal({ onClose }: Props) {
           role: formData.role as 'Administrador' | 'Operador',
           active: formData.active,
         });
+        toast({
+          title: 'Usuario creado',
+          description: `"${formData.full_name}" fue creado correctamente.`,
+        });
       }
       onClose();
-    } catch (error) {
-      console.error('Error saving user:', error);
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'No se pudo guardar el usuario.',
+      });
     }
   };
 

@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, AlertCircle, Search, UserPlus } from 'lucide-react';
+import { Plus, Pencil, Trash2, CircleAlert as AlertCircle, Search, UserPlus } from 'lucide-react';
 import { useUsuariosStore } from '../stores/usuariosStore';
 import UsuarioModal from '../components/usuarios/UsuarioModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import clsx from 'clsx';
 import SkeletonTable from '../components/skeletons/SkeletonTable';
+import { useToast } from '../components/ui/use-toast';
 
 export default function Usuarios() {
   const { 
@@ -23,7 +25,9 @@ export default function Usuarios() {
     setIsModalOpen
   } = useUsuariosStore();
 
+  const { toast } = useToast();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchUsuarios();
@@ -45,28 +49,33 @@ export default function Usuarios() {
   };
 
   const handleDelete = async (id: string) => {
+    setIsDeleting(true);
     try {
+      const user = usuarios.find(u => u.id === id);
       await deleteUsuario(id);
       setShowDeleteConfirm(null);
-    } catch (error) {
-      console.error('Error deleting user:', error);
+      toast({
+        title: 'Usuario eliminado',
+        description: user ? `"${user.full_name || user.email}" fue eliminado correctamente.` : 'El usuario fue eliminado correctamente.',
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error al eliminar',
+        description: error.message || 'No se pudo eliminar el usuario.',
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   const filteredUsers = usuarios.filter(user => {
-    const matchesSearch = 
+    const matchesSearch =
       user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === 'Todos' || user.role === roleFilter;
-    const result = matchesSearch && matchesRole;
-        
-    return result;
+    return matchesSearch && matchesRole;
   });
-  
-  // Debug the final filtered results
-  console.log('🎯 Filtered users for display:', filteredUsers.length);
-  console.log('🎯 Search term:', searchTerm);
-  console.log('🎯 Role filter:', roleFilter);
 
   if (error) {
     return (
@@ -240,32 +249,20 @@ export default function Usuarios() {
 
       {isModalOpen && <UsuarioModal onClose={() => setIsModalOpen(false)} />}
 
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-darkbg-lighter rounded-xl shadow-xl p-6 max-w-md mx-4">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-              Confirmar Eliminación
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              Esta acción eliminará permanentemente la cuenta y sus credenciales de inicio de sesión. ¿Continuar?
-            </p>
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setShowDeleteConfirm(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-darkbg rounded-lg hover:bg-gray-200 dark:hover:bg-darkbg-darker transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => handleDelete(showDeleteConfirm)}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Eliminar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationModal
+        isOpen={!!showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(null)}
+        onConfirm={() => {
+          if (showDeleteConfirm) handleDelete(showDeleteConfirm);
+        }}
+        title="Eliminar usuario"
+        message="Esta acción eliminará permanentemente la cuenta y sus credenciales de inicio de sesión. ¿Continuar?"
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={isDeleting}
+        loadingText="Eliminando..."
+      />
     </div>
   );
 }

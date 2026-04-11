@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import NotificationModal from './NotificationModal';
 import { getScheduledOrderAlert } from '../../utils/timeAlerts';
+import { useToast } from '../../components/ui/use-toast';
 
 
 interface Props {
@@ -23,6 +24,7 @@ const statusOptions: { value: OrderStatus; label: string; icon: React.ComponentT
 
 export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) {
   const { fetchNotificationsByOrder } = useOrderStore();
+  const { toast } = useToast();
   const [notifications, setNotifications] = React.useState<OrderNotification[]>([]);
   const [showNotificationModal, setShowNotificationModal] = React.useState(false);
   const [currentTime, setCurrentTime] = React.useState(Date.now());
@@ -63,7 +65,11 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
     // Get the iframe document
     const doc = iframe.contentWindow?.document;
     if (!doc) {
-      alert('Error al preparar la impresión');
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Error al preparar la impresión',
+      });
       return;
     }
 
@@ -273,7 +279,24 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
               </label>
               <select
                 value={order.status}
-                onChange={(e) => onStatusChange(e.target.value as OrderStatus)}
+                onChange={async (e) => {
+                  const newStatus = e.target.value as OrderStatus;
+                  try {
+                    await onStatusChange(newStatus);
+                    const label = statusOptions.find(o => o.value === newStatus)?.label || newStatus;
+                    toast({
+                      title: 'Estado actualizado',
+                      description: `Pedido #${order.id} movido a ${label}`,
+                      className: "border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20",
+                    });
+                  } catch (err: any) {
+                    toast({
+                      variant: 'destructive',
+                      title: 'Error',
+                      description: err.message || 'Error al actualizar el estado del pedido',
+                    });
+                  }
+                }}
                 className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary bg-white dark:bg-darkbg-lighter text-gray-900 dark:text-white text-base font-medium touch-manipulation shadow-sm transition-all"
               >
                 {statusOptions.map(option => (

@@ -5,6 +5,7 @@ import { useCategoryStore } from '../stores/categoryStore';
 import { useProductStore } from '../stores/productStore';
 import MenuModal from '../components/MenuModal';
 import DeleteMenuModal from '../components/DeleteMenuModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import SkeletonTable from '../components/skeletons/SkeletonTable';
@@ -31,6 +32,7 @@ export default function Menus() {
   const [menuToDelete, setMenuToDelete] = useState<Menu | null>(null);
   const [menuStats, setMenuStats] = useState<MenuStats | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [menuToDeactivate, setMenuToDeactivate] = useState<Menu | null>(null);
 
   useEffect(() => {
     fetchMenus();
@@ -86,22 +88,32 @@ export default function Menus() {
     }
   };
 
-  const handleToggleStatus = async (menu: Menu) => {
+  const handleToggleStatus = (menu: Menu) => {
     const newStatus = !menu.active;
 
     if (newStatus === false) {
-      const confirmed = window.confirm(
-        `¿Estás seguro de que deseas desactivar el menú "${menu.name}"? \n\nTodas sus categorías y productos también se desactivarán.`
-      );
-      if (!confirmed) return;
+      setMenuToDeactivate(menu);
+      return;
     }
 
+    confirmToggleStatus(menu, newStatus);
+  };
+
+  const confirmToggleStatus = async (menu: Menu, newStatus: boolean) => {
     try {
       await toggleMenuStatus(menu.id, newStatus);
       await Promise.all([fetchCategories(), fetchProducts()]);
-      
-    } catch (err) {
-      console.error("Error al cambiar el estado del menú:", err);
+
+      toast({
+        title: newStatus ? 'Menú activado' : 'Menú desactivado',
+        description: `"${menu.name}" fue ${newStatus ? 'activado' : 'desactivado'} correctamente.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: err.message || 'No se pudo cambiar el estado del menú.',
+      });
     }
   };
 
@@ -237,6 +249,22 @@ export default function Menus() {
           onConfirm={handleConfirmDelete}
         />
       )}
+
+      <ConfirmationModal
+        isOpen={!!menuToDeactivate}
+        onClose={() => setMenuToDeactivate(null)}
+        onConfirm={() => {
+          if (menuToDeactivate) {
+            confirmToggleStatus(menuToDeactivate, false);
+            setMenuToDeactivate(null);
+          }
+        }}
+        title="Desactivar menú"
+        message={`¿Estás seguro de que deseas desactivar el menú "${menuToDeactivate?.name}"? Todas sus categorías y productos también se desactivarán.`}
+        confirmText="Desactivar"
+        cancelText="Cancelar"
+        variant="warning"
+      />
     </div>
   );
 }

@@ -27,6 +27,7 @@ export default function Categories() {
   const { toast } = useToast();
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [categoryToDeactivate, setCategoryToDeactivate] = useState<Category | null>(null);
 
   useEffect(() => {
     fetchCategories();
@@ -41,32 +42,47 @@ export default function Categories() {
     setIsModalOpen(true);
   };
 
-  const handleToggleStatus = async (category: Category) => {
+  const handleToggleStatus = (category: Category) => {
     const newStatus = !category.active;
 
     if (newStatus === true) {
       if (category.menu && !category.menu.active) {
-        alert(`No se puede activar la categoría "${category.name}" porque el menú "${category.menu.name}" está desactivado.`);
-        return; 
+        toast({
+          variant: 'destructive',
+          title: 'No se puede activar',
+          description: `La categoría "${category.name}" no se puede activar porque el menú "${category.menu.name}" está desactivado.`,
+        });
+        return;
       }
-    }
-    
-    if (newStatus === false) {
-      const confirmed = window.confirm(
-        `¿Estás seguro de que deseas desactivar la categoría "${category.name}"? \n\nTodos los productos dentro de esta categoría también se desactivarán.`
-      );
-      if (!confirmed) return;
     }
 
+    if (newStatus === false) {
+      setCategoryToDeactivate(category);
+      return;
+    }
+
+    confirmToggleStatus(category, newStatus);
+  };
+
+  const confirmToggleStatus = async (category: Category, newStatus: boolean) => {
     try {
       await toggleCategoryStatus(category.id, newStatus);
-      
+
       if (newStatus === false) {
         await deactivateProductsByCategory(category.id);
-        fetchProducts(); 
+        fetchProducts();
       }
-    } catch (err) {
-      console.error("Error al cambiar el estado de la categoría:", err);
+
+      toast({
+        title: newStatus ? 'Categoría activada' : 'Categoría desactivada',
+        description: `"${category.name}" fue ${newStatus ? 'activada' : 'desactivada'} correctamente.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: err.message || 'No se pudo cambiar el estado de la categoría.',
+      });
     }
   };
 
@@ -258,6 +274,22 @@ export default function Categories() {
           </div>
         )}
       </ConfirmationModal>
+
+      <ConfirmationModal
+        isOpen={!!categoryToDeactivate}
+        onClose={() => setCategoryToDeactivate(null)}
+        onConfirm={() => {
+          if (categoryToDeactivate) {
+            confirmToggleStatus(categoryToDeactivate, false);
+            setCategoryToDeactivate(null);
+          }
+        }}
+        title="Desactivar categoría"
+        message={`¿Estás seguro de que deseas desactivar la categoría "${categoryToDeactivate?.name}"? Todos los productos dentro de esta categoría también se desactivarán.`}
+        confirmText="Desactivar"
+        cancelText="Cancelar"
+        variant="warning"
+      />
     </div>
   );
 }

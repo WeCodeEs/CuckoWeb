@@ -4,8 +4,7 @@ import { useMenuStore, Menu, MenuStats } from '../stores/menuStore';
 import { useCategoryStore } from '../stores/categoryStore';
 import { useProductStore } from '../stores/productStore';
 import MenuModal from '../components/MenuModal';
-import DeleteMenuModal from '../components/DeleteMenuModal';
-import ConfirmationModal from '../components/ConfirmationModal';
+import ConfirmationModal from '../components/ConfirmationModal'; // Usamos solo este
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import SkeletonTable from '../components/skeletons/SkeletonTable';
@@ -13,26 +12,17 @@ import { useToast } from '../components/ui/use-toast';
 
 export default function Menus() {
   const {
-    menus,
-    loading,
-    error,
-    isModalOpen,
-    fetchMenus,
-    toggleMenuStatus,
-    deleteMenu,
-    getMenuStats,
-    setSelectedMenu,
-    setIsModalOpen
+    menus, loading, error, isModalOpen, fetchMenus,
+    toggleMenuStatus, deleteMenu, getMenuStats,
+    setSelectedMenu, setIsModalOpen
   } = useMenuStore();
 
   const { fetchCategories } = useCategoryStore();
   const { fetchProducts } = useProductStore();
   const { toast } = useToast();
 
-  // Estados para el flujo de DESACTIVACIÓN (fixDialogo)
+  // Estados unificados
   const [menuToDeactivate, setMenuToDeactivate] = useState<Menu | null>(null);
-
-  // Estados para el flujo de ELIMINACIÓN (dev)
   const [menuToDelete, setMenuToDelete] = useState<Menu | null>(null);
   const [menuStats, setMenuStats] = useState<MenuStats | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -46,10 +36,8 @@ export default function Menus() {
     setIsModalOpen(true);
   };
 
-  /**
-   * FLUJO DE DESACTIVACIÓN (Soft Action)
-   */
-  const handleToggleStatus = async (menu: Menu) => {
+  // --- LÓGICA DE DESACTIVACIÓN ---
+  const handleToggleStatus = (menu: Menu) => {
     const newStatus = !menu.active;
     if (newStatus === false) {
       setMenuToDeactivate(menu);
@@ -61,64 +49,38 @@ export default function Menus() {
   const performToggle = async (menu: Menu, newStatus: boolean) => {
     try {
       await toggleMenuStatus(menu.id, newStatus);
-      // Actualizamos todo el ecosistema para reflejar cambios en cascada
       await Promise.all([fetchCategories(), fetchProducts()]);
-      
       toast({
         title: newStatus ? 'Menú activado' : 'Menú desactivado',
-        description: `"${menu.name}" se ${newStatus ? 'activó' : 'desactivó'} correctamente.`,
+        description: `"${menu.name}" actualizado correctamente.`,
       });
     } catch (err: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Error al cambiar estado',
-        description: err?.message || 'No se pudo cambiar el estado del menú.',
-      });
+      toast({ variant: 'destructive', title: 'Error', description: err.message });
     } finally {
       setMenuToDeactivate(null);
     }
   };
 
-  /**
-   * FLUJO DE ELIMINACIÓN (Hard Action)
-   */
+  // --- LÓGICA DE ELIMINACIÓN ---
   const handleRequestDelete = async (menu: Menu) => {
     try {
       const stats = await getMenuStats(menu.id);
       setMenuStats(stats);
       setMenuToDelete(menu);
     } catch (err) {
-      toast({
-        title: 'Error',
-        description: 'No se pudo obtener la información del menú.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'No se pudo obtener info del menú.', variant: 'destructive' });
     }
   };
 
   const handleConfirmDelete = async () => {
-    if (!menuToDelete || !menuStats) return;
+    if (!menuToDelete) return;
     setIsDeleting(true);
     try {
-      const name = menuToDelete.name;
-      const catCount = menuStats.categoryCount;
-      const prodCount = menuStats.productCount;
-
       await deleteMenu(menuToDelete.id);
       await Promise.all([fetchCategories(), fetchProducts()]);
-
-      toast({
-        title: 'Menú eliminado',
-        description: catCount > 0 || prodCount > 0
-          ? `"${name}" fue eliminado junto con ${catCount} categorías y ${prodCount} productos.`
-          : `"${name}" fue eliminado.`,
-      });
+      toast({ title: 'Menú eliminado', description: `"${menuToDelete.name}" fue borrado.` });
     } catch (err: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Error al eliminar',
-        description: err.message || 'No se pudo eliminar el menú.',
-      });
+      toast({ variant: 'destructive', title: 'Error', description: err.message });
     } finally {
       setIsDeleting(false);
       setMenuToDelete(null);
@@ -126,115 +88,75 @@ export default function Menus() {
     }
   };
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-        <div className="bg-red-50 dark:bg-darkbg-lighter border border-red-100 dark:border-red-900 rounded-xl p-6 max-w-md text-center">
-          <AlertCircle className="w-12 h-12 text-red-500 dark:text-red-400 mx-auto mb-4" />
-          <p className="text-lg font-medium text-red-800 dark:text-red-400">Error al cargar los menús</p>
-          <p className="mt-2 text-sm text-red-600 dark:text-red-300">{error}</p>
-          <button
-            onClick={() => fetchMenus()}
-            className="mt-4 px-4 py-2 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900 transition-colors"
-          >
-            Reintentar
-          </button>
-        </div>
-      </div>
-    );
-  }
+  if (error) return <div className="p-6 text-red-500">Error: {error}</div>;
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-primary-dark dark:text-white">Menús</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-300">Gestiona los menús del sistema</p>
-        </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary dark:bg-secondary rounded-xl hover:bg-primary-dark dark:hover:bg-secondary/90 transition-colors shadow-lg shadow-primary/20 dark:shadow-secondary/20"
-        >
-          <Plus className="w-4 h-4" />
-          Nuevo Menú
+        <h1 className="text-2xl font-bold">Menús</h1>
+        <button onClick={() => setIsModalOpen(true)} className="bg-primary p-2 text-white rounded-xl">
+          <Plus className="w-4 h-4 inline mr-2" /> Nuevo Menú
         </button>
       </div>
 
       {loading ? (
         <SkeletonTable rows={5} columns={4} hasActions />
       ) : (
-        <div className="bg-white dark:bg-darkbg-lighter rounded-xl shadow-soft dark:shadow-dark overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-100 dark:divide-darkbg">
-              <thead>
-                <tr className="bg-gray-50/50 dark:bg-darkbg/50">
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descripción</th>
-                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha de Creación</th>
-                  <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
+        <div className="bg-white dark:bg-darkbg-lighter rounded-xl overflow-hidden shadow-soft">
+          <table className="min-w-full">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-darkbg">
+                <th className="px-6 py-4 text-left">Nombre</th>
+                <th className="px-6 py-4 text-center">Estado</th>
+                <th className="px-6 py-4 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {menus.map((menu) => (
+                <tr key={menu.id} className="border-t border-gray-100 dark:border-darkbg">
+                  <td className="px-6 py-4">{menu.name}</td>
+                  <td className="px-6 py-4 text-center">
+                    <button 
+                      onClick={() => handleToggleStatus(menu)}
+                      className={`px-3 py-1 rounded-full text-xs ${menu.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+                    >
+                      {menu.active ? 'Activo' : 'Inactivo'}
+                    </button>
+                  </td>
+                  <td className="px-6 py-4 text-right flex justify-end gap-2">
+                    <button onClick={() => handleEdit(menu)} className="text-primary"><Pencil className="w-4 h-4" /></button>
+                    <button onClick={() => handleRequestDelete(menu)} className="text-red-500"><Trash2 className="w-4 h-4" /></button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-darkbg">
-                {menus.map((menu) => (
-                  <tr key={menu.id} className="hover:bg-gray-50/50 dark:hover:bg-darkbg/50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{menu.name}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{menu.description || '-'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <button
-                        onClick={() => handleToggleStatus(menu)}
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${
-                          menu.active
-                            ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/30'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        {menu.active ? 'Activo' : 'Inactivo'}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                      {format(new Date(menu.created_at), "d 'de' MMMM, yyyy", { locale: es })}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                      <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => handleEdit(menu)} className="p-2 text-primary hover:bg-primary/5 rounded-lg transition-colors"><Pencil className="w-4 h-4" /></button>
-                        <button onClick={() => handleRequestDelete(menu)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
       {/* MODALES */}
       {isModalOpen && <MenuModal onClose={() => setIsModalOpen(false)} />}
 
-      {/* Modal para Desactivar (Preventivo) */}
+      {/* Modal para DESACTIVAR */}
       <ConfirmationModal
         isOpen={!!menuToDeactivate}
         onClose={() => setMenuToDeactivate(null)}
-        onConfirm={() => {
-          if (menuToDeactivate) performToggle(menuToDeactivate, false);
-        }}
-        title="Desactivar menú"
-        message={`¿Estás seguro de que deseas desactivar el menú "${menuToDeactivate?.name}"? Todas sus categorías y productos también se desactivarán.`}
+        onConfirm={() => menuToDeactivate && performToggle(menuToDeactivate, false)}
+        title="Desactivar Menú"
+        message={`¿Seguro que quieres desactivar "${menuToDeactivate?.name}"?`}
         confirmText="Desactivar"
-        cancelText="Cancelar"
       />
 
-      {/* Modal para Eliminar (Destructivo con Stats) */}
-      {menuToDelete && (
-        <DeleteMenuModal
-          menu={menuToDelete}
-          stats={menuStats}
-          isLoading={isDeleting}
-          onClose={() => { setMenuToDelete(null); setMenuStats(null); }}
-          onConfirm={handleConfirmDelete}
-        />
-      )}
+      {/* Modal para ELIMINAR (Usando el ConfirmationModal genérico) */}
+      <ConfirmationModal
+        isOpen={!!menuToDelete}
+        onClose={() => setMenuToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="ELIMINAR MENÚ"
+        message={`¿Estás seguro? Se borrarán ${menuStats?.categoryCount || 0} categorías y ${menuStats?.productCount || 0} productos.`}
+        confirmText={isDeleting ? "Eliminando..." : "Eliminar Permanentemente"}
+        variant="danger"
+      />
     </div>
   );
 }

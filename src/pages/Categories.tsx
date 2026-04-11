@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, Pencil, CircleAlert as AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, CircleAlert as AlertCircle } from 'lucide-react';
 import { useCategoryStore, Category } from '../stores/categoryStore';
-import { useProductStore } from '../stores/productStore';
+import { useProductStore, Product } from '../stores/productStore';
 import CategoryModal from '../components/CategoryModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { format } from 'date-fns';
@@ -11,20 +11,25 @@ import { getCategoryNameFrequencies, formatCategoryName } from '../utils/categor
 import { useToast } from '../components/ui/use-toast';
 
 export default function Categories() {
-  const { 
+  const {
     categories,
     loading,
     error,
     isModalOpen,
     fetchCategories,
     toggleCategoryStatus,
+    deleteCategory,
     setSelectedCategory,
     setIsModalOpen
   } = useCategoryStore();
 
-  const { deactivateProductsByCategory, fetchProducts } = useProductStore();
+  const { products, deactivateProductsByCategory, fetchProducts } = useProductStore();
   const { toast } = useToast();
+
+  // Estados locales para el manejo de modales de confirmación
   const [categoryToDeactivate, setCategoryToDeactivate] = useState<Category | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -39,10 +44,14 @@ export default function Categories() {
     setIsModalOpen(true);
   };
 
+  /**
+   * Lógica de cambio de estado (Activación/Desactivación)
+   */
   const handleToggleStatus = (category: Category) => {
     const newStatus = !category.active;
 
     if (newStatus === true) {
+      // Validación: No activar si el menú padre está inactivo
       if (category.menu && !category.menu.active) {
         toast({
           variant: 'destructive',
@@ -53,6 +62,7 @@ export default function Categories() {
       }
       performToggle(category, true);
     } else {
+      // Si se va a desactivar, pedimos confirmación
       setCategoryToDeactivate(category);
     }
   };
@@ -74,6 +84,44 @@ export default function Categories() {
         title: 'Error al cambiar estado',
         description: err?.message || 'No se pudo cambiar el estado de la categoría.',
       });
+    } finally {
+      setCategoryToDeactivate(null);
+    }
+  };
+
+  /**
+   * Lógica de Eliminación Física
+   */
+  const categoryProducts = useMemo(() => {
+    if (!categoryToDelete) return [];
+    return products.filter(p => p.category_id === categoryToDelete.id);
+  }, [categoryToDelete, products]);
+
+  const handleDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+    setIsDeleting(true);
+    try {
+      const name = categoryToDelete.name;
+      const prodCount = categoryProducts.length;
+
+      await deleteCategory(categoryToDelete.id);
+      fetchProducts();
+
+      toast({
+        title: 'Categoría eliminada',
+        description: prodCount > 0
+          ? `"${name}" fue eliminada junto con ${prodCount} ${prodCount === 1 ? 'producto' : 'productos'}.`
+          : `"${name}" fue eliminada.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error al eliminar',
+        description: err.message || 'No se pudo eliminar la categoría.',
+      });
+    } finally {
+      setIsDeleting(false);
+      setCategoryToDelete(null);
     }
   };
 
@@ -119,36 +167,22 @@ export default function Categories() {
             <table className="min-w-full divide-y divide-gray-100 dark:divide-darkbg">
               <thead>
                 <tr className="bg-gray-50/50 dark:bg-darkbg/50">
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Nombre
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Menú
-                  </th>
-                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Fecha de Creación
-                  </th>
-                  <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Acciones
-                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Menú</th>
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha de Creación</th>
+                  <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-darkbg">
                 {categories.map((category) => (
-                  <tr 
-                    key={category.id}
-                    className="hover:bg-gray-50/50 dark:hover:bg-darkbg/50 transition-colors"
-                  >
+                  <tr key={category.id} className="hover:bg-gray-50/50 dark:hover:bg-darkbg/50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                       {formatCategoryName(category, categoryFrequencies)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                       {category.menu?.name || '-'}
                     </td>
-                    
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <button
                         onClick={() => handleToggleStatus(category)}
@@ -162,7 +196,6 @@ export default function Categories() {
                         {category.active ? 'Activa' : 'Inactiva'}
                       </button>
                     </td>
-
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                       {format(new Date(category.created_at), "d 'de' MMMM, yyyy", { locale: es })}
                     </td>
@@ -175,6 +208,13 @@ export default function Categories() {
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
+                        <button
+                          onClick={() => setCategoryToDelete(category)}
+                          className="p-2 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -182,17 +222,13 @@ export default function Categories() {
               </tbody>
             </table>
           </div>
-
-          {categories.length === 0 && !loading && (
-            <div className="text-center py-12">
-              <p className="text-gray-500 dark:text-gray-400">No hay categorías registradas</p>
-            </div>
-          )}
         </div>
       )}
 
+      {/* MODALES */}
       {isModalOpen && <CategoryModal onClose={() => setIsModalOpen(false)} />}
 
+      {/* Confirmación para Desactivar */}
       <ConfirmationModal
         isOpen={!!categoryToDeactivate}
         onClose={() => setCategoryToDeactivate(null)}
@@ -206,6 +242,38 @@ export default function Categories() {
         confirmText="Desactivar"
         cancelText="Cancelar"
       />
+
+      {/* Confirmación para Eliminar */}
+      <ConfirmationModal
+        isOpen={!!categoryToDelete}
+        onClose={() => setCategoryToDelete(null)}
+        onConfirm={handleDeleteCategory}
+        title="Eliminar categoría"
+        message={
+          categoryProducts.length > 0
+            ? `La categoría "${categoryToDelete?.name}" contiene ${categoryProducts.length} ${categoryProducts.length === 1 ? 'producto' : 'productos'}. Al eliminarla, se borrarán todos los productos asociados de forma permanente. Los pedidos anteriores conservarán su historial.`
+            : `La categoría "${categoryToDelete?.name}" será eliminada permanentemente.`
+        }
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={isDeleting}
+      >
+        {categoryProducts.length > 0 && (
+          <div className="mt-4 max-h-32 overflow-y-auto rounded-lg border border-gray-200 dark:border-darkbg divide-y divide-gray-100 dark:divide-darkbg">
+            {categoryProducts.map(product => (
+              <div key={product.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                <span className="text-gray-700 dark:text-gray-300">{product.name}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  product.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                }`}>
+                  {product.active ? 'Activo' : 'Inactivo'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </ConfirmationModal>
     </div>
   );
 }

@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Pencil, CircleAlert as AlertCircle } from 'lucide-react';
-import { useMenuStore, Menu } from '../stores/menuStore';
+import { Plus, Pencil, Trash2, CircleAlert as AlertCircle } from 'lucide-react';
+import { useMenuStore, Menu, MenuStats } from '../stores/menuStore';
 import { useCategoryStore } from '../stores/categoryStore';
 import { useProductStore } from '../stores/productStore';
 import MenuModal from '../components/MenuModal';
+import DeleteMenuModal from '../components/DeleteMenuModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -11,13 +12,15 @@ import SkeletonTable from '../components/skeletons/SkeletonTable';
 import { useToast } from '../components/ui/use-toast';
 
 export default function Menus() {
-  const { 
+  const {
     menus,
     loading,
     error,
     isModalOpen,
     fetchMenus,
     toggleMenuStatus,
+    deleteMenu,
+    getMenuStats,
     setSelectedMenu,
     setIsModalOpen
   } = useMenuStore();
@@ -25,7 +28,14 @@ export default function Menus() {
   const { fetchCategories } = useCategoryStore();
   const { fetchProducts } = useProductStore();
   const { toast } = useToast();
+
+  // Estados para el flujo de DESACTIVACIÓN (fixDialogo)
   const [menuToDeactivate, setMenuToDeactivate] = useState<Menu | null>(null);
+
+  // Estados para el flujo de ELIMINACIÓN (dev)
+  const [menuToDelete, setMenuToDelete] = useState<Menu | null>(null);
+  const [menuStats, setMenuStats] = useState<MenuStats | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchMenus();
@@ -36,7 +46,10 @@ export default function Menus() {
     setIsModalOpen(true);
   };
 
-  const handleToggleStatus = (menu: Menu) => {
+  /**
+   * FLUJO DE DESACTIVACIÓN (Soft Action)
+   */
+  const handleToggleStatus = async (menu: Menu) => {
     const newStatus = !menu.active;
     if (newStatus === false) {
       setMenuToDeactivate(menu);
@@ -48,18 +61,68 @@ export default function Menus() {
   const performToggle = async (menu: Menu, newStatus: boolean) => {
     try {
       await toggleMenuStatus(menu.id, newStatus);
-      fetchCategories();
-      fetchProducts();
+      // Actualizamos todo el ecosistema para reflejar cambios en cascada
+      await Promise.all([fetchCategories(), fetchProducts()]);
+      
       toast({
-        title: newStatus ? 'Menu activado' : 'Menu desactivado',
+        title: newStatus ? 'Menú activado' : 'Menú desactivado',
         description: `"${menu.name}" se ${newStatus ? 'activó' : 'desactivó'} correctamente.`,
       });
     } catch (err: any) {
       toast({
         variant: 'destructive',
         title: 'Error al cambiar estado',
-        description: err?.message || 'No se pudo cambiar el estado del menu.',
+        description: err?.message || 'No se pudo cambiar el estado del menú.',
       });
+    } finally {
+      setMenuToDeactivate(null);
+    }
+  };
+
+  /**
+   * FLUJO DE ELIMINACIÓN (Hard Action)
+   */
+  const handleRequestDelete = async (menu: Menu) => {
+    try {
+      const stats = await getMenuStats(menu.id);
+      setMenuStats(stats);
+      setMenuToDelete(menu);
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'No se pudo obtener la información del menú.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!menuToDelete || !menuStats) return;
+    setIsDeleting(true);
+    try {
+      const name = menuToDelete.name;
+      const catCount = menuStats.categoryCount;
+      const prodCount = menuStats.productCount;
+
+      await deleteMenu(menuToDelete.id);
+      await Promise.all([fetchCategories(), fetchProducts()]);
+
+      toast({
+        title: 'Menú eliminado',
+        description: catCount > 0 || prodCount > 0
+          ? `"${name}" fue eliminado junto con ${catCount} categorías y ${prodCount} productos.`
+          : `"${name}" fue eliminado.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error al eliminar',
+        description: err.message || 'No se pudo eliminar el menú.',
+      });
+    } finally {
+      setIsDeleting(false);
+      setMenuToDelete(null);
+      setMenuStats(null);
     }
   };
 
@@ -105,36 +168,18 @@ export default function Menus() {
             <table className="min-w-full divide-y divide-gray-100 dark:divide-darkbg">
               <thead>
                 <tr className="bg-gray-50/50 dark:bg-darkbg/50">
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Nombre
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Descripción
-                  </th>
-                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Fecha de Creación
-                  </th>
-                  <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Acciones
-                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descripción</th>
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha de Creación</th>
+                  <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-darkbg">
                 {menus.map((menu) => (
-                  <tr 
-                    key={menu.id}
-                    className="hover:bg-gray-50/50 dark:hover:bg-darkbg/50 transition-colors"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      {menu.name}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                      {menu.description || '-'}
-                    </td>
-                    
+                  <tr key={menu.id} className="hover:bg-gray-50/50 dark:hover:bg-darkbg/50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{menu.name}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{menu.description || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <button
                         onClick={() => handleToggleStatus(menu)}
@@ -143,24 +188,17 @@ export default function Menus() {
                             ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/30'
                             : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                         }`}
-                        title={menu.active ? 'Clic para desactivar' : 'Clic para activar'}
                       >
                         {menu.active ? 'Activo' : 'Inactivo'}
                       </button>
                     </td>
-
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                       {format(new Date(menu.created_at), "d 'de' MMMM, yyyy", { locale: es })}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleEdit(menu)}
-                          className="p-2 text-primary dark:text-secondary hover:bg-primary/5 dark:hover:bg-secondary/5 rounded-lg transition-colors"
-                          title="Editar"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>                        
+                        <button onClick={() => handleEdit(menu)} className="p-2 text-primary hover:bg-primary/5 rounded-lg transition-colors"><Pencil className="w-4 h-4" /></button>
+                        <button onClick={() => handleRequestDelete(menu)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
                   </tr>
@@ -168,30 +206,35 @@ export default function Menus() {
               </tbody>
             </table>
           </div>
-
-          {menus.length === 0 && !loading && (
-            <div className="text-center py-12">
-              <p className="text-gray-500 dark:text-gray-400">No hay menús registrados</p>
-            </div>
-          )}
         </div>
       )}
 
+      {/* MODALES */}
       {isModalOpen && <MenuModal onClose={() => setIsModalOpen(false)} />}
 
+      {/* Modal para Desactivar (Preventivo) */}
       <ConfirmationModal
         isOpen={!!menuToDeactivate}
         onClose={() => setMenuToDeactivate(null)}
         onConfirm={() => {
-          if (menuToDeactivate) {
-            performToggle(menuToDeactivate, false);
-          }
+          if (menuToDeactivate) performToggle(menuToDeactivate, false);
         }}
-        title="Desactivar menu"
-        message={`¿Estas seguro de que deseas desactivar el menu "${menuToDeactivate?.name}"? Todas sus categorias y productos tambien se desactivaran.`}
+        title="Desactivar menú"
+        message={`¿Estás seguro de que deseas desactivar el menú "${menuToDeactivate?.name}"? Todas sus categorías y productos también se desactivarán.`}
         confirmText="Desactivar"
         cancelText="Cancelar"
       />
+
+      {/* Modal para Eliminar (Destructivo con Stats) */}
+      {menuToDelete && (
+        <DeleteMenuModal
+          menu={menuToDelete}
+          stats={menuStats}
+          isLoading={isDeleting}
+          onClose={() => { setMenuToDelete(null); setMenuStats(null); }}
+          onConfirm={handleConfirmDelete}
+        />
+      )}
     </div>
   );
 }

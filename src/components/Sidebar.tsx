@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList, History, SquareMenu as MenuSquare, Users, ChevronDown, ChevronRight, FolderTree, Coffee, HeartPlus, Layers, UserRoundCog, IdCard, IdCardLanyard, Settings, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, History, SquareMenu as MenuSquare, Users, ChevronDown, ChevronRight, FolderTree, Coffee, HeartPlus, Layers, UserRoundCog, IdCard, IdCardLanyard, Settings, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Route } from '../types';
 import { useAuthStore } from '../stores/authStore';
 import { useSidebarStore } from '../stores/sidebarStore';
@@ -197,8 +197,8 @@ export default function Sidebar() {
       "hidden md:flex bg-primary-dark dark:bg-darkbg-darker text-white h-screen flex-col transition-all duration-300 flex-shrink-0",
       isCollapsed ? 'w-16' : 'w-64'
     )}>
-      <div className="bg-white dark:bg-darkbg-darker p-4 flex flex-col items-center relative">
-        {!isCollapsed && (
+      <div className="bg-white dark:bg-darkbg-darker p-4 flex flex-col items-center">
+        {!isCollapsed ? (
           <>
             <img
               src={`${SUPABASE_URL}/storage/v1/object/sign/images/Logo_Vertical.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9iYjIwYTQ2OC0zZGUxLTQ4ZGMtOWY4Zi04ODUyNDRiNDIwYzEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvTG9nb19WZXJ0aWNhbC5qcGciLCJpYXQiOjE3NTk4Njk0ODQsImV4cCI6NDkxMzQ2OTQ4NH0.fVr0DAFBXQuW-38eQIqfCCAqNwo3mCdEo45tLJmohqM`}
@@ -211,32 +211,40 @@ export default function Sidebar() {
               className="h-28 w-auto mb-4 hidden dark:block"
             />
           </>
+        ) : (
+          <div className="h-8" />
         )}
-        <button
-          onClick={toggleSidebar}
-          className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-primary-dark dark:bg-darkbg-lighter border border-white/20 rounded-full flex items-center justify-center text-white hover:bg-primary transition-colors z-10"
-          title={isCollapsed ? 'Expandir menú' : 'Colapsar menú'}
-        >
-          {isCollapsed ? (
-            <PanelLeftOpen className="w-3.5 h-3.5" />
-          ) : (
-            <PanelLeftClose className="w-3.5 h-3.5" />
-          )}
-        </button>
       </div>
 
       <nav className={clsx("flex-1 space-y-1 overflow-y-auto scrollbar-thin", isCollapsed ? 'p-2' : 'p-4')}>
         {filteredRoutes.map(route => renderNavItem(route))}
       </nav>
 
-      {!isCollapsed && (
-        <div className="p-4 border-t border-white/10">
+      <div className="border-t border-white/10">
+        {!isCollapsed && (
           <div className="px-4 py-3 text-sm text-secondary-light">
-            <p className="font-medium">{user?.full_name}</p>
-            <p className="text-xs opacity-75">{user?.email}</p>
+            <p className="font-medium truncate">{user?.full_name}</p>
+            <p className="text-xs opacity-75 truncate">{user?.email}</p>
           </div>
-        </div>
-      )}
+        )}
+        <button
+          onClick={toggleSidebar}
+          className={clsx(
+            "w-full flex items-center gap-3 py-3 text-secondary-light/70 hover:text-white hover:bg-white/5 transition-colors duration-200",
+            isCollapsed ? 'justify-center px-2' : 'px-6'
+          )}
+          title={isCollapsed ? 'Expandir menú' : 'Colapsar menú'}
+        >
+          {isCollapsed ? (
+            <ChevronsRight className="w-5 h-5" />
+          ) : (
+            <>
+              <ChevronsLeft className="w-5 h-5" />
+              <span className="text-sm">Colapsar menú</span>
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

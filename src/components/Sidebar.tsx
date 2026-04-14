@@ -216,7 +216,7 @@ export default function Sidebar() {
         )}
       </div>
 
-      <nav className={clsx("flex-1 space-y-1 overflow-y-auto scrollbar-thin", isCollapsed ? 'p-2' : 'p-4')}>
+      <nav className={clsx("flex-1 space-y-1 overflow-y-auto", isCollapsed ? 'p-2' : 'p-4')}>
         {filteredRoutes.map(route => renderNavItem(route))}
       </nav>
 

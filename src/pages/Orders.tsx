@@ -319,6 +319,8 @@ export default function Orders() {
     );
   }
 
+  const activeOrder = activeId ? orders.find(o => o.id === activeId) ?? null : null;
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex-shrink-0 mb-4 md:mb-6 flex flex-col md:flex-row md:items-center gap-3 md:gap-0 md:justify-between">
@@ -419,10 +421,10 @@ export default function Orders() {
         </div>
 
         <DragOverlay>
-          {activeId ? (
+          {activeOrder ? (
             <div className="max-w-[280px] will-change-transform">
               <PedidoCard
-                order={orders.find(o => o.id === activeId)!}
+                order={activeOrder}
                 onClick={() => {}}
                 onPrint={() => {}}
                 isDragging

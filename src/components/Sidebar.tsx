@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList, History, SquareMenu as MenuSquare, Users, ChevronDown, ChevronRight, FolderTree, Coffee, HeartPlus, Layers, UserRoundCog, IdCard, IdCardLanyard, Settings } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, History, SquareMenu as MenuSquare, Users, ChevronDown, ChevronRight, FolderTree, Coffee, HeartPlus, Layers, UserRoundCog, IdCard, IdCardLanyard, Settings, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { Route } from '../types';
 import { useAuthStore } from '../stores/authStore';
+import { useSidebarStore } from '../stores/sidebarStore';
 import clsx from 'clsx';
 
 interface SubRoute {
@@ -17,36 +18,36 @@ interface RouteWithSubRoutes extends Route {
 }
 
 const routes: RouteWithSubRoutes[] = [
-  { 
-    path: '/dashboard', 
-    name: 'Dashboard', 
-    icon: 'LayoutDashboard', 
-    adminOnly: true 
+  {
+    path: '/dashboard',
+    name: 'Dashboard',
+    icon: 'LayoutDashboard',
+    adminOnly: true
   },
-  { 
-    path: '/pedidos', 
-    name: 'Pedidos', 
-    icon: 'ClipboardList', 
+  {
+    path: '/pedidos',
+    name: 'Pedidos',
+    icon: 'ClipboardList',
     subRoutes: [
-      { 
-        path: '/historico', 
+      {
+        path: '/historico',
         name: 'Historial de Pedidos',
         icon: 'History',
-      }     
+      }
     ]
   },
-  { 
-    path: '/menus', 
-    name: 'Menús', 
+  {
+    path: '/menus',
+    name: 'Menús',
     icon: 'MenuSquare',
     subRoutes: [
-      { 
-        path: '/categorias', 
+      {
+        path: '/categorias',
         name: 'Categorías',
         icon: 'FolderTree',
         subRoutes: [
-          { 
-            path: '/productos', 
+          {
+            path: '/productos',
             name: 'Productos',
             icon: 'Coffee'
           }
@@ -66,17 +67,17 @@ const routes: RouteWithSubRoutes[] = [
       }
     ]
   },
-  { 
-    path: '/usuarios', 
-    name: 'Staff', 
-    icon: 'IdCardLanyard', 
-    adminOnly: true 
+  {
+    path: '/usuarios',
+    name: 'Staff',
+    icon: 'IdCardLanyard',
+    adminOnly: true
   },
-  { 
-    path: '/alumnos', 
-    name: 'Alumnos', 
-    icon: 'Users', 
-    adminOnly: true 
+  {
+    path: '/alumnos',
+    name: 'Alumnos',
+    icon: 'Users',
+    adminOnly: true
   },
   {
     path: '/configuracion',
@@ -104,6 +105,7 @@ const iconComponents: { [key: string]: React.ComponentType<any> } = {
 
 export default function Sidebar() {
   const { user } = useAuthStore();
+  const { isCollapsed, toggleSidebar } = useSidebarStore();
   const location = useLocation();
   const isAdmin = user?.role === 'Administrador';
   const [expandedMenus, setExpandedMenus] = useState<string[]>(['/menus', '/adicionales']);
@@ -112,7 +114,7 @@ export default function Sidebar() {
   const filteredRoutes = routes.filter(route => !route.adminOnly || isAdmin);
 
   const toggleMenu = (path: string) => {
-    setExpandedMenus(current => 
+    setExpandedMenus(current =>
       current.includes(path)
         ? current.filter(p => p !== path)
         : [...current, path]
@@ -126,30 +128,35 @@ export default function Sidebar() {
     const isActive = location.pathname === route.path;
     const isChildActive = location.pathname.startsWith(route.path);
 
+    if (isCollapsed && level > 0) return null;
+
     return (
-      <div key={route.path} className="relative">
+      <div key={route.path} className="relative group">
         <div className={clsx(
           "flex items-center gap-3 py-3 rounded-xl transition-all duration-200",
           {
-            'bg-accent text-white shadow-lg shadow-accent/20 translate-x-2': isActive,
+            'bg-accent text-white shadow-lg shadow-accent/20': isActive,
+            'translate-x-1': isActive && !isCollapsed,
             'text-secondary-light hover:bg-white/5': !isActive,
             'text-accent/90': !isActive && isChildActive,
-            'px-4': level === 0,
-            'pl-8': level === 1,
-            'pl-12': level === 2
+            'px-4': level === 0 && !isCollapsed,
+            'px-2 justify-center': isCollapsed,
+            'pl-8': level === 1 && !isCollapsed,
+            'pl-12': level === 2 && !isCollapsed,
           }
         )}>
-          {/* Always render NavLink for navigation */}
           <NavLink
             to={route.path}
-            className="flex items-center gap-3 flex-1"
+            className={clsx("flex items-center gap-3 flex-1", {
+              'justify-center': isCollapsed,
+            })}
+            title={isCollapsed ? route.name : undefined}
           >
-            {Icon && <Icon className="w-5 h-5" />}
-            <span className="font-medium">{route.name}</span>
+            {Icon && <Icon className="w-5 h-5 flex-shrink-0" />}
+            {!isCollapsed && <span className="font-medium">{route.name}</span>}
           </NavLink>
 
-          {/* Render expand/collapse button for routes with subRoutes */}
-          {hasSubRoutes && (
+          {hasSubRoutes && !isCollapsed && (
             <button
               onClick={(e) => {
                 e.preventDefault();
@@ -170,9 +177,15 @@ export default function Sidebar() {
           )}
         </div>
 
-        {hasSubRoutes && isExpanded && (
+        {isCollapsed && (
+          <div className="absolute left-full top-0 ml-2 px-3 py-2 bg-primary-dark dark:bg-darkbg-darker text-white text-sm rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-50 shadow-lg">
+            {route.name}
+          </div>
+        )}
+
+        {hasSubRoutes && isExpanded && !isCollapsed && (
           <div className="space-y-1 mt-1">
-            {route.subRoutes.map(subRoute => renderNavItem(subRoute, level + 1))}
+            {route.subRoutes!.map(subRoute => renderNavItem(subRoute, level + 1))}
           </div>
         )}
       </div>
@@ -180,30 +193,50 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="hidden md:flex bg-primary-dark dark:bg-darkbg-darker text-white w-64 h-screen flex-col transition-colors duration-200 flex-shrink-0">
-      <div className="bg-white dark:bg-darkbg-darker p-6 flex flex-col items-center">
-        <img 
-          src={`${SUPABASE_URL}/storage/v1/object/sign/images/Logo_Vertical.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9iYjIwYTQ2OC0zZGUxLTQ4ZGMtOWY4Zi04ODUyNDRiNDIwYzEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvTG9nb19WZXJ0aWNhbC5qcGciLCJpYXQiOjE3NTk4Njk0ODQsImV4cCI6NDkxMzQ2OTQ4NH0.fVr0DAFBXQuW-38eQIqfCCAqNwo3mCdEo45tLJmohqM`}
-          alt="Café Admin Logo"
-          className="h-28 w-auto mb-4 block dark:hidden"
-        />
-        <img 
-          src={`${SUPABASE_URL}/storage/v1/object/sign/images/Logo_Cuckoo_Fondo_Oscuro.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9iYjIwYTQ2OC0zZGUxLTQ4ZGMtOWY4Zi04ODUyNDRiNDIwYzEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvTG9nb19DdWNrb29fRm9uZG9fT3NjdXJvLnBuZyIsImlhdCI6MTc1OTg2OTcxNywiZXhwIjo0OTEzNDY5NzE3fQ.6JcaTT2Nwfu9PpiDSpjhhbGREcnVvI1lPktXne9A_DQ`}
-          alt="Café Admin Logo"
-          className="h-28 w-auto mb-4 hidden dark:block"
-        />
+    <div className={clsx(
+      "hidden md:flex bg-primary-dark dark:bg-darkbg-darker text-white h-screen flex-col transition-all duration-300 flex-shrink-0",
+      isCollapsed ? 'w-16' : 'w-64'
+    )}>
+      <div className="bg-white dark:bg-darkbg-darker p-4 flex flex-col items-center relative">
+        {!isCollapsed && (
+          <>
+            <img
+              src={`${SUPABASE_URL}/storage/v1/object/sign/images/Logo_Vertical.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9iYjIwYTQ2OC0zZGUxLTQ4ZGMtOWY4Zi04ODUyNDRiNDIwYzEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvTG9nb19WZXJ0aWNhbC5qcGciLCJpYXQiOjE3NTk4Njk0ODQsImV4cCI6NDkxMzQ2OTQ4NH0.fVr0DAFBXQuW-38eQIqfCCAqNwo3mCdEo45tLJmohqM`}
+              alt="Café Admin Logo"
+              className="h-28 w-auto mb-4 block dark:hidden"
+            />
+            <img
+              src={`${SUPABASE_URL}/storage/v1/object/sign/images/Logo_Cuckoo_Fondo_Oscuro.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9iYjIwYTQ2OC0zZGUxLTQ4ZGMtOWY4Zi04ODUyNDRiNDIwYzEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvTG9nb19DdWNrb29fRm9uZG9fT3NjdXJvLnBuZyIsImlhdCI6MTc1OTg2OTcxNywiZXhwIjo0OTEzNDY5NzE3fQ.6JcaTT2Nwfu9PpiDSpjhhbGREcnVvI1lPktXne9A_DQ`}
+              alt="Café Admin Logo"
+              className="h-28 w-auto mb-4 hidden dark:block"
+            />
+          </>
+        )}
+        <button
+          onClick={toggleSidebar}
+          className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-primary-dark dark:bg-darkbg-lighter border border-white/20 rounded-full flex items-center justify-center text-white hover:bg-primary transition-colors z-10"
+          title={isCollapsed ? 'Expandir menú' : 'Colapsar menú'}
+        >
+          {isCollapsed ? (
+            <PanelLeftOpen className="w-3.5 h-3.5" />
+          ) : (
+            <PanelLeftClose className="w-3.5 h-3.5" />
+          )}
+        </button>
       </div>
-      
-      <nav className="flex-1 p-4 space-y-1">
+
+      <nav className={clsx("flex-1 space-y-1 overflow-y-auto scrollbar-thin", isCollapsed ? 'p-2' : 'p-4')}>
         {filteredRoutes.map(route => renderNavItem(route))}
       </nav>
 
-      <div className="p-4 border-t border-white/10">
-        <div className="px-4 py-3 text-sm text-secondary-light">
-          <p className="font-medium">{user?.full_name}</p>
-          <p className="text-xs opacity-75">{user?.email}</p>
+      {!isCollapsed && (
+        <div className="p-4 border-t border-white/10">
+          <div className="px-4 py-3 text-sm text-secondary-light">
+            <p className="font-medium">{user?.full_name}</p>
+            <p className="text-xs opacity-75">{user?.email}</p>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

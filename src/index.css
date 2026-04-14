@@ -138,4 +138,26 @@
   .spin-urgent {
     animation: spin-fast 0.8s linear infinite;
   }
+
+  .scroll-smooth-touch {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .scroll-smooth-touch::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .scroll-smooth-touch::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scroll-smooth-touch::-webkit-scrollbar-thumb {
+    background-color: rgb(209 213 219);
+    border-radius: 9999px;
+  }
+
+  .dark .scroll-smooth-touch::-webkit-scrollbar-thumb {
+    background-color: rgb(31 41 55);
+  }
 }

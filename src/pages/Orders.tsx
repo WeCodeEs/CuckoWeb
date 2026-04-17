@@ -15,7 +15,7 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
-  closestCorners,
+  closestCenter,
   useDroppable,
 } from '@dnd-kit/core';
 import { useToast } from '../components/ui/use-toast';
@@ -47,17 +47,19 @@ function DroppableColumn({
     <div
       ref={enableDrop ? setNodeRef : undefined}
       aria-label={`${title} column`}
-      className={`w-full md:flex-1 md:min-w-[300px] lg:max-w-[400px] flex flex-col bg-gray-100 dark:bg-darkbg-darker rounded-xl p-3 md:p-4 transition-all duration-200 ${
-        isOver && enableDrop ? 'ring-2 ring-primary dark:ring-secondary ring-inset bg-gray-200 dark:bg-darkbg' : ''
+      className={`w-full md:flex-1 md:basis-0 md:min-w-[200px] flex flex-col bg-gray-100 dark:bg-darkbg-darker rounded-xl p-2.5 md:p-3 lg:p-4 transition-all duration-150 ${
+        isOver && enableDrop
+          ? 'ring-2 ring-primary dark:ring-secondary ring-inset bg-primary/5 dark:bg-secondary/5 scale-[1.01]'
+          : ''
       }`}
     >
-      <h2 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-3 md:mb-4 flex items-center justify-between">
-        <span>{title}</span>
-        <span className="text-xs bg-gray-200 dark:bg-darkbg px-2 py-1 rounded-full text-gray-700 dark:text-gray-300">
+      <h2 className="text-sm md:text-base lg:text-lg font-semibold text-gray-900 dark:text-white mb-2 md:mb-3 lg:mb-4 flex items-center justify-between">
+        <span className="truncate">{title}</span>
+        <span className="text-xs bg-gray-200 dark:bg-darkbg px-2 py-1 rounded-full text-gray-700 dark:text-gray-300 flex-shrink-0 ml-2">
           {React.Children.count(children)}
         </span>
       </h2>
-      <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-3 md:space-y-4 min-h-[200px] scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-darkbg pr-1">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-2 md:space-y-3 min-h-[200px] scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-darkbg pr-1">
         {children}
       </div>
     </div>
@@ -317,6 +319,8 @@ export default function Orders() {
     );
   }
 
+  const activeOrder = activeId ? orders.find(o => o.id === activeId) ?? null : null;
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex-shrink-0 mb-4 md:mb-6 flex flex-col md:flex-row md:items-center gap-3 md:gap-0 md:justify-between">
@@ -341,11 +345,11 @@ export default function Orders() {
 
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={closestCenter}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex-1 flex flex-col md:flex-row gap-3 md:gap-6 min-h-0 overflow-auto md:overflow-x-auto md:overflow-y-hidden">
+        <div className="flex-1 flex flex-col md:flex-row gap-2 md:gap-3 lg:gap-4 xl:gap-5 min-h-0 overflow-auto md:overflow-x-auto md:overflow-y-hidden scroll-smooth-touch">
             {columns.map(({ status, title }) => (
               <DroppableColumn 
                 key={status} 
@@ -417,14 +421,16 @@ export default function Orders() {
         </div>
 
         <DragOverlay>
-          {activeId ? (
-            <PedidoCard
-              order={orders.find(o => o.id === activeId)!}
-              onClick={() => {}}
-              onPrint={() => {}}
-              isDragging
-              enableDrag={false}
-            />
+          {activeOrder ? (
+            <div className="max-w-[280px] will-change-transform">
+              <PedidoCard
+                order={activeOrder}
+                onClick={() => {}}
+                onPrint={() => {}}
+                isDragging
+                enableDrag={false}
+              />
+            </div>
           ) : null}
         </DragOverlay>
       </DndContext>

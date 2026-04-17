@@ -120,7 +120,7 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
       onClick={onClick}
     >
       {order.scheduled_delivery_time && (
-        <div className="w-[96%] mx-auto">
+        <div className="w-full">
           <div
             className={clsx(
               "flex items-center gap-2 px-3 py-1 rounded-t-lg rounded-b-none",
@@ -132,7 +132,7 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
             {alertInfo ? (
               <>
                 <Timer className={clsx("w-4 h-4 text-white dark:text-white", alertInfo.iconAnimation)} />
-                <span className="text-xs sm:text-sm font-bold">
+                <span className="text-xs sm:text-sm font-bold truncate">
                   {alertInfo.badgeText} - Entrega: {format(new Date(order.scheduled_delivery_time as string), "HH:mm")}
                 </span>
               </>
@@ -149,7 +149,7 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
       )}
 
       {!order.scheduled_delivery_time && preparationAlert && (
-        <div className="w-[96%] mx-auto">
+        <div className="w-full">
           <div
             className={clsx(
               "flex items-center gap-2 px-3 py-1 rounded-t-lg rounded-b-none",
@@ -168,7 +168,7 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
 
       <div
         className={clsx(
-          "p-3 sm:p-4 shadow-sm transition-transform transition-shadow duration-200 border-l-4 transform",
+          "p-2.5 md:p-3 xl:p-4 shadow-sm transition-transform transition-shadow duration-200 border-l-4 transform",
           alertInfo ? alertInfo.className : (preparationAlert ? preparationAlert.className : statusColors[order.status]),
           "bg-white dark:bg-darkbg-lighter",
           "rounded-lg",
@@ -200,11 +200,11 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
         <div className="space-y-1.5 sm:space-y-2 mb-3">
           {order.details.slice(0, 3).map((detail) => (
             <div key={detail.id}>
-              <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">
+              <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white truncate">
                 {detail.quantity}x {detail.product_name || detail.product?.name || 'Producto eliminado'}
               </p>
               {detail.options && detail.options.length > 0 && (
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5 truncate">
                   {detail.options.map(opt => opt.option_name || opt.option?.name || 'Opcion eliminada').join(', ')}
                 </p>
               )}

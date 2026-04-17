@@ -370,8 +370,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
     },
 
     updateOrderStatus: async (id: number, status: OrderStatus) => {
-      let ordersSnapshot: Order[] | null = null;
-      let selectedSnapshot: Order | null = null;
+      let originalOrder: Order | null = null;
 
       try {
         const current = get().orders.find(o => o.id === id) || null;
@@ -433,19 +432,13 @@ export const useOrderStore = create<OrderStore>((set, get) => {
           }
         }
 
-        ordersSnapshot = get().orders.map(o => ({ ...o, details: [...o.details] }));
-        selectedSnapshot = get().selectedOrder
-          ? { ...get().selectedOrder!, details: [...get().selectedOrder!.details] }
-          : null;
+        originalOrder = { ...current, details: [...current.details] };
 
         const optimisticOrder = { ...current, ...updateData, updated_at: now };
-        const optimisticOrders = ordersSnapshot.map(o =>
-          o.id === id ? optimisticOrder : o
-        );
-        set({
-          orders: sortOrders(optimisticOrders),
-          ...(get().selectedOrder?.id === id ? { selectedOrder: optimisticOrder } : {}),
-        });
+        set(state => ({
+          orders: sortOrders(state.orders.map(o => o.id === id ? optimisticOrder : o)),
+          ...(state.selectedOrder?.id === id ? { selectedOrder: optimisticOrder } : {}),
+        }));
 
         const { data, error } = await supabase
           .from('orders')
@@ -460,11 +453,12 @@ export const useOrderStore = create<OrderStore>((set, get) => {
         }
       } catch (error: any) {
         console.error('Error updating order status:', error);
-        if (ordersSnapshot) {
-          set({
-            orders: ordersSnapshot,
-            selectedOrder: selectedSnapshot,
-          });
+        if (originalOrder) {
+          const snapshot = originalOrder;
+          set(state => ({
+            orders: state.orders.map(o => o.id === id ? snapshot : o),
+            ...(state.selectedOrder?.id === id ? { selectedOrder: snapshot } : {}),
+          }));
         }
         throw error;
       }

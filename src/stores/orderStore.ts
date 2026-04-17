@@ -96,7 +96,7 @@ interface OrderStore {
   selectedOrder: Order | null;
   isDrawerOpen: boolean;
   fetchOrders: (opts: { startDate: Date; endDate: Date; typeFilter: OrderTypeFilter }) => Promise<void>;
-  fetchOrdersToday: () => Promise<void>;
+  fetchOrdersToday: (opts?: { silent?: boolean }) => Promise<void>;
   updateOrderStatus: (id: number, status: OrderStatus) => Promise<void>;
   sendPersonalNotification: (order: Order, title: string, body: string) => Promise<void>;
   fetchNotificationsByOrder: (orderId: number) => Promise<OrderNotification[]>;
@@ -108,6 +108,14 @@ interface OrderStore {
 
 export const useOrderStore = create<OrderStore>((set, get) => {
   let subscription: any = null;
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const debouncedSilentFetch = () => {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      get().fetchOrdersToday({ silent: true });
+    }, 1500);
+  };
 
   const subscribeToOrders = () => {
     if (subscription) {
@@ -147,7 +155,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
               console.error('Error handling new order notification:', error);
             }
           }
-          await get().fetchOrdersToday();
+          debouncedSilentFetch();
         }
       )
       .subscribe((status) => {
@@ -160,6 +168,10 @@ export const useOrderStore = create<OrderStore>((set, get) => {
   };
 
   const unsubscribeFromOrders = () => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
     if (subscription) {
       supabase.removeChannel(subscription);
       subscription = null;
@@ -280,9 +292,12 @@ export const useOrderStore = create<OrderStore>((set, get) => {
       }
     },
 
-    fetchOrdersToday: async () => {
+    fetchOrdersToday: async (opts) => {
+      const silent = opts?.silent ?? false;
       try {
-        set({ loading: true, error: null });
+        if (!silent) {
+          set({ loading: true, error: null });
+        }
 
         const { data, error } = await supabase
           .from('orders_today')
@@ -335,19 +350,33 @@ export const useOrderStore = create<OrderStore>((set, get) => {
         const transformedData = transformOrderData(data || []);
         const sortedOrders = sortOrders(transformedData);
 
-        set({ orders: sortedOrders, loading: false });
+        const { selectedOrder } = get();
+        const updatedSelected = selectedOrder
+          ? sortedOrders.find(o => o.id === selectedOrder.id) ?? null
+          : null;
+
+        set({
+          orders: sortedOrders,
+          loading: false,
+          selectedOrder: updatedSelected,
+        });
       } catch (error: any) {
         console.error('Error fetching orders:', error);
-        set({
-          error: error.message || 'Error al cargar los pedidos',
-          loading: false
-        });
+        if (!silent) {
+          set({
+            error: error.message || 'Error al cargar los pedidos',
+            loading: false
+          });
+        }
       }
     },
 
     updateOrderStatus: async (id: number, status: OrderStatus) => {
+      const snapshot = get().orders;
+      const snapshotSelected = get().selectedOrder;
+
       try {
-        const current = get().orders.find(o => o.id === id) || null;
+        const current = snapshot.find(o => o.id === id) || null;
         if (!current) {
           throw new Error('Pedido no encontrado en memoria.');
         }
@@ -370,7 +399,6 @@ export const useOrderStore = create<OrderStore>((set, get) => {
           throw new Error('No puedes retroceder el estado del pedido.');
         }
 
-        set({ loading: true });
         const now = new Date().toISOString();
         const updateData: Record<string, any> = { status };
 
@@ -407,6 +435,27 @@ export const useOrderStore = create<OrderStore>((set, get) => {
           }
         }
 
+        const optimisticOrder: Order = {
+          ...current,
+          status,
+          started_at: updateData.started_at !== undefined ? updateData.started_at : current.started_at,
+          ready_at: updateData.ready_at !== undefined ? updateData.ready_at : current.ready_at,
+          delivered_at: updateData.delivered_at !== undefined ? updateData.delivered_at : current.delivered_at,
+          updated_at: now,
+        };
+
+        const optimisticOrders = sortOrders(
+          snapshot.map(o => (o.id === id ? optimisticOrder : o))
+        );
+
+        const optimisticSelected =
+          snapshotSelected?.id === id ? optimisticOrder : snapshotSelected;
+
+        set({
+          orders: optimisticOrders,
+          selectedOrder: optimisticSelected,
+        });
+
         const { data, error } = await supabase
           .from('orders')
           .update(updateData)
@@ -418,11 +467,9 @@ export const useOrderStore = create<OrderStore>((set, get) => {
         if (!data || data.length === 0) {
           throw new Error('No se pudo actualizar el pedido. Verifique que el pedido existe y que tiene permisos para modificarlo.');
         }
-
-        await get().fetchOrdersToday();
       } catch (error: any) {
         console.error('Error updating order status:', error);
-        set({ loading: false });
+        set({ orders: snapshot, selectedOrder: snapshotSelected });
         throw error;
       }
     },

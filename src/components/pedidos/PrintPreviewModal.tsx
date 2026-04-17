@@ -2,6 +2,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import PrintTicket from './PrintTicket';
 import { useToast } from '../../components/ui/use-toast';
+import { printViaIframe } from '../../utils/printIframe';
 
 interface Props {
   onClose: () => void;
@@ -10,13 +11,9 @@ interface Props {
 export default function PrintPreviewModal({ onClose }: Props) {
   const { toast } = useToast();
 
-  const handlePrint = () => {
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow?.document;
-    if (!doc) {
+  const handlePrint = async () => {
+    const htmlContent = document.getElementById('print-content')?.innerHTML || '';
+    if (!htmlContent) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -25,52 +22,8 @@ export default function PrintPreviewModal({ onClose }: Props) {
       return;
     }
 
-    // Write the print content with 80mm paper configuration
-    doc.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            @page {
-              size: 80mm auto;
-              margin: 0mm;
-            }
-            body {
-              margin: 0;
-              padding: 8px;
-              width: 80mm;
-              font-family: 'Courier New', monospace;
-              font-size: 11px;
-              line-height: 1.2;
-              color: #000;
-            }
-            * {
-              box-sizing: border-box;
-            }
-            .print-ticket {
-              width: 80mm !important;
-            }
-            div {
-              color: inherit;
-            }
-          </style>
-        </head>
-        <body>
-          ${document.getElementById('print-content')?.innerHTML || ''}
-        </body>
-      </html>
-    `);
-    doc.close();
-
-    // Print and remove iframe
-    iframe.contentWindow?.focus();
-    iframe.contentWindow?.print();
-    
-    // Remove iframe after printing
-    setTimeout(() => {
-      document.body.removeChild(iframe);
-      onClose();
-    }, 500);
+    await printViaIframe(htmlContent);
+    onClose();
   };
 
   return (

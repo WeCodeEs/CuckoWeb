@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, CalendarClock, Printer, Timer, ShoppingBag, UtensilsCrossed } from 'lucide-react';
+import { Clock, CalendarClock, Printer, Timer, ShoppingBag, Utensils } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Order } from '../../stores/orderStore';
@@ -190,7 +190,7 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-semibold bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300 whitespace-nowrap">
-                  <UtensilsCrossed className="w-3 h-3" />
+                  <Utensils className="w-3 h-3" />
                   Aquí
                 </span>
               )}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Printer, Clock, CircleCheck as CheckCircle, Truck, Play, Mail, CalendarClock, CircleAlert as AlertCircle, ExternalLink, ShoppingBag, UtensilsCrossed } from 'lucide-react';
+import { X, Printer, Clock, CircleCheck as CheckCircle, Truck, Play, Mail, CalendarClock, CircleAlert as AlertCircle, ExternalLink, ShoppingBag, Utensils } from 'lucide-react';
 import { Order, OrderStatus, OrderNotification, useOrderStore } from '../../stores/orderStore';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { format } from 'date-fns';
@@ -191,7 +191,7 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300">
-                    <UtensilsCrossed className="w-3.5 h-3.5" />
+                    <Utensils className="w-3.5 h-3.5" />
                     Comer Aquí
                   </span>
                 )}

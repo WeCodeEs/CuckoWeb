@@ -97,7 +97,7 @@ interface OrderStore {
   selectedOrder: Order | null;
   isDrawerOpen: boolean;
   fetchOrders: (opts: { startDate: Date; endDate: Date; typeFilter: OrderTypeFilter }) => Promise<void>;
-  fetchOrdersToday: () => Promise<void>;
+  fetchOrdersToday: (opts?: { silent?: boolean }) => Promise<void>;
   updateOrderStatus: (id: number, status: OrderStatus) => Promise<void>;
   sendPersonalNotification: (order: Order, title: string, body: string) => Promise<void>;
   fetchNotificationsByOrder: (orderId: number) => Promise<OrderNotification[]>;
@@ -109,6 +109,7 @@ interface OrderStore {
 
 export const useOrderStore = create<OrderStore>((set, get) => {
   let subscription: any = null;
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   const subscribeToOrders = () => {
     if (subscription) {
@@ -148,7 +149,10 @@ export const useOrderStore = create<OrderStore>((set, get) => {
               console.error('Error handling new order notification:', error);
             }
           }
-          await get().fetchOrdersToday();
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            get().fetchOrdersToday({ silent: true });
+          }, 1500);
         }
       )
       .subscribe((status) => {
@@ -161,6 +165,10 @@ export const useOrderStore = create<OrderStore>((set, get) => {
   };
 
   const unsubscribeFromOrders = () => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
     if (subscription) {
       supabase.removeChannel(subscription);
       subscription = null;
@@ -282,9 +290,11 @@ export const useOrderStore = create<OrderStore>((set, get) => {
       }
     },
 
-    fetchOrdersToday: async () => {
+    fetchOrdersToday: async ({ silent = false } = {}) => {
       try {
-        set({ loading: true, error: null });
+        if (!silent) {
+          set({ loading: true, error: null });
+        }
 
         const { data, error } = await supabase
           .from('orders_today')
@@ -338,17 +348,31 @@ export const useOrderStore = create<OrderStore>((set, get) => {
         const transformedData = transformOrderData(data || []);
         const sortedOrders = sortOrders(transformedData);
 
-        set({ orders: sortedOrders, loading: false });
+        const selectedOrder = get().selectedOrder;
+        const updatedSelected = selectedOrder
+          ? sortedOrders.find(o => o.id === selectedOrder.id) ?? selectedOrder
+          : null;
+
+        set({
+          orders: sortedOrders,
+          ...(silent ? {} : { loading: false }),
+          selectedOrder: updatedSelected,
+        });
       } catch (error: any) {
         console.error('Error fetching orders:', error);
-        set({
-          error: error.message || 'Error al cargar los pedidos',
-          loading: false
-        });
+        if (!silent) {
+          set({
+            error: error.message || 'Error al cargar los pedidos',
+            loading: false
+          });
+        }
       }
     },
 
     updateOrderStatus: async (id: number, status: OrderStatus) => {
+      let ordersSnapshot: Order[] | null = null;
+      let selectedSnapshot: Order | null = null;
+
       try {
         const current = get().orders.find(o => o.id === id) || null;
         if (!current) {
@@ -373,7 +397,6 @@ export const useOrderStore = create<OrderStore>((set, get) => {
           throw new Error('No puedes retroceder el estado del pedido.');
         }
 
-        set({ loading: true });
         const now = new Date().toISOString();
         const updateData: Record<string, any> = { status };
 
@@ -410,6 +433,20 @@ export const useOrderStore = create<OrderStore>((set, get) => {
           }
         }
 
+        ordersSnapshot = get().orders.map(o => ({ ...o, details: [...o.details] }));
+        selectedSnapshot = get().selectedOrder
+          ? { ...get().selectedOrder!, details: [...get().selectedOrder!.details] }
+          : null;
+
+        const optimisticOrder = { ...current, ...updateData, updated_at: now };
+        const optimisticOrders = ordersSnapshot.map(o =>
+          o.id === id ? optimisticOrder : o
+        );
+        set({
+          orders: sortOrders(optimisticOrders),
+          ...(get().selectedOrder?.id === id ? { selectedOrder: optimisticOrder } : {}),
+        });
+
         const { data, error } = await supabase
           .from('orders')
           .update(updateData)
@@ -421,11 +458,14 @@ export const useOrderStore = create<OrderStore>((set, get) => {
         if (!data || data.length === 0) {
           throw new Error('No se pudo actualizar el pedido. Verifique que el pedido existe y que tiene permisos para modificarlo.');
         }
-
-        await get().fetchOrdersToday();
       } catch (error: any) {
         console.error('Error updating order status:', error);
-        set({ loading: false });
+        if (ordersSnapshot) {
+          set({
+            orders: ordersSnapshot,
+            selectedOrder: selectedSnapshot,
+          });
+        }
         throw error;
       }
     },

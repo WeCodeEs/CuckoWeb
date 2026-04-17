@@ -22,7 +22,7 @@ export default function PrintPreviewModal({ onClose }: Props) {
       });
       return;
     }
-    setTimeout(() => onClose(), 500);
+    setTimeout(() => onClose(), 150);
   };
 
   return (

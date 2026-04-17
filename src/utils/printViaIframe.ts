@@ -35,12 +35,26 @@ export function printViaIframe(ticketHtml: string): boolean {
 </html>`);
   doc.close();
 
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    clearTimeout(fallbackTimer);
+    try {
+      if (iframe.parentNode) {
+        document.body.removeChild(iframe);
+      }
+    } catch (_) {}
+  };
+
+  const fallbackTimer = setTimeout(cleanup, 60000);
+
+  try {
+    iframe.contentWindow?.addEventListener('afterprint', cleanup);
+  } catch (_) {}
+
   iframe.contentWindow?.focus();
   iframe.contentWindow?.print();
-
-  setTimeout(() => {
-    document.body.removeChild(iframe);
-  }, 500);
 
   return true;
 }

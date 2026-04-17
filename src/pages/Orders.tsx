@@ -5,7 +5,8 @@ import PedidoDrawer from '../components/pedidos/PedidoDrawer';
 import PrintPreviewModal from '../components/pedidos/PrintPreviewModal';
 import SkeletonKanbanCard from '../components/skeletons/SkeletonKanbanCard';
 import { Printer } from 'lucide-react';
-import { format } from 'date-fns';
+import { buildTicketHtml } from '../utils/buildTicketHtml';
+import { printViaIframe } from '../utils/printViaIframe';
 import {
   DndContext,
   DragEndEvent,
@@ -155,14 +156,8 @@ export default function Orders() {
   };
 
   const handlePrintOrder = (order: any) => {
-    // Create an iframe for printing the order
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-
-    // Get the iframe document
-    const doc = iframe.contentWindow?.document;
-    if (!doc) {
+    const success = printViaIframe(buildTicketHtml(order));
+    if (!success) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -170,93 +165,6 @@ export default function Orders() {
       });
       return;
     }
-
-    // Create the print content
-    const printContent = `
-      <div style="width: 80mm; padding: 8px; font-family: monospace;">
-        <div style="text-align: center; margin-bottom: 8px;">
-          <h1 style="font-size: 22px; margin: 0 0 4px 0; font-weight: bold;">CuckooEats</h1>
-          <p style="font-size: 24px; margin: 4px 0; font-weight: bold;">Pedido #${order.id}</p>
-          <div style="font-size: 20px; margin: 8px 0; font-weight: bold; padding: 6px; border: 3px solid #000; border-radius: 4px; text-align: center;">
-            ${order.is_takeaway ? '*** PARA LLEVAR ***' : '--- COMER AQUI ---'}
-          </div>
-          ${order.scheduled_delivery_time ? `
-            <div style="font-size: 18px; margin: 8px 0; font-weight: bold; padding: 6px; border: 2px solid #000; border-radius: 4px;">
-              <p style="margin: 0 0 2px 0;">PEDIDO AGENDADO</p>
-              <p style="margin: 0; font-size: 16px;">Para la(s) ${format(new Date(order.scheduled_delivery_time), 'HH:mm')}</p>
-            </div>
-          ` : ''}
-        </div>
-
-        <div style="font-size: 13px; margin-bottom: 8px;">
-          <p style="margin: 0;">Fecha: ${new Date(order.created_at).toLocaleString('es-PE')}</p>
-          <p style="margin: 0;">Cliente: ${order.user ? `${order.user.first_name} ${order.user.last_name}` : 'Cliente'}</p>
-          <p style="margin: 0;">Estado: ${order.status}</p>
-          ${order.started_at ? `<p style="margin: 0;">Iniciado: ${new Date(order.started_at).toLocaleString('es-PE')}</p>` : ''}
-          ${order.ready_at ? `<p style="margin: 0;">Listo: ${new Date(order.ready_at).toLocaleString('es-PE')}</p>` : ''}
-          ${order.delivered_at ? `<p style="margin: 0;">Entregado: ${new Date(order.delivered_at).toLocaleString('es-PE')}</p>` : ''}
-        </div>
-        
-        <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 8px 0; margin-bottom: 8px;">
-          ${order.details.map(detail => `
-            <div style="font-size: 14px; margin-bottom: 4px;">
-              <div style="display: flex; justify-content: space-between;">
-                <span style="max-width: 60%; word-wrap: break-word;">${detail.quantity}x ${detail.product.name}</span>
-                <span>$${detail.subtotal.toFixed(2)}</span>
-              </div>
-              ${detail.options && detail.options.length
-                ? `<div style="padding-left: 12px; color: #000; font-size: 14px;">${detail.options.map(opt => opt.option.name).join(', ')}</div>`
-                : ''}
-            </div>
-          `).join('')}
-        </div>
-
-        <div style="font-size: 16px; text-align: right; font-weight: bold; margin-bottom: 8px;">
-          Total: $${order.total.toFixed(2)}
-        </div>
-      </div>
-    `;
-
-    // Write the print content with 80mm paper configuration
-    doc.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            @page {
-              size: 80mm auto;
-              margin: 0mm;
-            }
-            body {
-              margin: 0;
-              padding: 8px;
-              width: 80mm;
-              font-family: 'Courier New', monospace;
-              font-size: 11px;
-              line-height: 1.2;
-              color: #000;
-            }
-            * {
-              box-sizing: border-box;
-            }
-          </style>
-        </head>
-        <body>
-          ${printContent}
-        </body>
-      </html>
-    `);
-    doc.close();
-
-    // Print and remove iframe
-    iframe.contentWindow?.focus();
-    iframe.contentWindow?.print();
-    
-    // Remove iframe after printing
-    setTimeout(() => {
-      document.body.removeChild(iframe);
-    }, 500);
-
     toast({
       title: 'Imprimiendo',
       description: `Pedido #${order.id} enviado a impresora`,

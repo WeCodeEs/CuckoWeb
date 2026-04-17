@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Printer, Clock, CircleCheck as CheckCircle, Truck, Play, Mail, CalendarClock, CircleAlert as AlertCircle, ExternalLink } from 'lucide-react';
+import { X, Printer, Clock, CircleCheck as CheckCircle, Truck, Play, Mail, CalendarClock, CircleAlert as AlertCircle, ExternalLink, ShoppingBag, Utensils } from 'lucide-react';
 import { Order, OrderStatus, OrderNotification, useOrderStore } from '../../stores/orderStore';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { format } from 'date-fns';
@@ -7,6 +7,8 @@ import { es } from 'date-fns/locale';
 import NotificationModal from './NotificationModal';
 import { getScheduledOrderAlert } from '../../utils/timeAlerts';
 import { useToast } from '../../components/ui/use-toast';
+import { buildTicketHtml } from '../../utils/buildTicketHtml';
+import { printViaIframe } from '../../utils/printViaIframe';
 
 
 interface Props {
@@ -57,104 +59,14 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
     : null;
 
   const handlePrint = () => {
-    // Create an iframe for printing the order
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-
-    // Get the iframe document
-    const doc = iframe.contentWindow?.document;
-    if (!doc) {
+    const success = printViaIframe(buildTicketHtml(order));
+    if (!success) {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: 'Error al preparar la impresión',
       });
-      return;
     }
-
-    // Create a temporary container with the print ticket
-    const tempContainer = document.createElement('div');
-    tempContainer.innerHTML = `
-      <div style="width: 80mm; padding: 8px; font-family: monospace;">
-        <div style="text-align: center; margin-bottom: 8px;">
-          <h1 style="font-size: 22px; margin: 0 0 4px 0; font-weight: bold;">CuckooEats</h1>
-          <p style="font-size: 24px; margin: 4px 0; font-weight: bold;">Pedido #${order.id}</p>
-          ${order.scheduled_delivery_time ? `
-            <div style="font-size: 18px; margin: 8px 0; font-weight: bold; padding: 6px; border: 2px solid #000; border-radius: 4px;">
-              <p style="margin: 0 0 2px 0;">PEDIDO AGENDADO</p>
-              <p style="margin: 0; font-size: 16px;">Para la(s) ${format(new Date(order.scheduled_delivery_time), 'HH:mm')}</p>
-            </div>
-          ` : ''}
-        </div>
-
-        <div style="font-size: 13px; margin-bottom: 8px;">
-          <p style="margin: 0;">Fecha: ${format(new Date(order.created_at), 'dd/MM/yyyy HH:mm', { locale: es })}</p>
-          <p style="margin: 0;">Cliente: ${order.user ? `${order.user.first_name} ${order.user.last_name}` : 'Cliente'}</p>
-          <p style="margin: 0;">Estado: ${order.status}</p>
-          ${order.started_at ? `<p style="margin: 0;">Iniciado: ${format(new Date(order.started_at), 'dd/MM/yyyy HH:mm', { locale: es })}</p>` : ''}
-          ${order.ready_at ? `<p style="margin: 0;">Listo: ${format(new Date(order.ready_at), 'dd/MM/yyyy HH:mm', { locale: es })}</p>` : ''}
-          ${order.delivered_at ? `<p style="margin: 0;">Entregado: ${format(new Date(order.delivered_at), 'dd/MM/yyyy HH:mm', { locale: es })}</p>` : ''}
-        </div>
-        
-        <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 8px 0; margin-bottom: 8px;">
-          ${order.details.map(detail => `
-            <div style="font-size: 14px; margin-bottom: 4px;">
-              <div style="display: flex; justify-content: space-between;">
-                <span style="max-width: 60%; word-wrap: break-word;">${detail.quantity}x ${detail.product_name || detail.product?.name || 'Producto eliminado'}</span>
-                <span>${formatCurrency(detail.subtotal)}</span>
-              </div>
-              ${detail.options && detail.options.length
-                ? `<div style="padding-left: 12px; color: #000; font-size: 14px;">${detail.options.map(opt => opt.option_name || opt.option?.name || 'Opcion eliminada').join(', ')}</div>`
-                : ''}
-            </div>
-          `).join('')}
-        </div>
-
-        <div style="font-size: 16px; text-align: right; font-weight: bold; margin-bottom: 8px;">
-          Total: ${formatCurrency(order.total)}
-        </div>
-      </div>
-    `;
-
-    // Write the print content with 80mm paper configuration
-    doc.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            @page {
-              size: 80mm auto;
-              margin: 0mm;
-            }
-            body {
-              margin: 0;
-              padding: 8px;
-              width: 80mm;
-              font-family: 'Courier New', monospace;
-              font-size: 11px;
-              line-height: 1.2;
-            }
-            * {
-              box-sizing: border-box;
-            }
-          </style>
-        </head>
-        <body>
-          ${tempContainer.innerHTML}
-        </body>
-      </html>
-    `);
-    doc.close();
-
-    // Print and remove iframe
-    iframe.contentWindow?.focus();
-    iframe.contentWindow?.print();
-    
-    // Remove iframe after printing
-    setTimeout(() => {
-      document.body.removeChild(iframe);
-    }, 500);
   };
 
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -177,9 +89,22 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
         <div className="relative px-4 sm:px-6 py-5 bg-gradient-to-r from-primary/5 to-secondary/5 dark:from-primary/10 dark:to-secondary/10 border-b border-gray-200 dark:border-darkbg">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                Pedido #{order.id}
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  Pedido #{order.id}
+                </h2>
+                {order.is_takeaway ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">
+                    <ShoppingBag className="w-3.5 h-3.5" />
+                    Para Llevar
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300">
+                    <Utensils className="w-3.5 h-3.5" />
+                    Comer Aquí
+                  </span>
+                )}
+              </div>
               {order.scheduled_delivery_time && (
                 <div className="flex items-center gap-2 mt-1">
                   <CalendarClock className="w-4 h-4 text-primary dark:text-secondary" />

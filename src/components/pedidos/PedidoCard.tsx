@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, CalendarClock, Printer, Timer } from 'lucide-react';
+import { Clock, CalendarClock, Printer, Timer, ShoppingBag, Utensils } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Order } from '../../stores/orderStore';
@@ -179,12 +179,25 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
       >
         <div className="mb-2 sm:mb-3">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-              #{order.id}
-            </h3>
+            <div className="flex items-center gap-2 min-w-0">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                #{order.id}
+              </h3>
+              {order.is_takeaway ? (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 whitespace-nowrap">
+                  <ShoppingBag className="w-3 h-3" />
+                  Llevar
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-semibold bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300 whitespace-nowrap">
+                  <Utensils className="w-3 h-3" />
+                  Aquí
+                </span>
+              )}
+            </div>
             <button
               onClick={handlePrintClick}
-              className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-secondary hover:bg-gray-100 dark:hover:bg-darkbg rounded-lg transition-colors"
+              className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-secondary hover:bg-gray-100 dark:hover:bg-darkbg rounded-lg transition-colors flex-shrink-0"
               title="Imprimir pedido"
             >
               <Printer className="w-4 h-4" />

@@ -67,6 +67,7 @@ export interface Order {
   delivered_at: string | null;
   updated_at: string;
   scheduled_delivery_time?: string | null;
+  is_takeaway?: boolean;
   details: OrderDetail[];
   user?: {
     uuid: string;
@@ -223,6 +224,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
             delivered_at,
             updated_at,
             scheduled_delivery_time,
+            is_takeaway,
             user:users (
               uuid,
               first_name,
@@ -297,6 +299,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
             delivered_at,
             updated_at,
             scheduled_delivery_time,
+            is_takeaway,
             user:users (
               uuid,
               first_name,

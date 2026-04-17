@@ -1,4 +1,9 @@
+let isPrinting = false;
+
 export function printViaIframe(ticketHtml: string): boolean {
+  if (isPrinting) return false;
+  isPrinting = true;
+
   const iframe = document.createElement('iframe');
   iframe.style.display = 'none';
   document.body.appendChild(iframe);
@@ -6,6 +11,7 @@ export function printViaIframe(ticketHtml: string): boolean {
   const doc = iframe.contentWindow?.document;
   if (!doc) {
     document.body.removeChild(iframe);
+    isPrinting = false;
     return false;
   }
 
@@ -35,12 +41,27 @@ export function printViaIframe(ticketHtml: string): boolean {
 </html>`);
   doc.close();
 
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    clearTimeout(fallbackTimer);
+    try {
+      if (iframe.parentNode) {
+        document.body.removeChild(iframe);
+      }
+    } catch (_) {}
+    isPrinting = false;
+  };
+
+  const fallbackTimer = setTimeout(cleanup, 1000);
+
+  try {
+    iframe.contentWindow?.addEventListener('afterprint', cleanup);
+  } catch (_) {}
+
   iframe.contentWindow?.focus();
   iframe.contentWindow?.print();
-
-  setTimeout(() => {
-    document.body.removeChild(iframe);
-  }, 500);
 
   return true;
 }

@@ -98,7 +98,7 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
     locale: es
   });
 
-  const handlePrintClick = (e: React.MouseEvent) => {
+  const handlePrintClick = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     onPrint();
   };
@@ -197,10 +197,11 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
             </div>
             <button
               onClick={handlePrintClick}
-              className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-secondary hover:bg-gray-100 dark:hover:bg-darkbg rounded-lg transition-colors flex-shrink-0"
+              onTouchStart={(e) => e.stopPropagation()}
+              className="p-2.5 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-secondary hover:bg-gray-100 dark:hover:bg-darkbg rounded-lg transition-colors flex-shrink-0"
               title="Imprimir pedido"
             >
-              <Printer className="w-4 h-4" />
+              <Printer className="w-5 h-5" />
             </button>
           </div>
           <div className="flex items-center text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">

@@ -4,6 +4,7 @@ import { LayoutDashboard, ClipboardList, History, SquareMenu as MenuSquare, User
 import { Route } from '../types';
 import { useAuthStore } from '../stores/authStore';
 import { useSidebarStore } from '../stores/sidebarStore';
+import SidebarTooltip from './SidebarTooltip';
 import clsx from 'clsx';
 
 interface SubRoute {
@@ -130,8 +131,8 @@ export default function Sidebar() {
 
     if (isCollapsed && level > 0) return null;
 
-    return (
-      <div key={route.path} className="relative group">
+    const navItem = (
+      <div key={route.path}>
         <div className={clsx(
           "flex items-center gap-3 py-3 rounded-xl transition-all duration-200",
           {
@@ -150,7 +151,6 @@ export default function Sidebar() {
             className={clsx("flex items-center gap-3 flex-1", {
               'justify-center': isCollapsed,
             })}
-            title={isCollapsed ? route.name : undefined}
           >
             {Icon && <Icon className="w-5 h-5 flex-shrink-0" />}
             {!isCollapsed && <span className="font-medium">{route.name}</span>}
@@ -177,12 +177,6 @@ export default function Sidebar() {
           )}
         </div>
 
-        {isCollapsed && (
-          <div className="absolute left-full top-0 ml-2 px-3 py-2 bg-primary-dark dark:bg-darkbg-darker text-white text-sm rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-50 shadow-lg">
-            {route.name}
-          </div>
-        )}
-
         {hasSubRoutes && isExpanded && !isCollapsed && (
           <div className="space-y-1 mt-1">
             {route.subRoutes!.map(subRoute => renderNavItem(subRoute, level + 1))}
@@ -190,6 +184,16 @@ export default function Sidebar() {
         )}
       </div>
     );
+
+    if (isCollapsed) {
+      return (
+        <SidebarTooltip key={route.path} label={route.name}>
+          {navItem}
+        </SidebarTooltip>
+      );
+    }
+
+    return navItem;
   };
 
   return (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Printer, Clock, CircleCheck as CheckCircle, Truck, Play, Mail, CalendarClock, CircleAlert as AlertCircle, ExternalLink } from 'lucide-react';
+import { X, Printer, Clock, CircleCheck as CheckCircle, Truck, Play, Mail, CalendarClock, CircleAlert as AlertCircle, ExternalLink, ShoppingBag, UtensilsCrossed } from 'lucide-react';
 import { Order, OrderStatus, OrderNotification, useOrderStore } from '../../stores/orderStore';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { format } from 'date-fns';
@@ -80,6 +80,9 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
         <div style="text-align: center; margin-bottom: 8px;">
           <h1 style="font-size: 22px; margin: 0 0 4px 0; font-weight: bold;">CuckooEats</h1>
           <p style="font-size: 24px; margin: 4px 0; font-weight: bold;">Pedido #${order.id}</p>
+          <div style="font-size: 20px; margin: 8px 0; font-weight: bold; padding: 6px; border: 3px solid #000; border-radius: 4px; text-align: center;">
+            ${order.is_takeaway ? '*** PARA LLEVAR ***' : '--- COMER AQUI ---'}
+          </div>
           ${order.scheduled_delivery_time ? `
             <div style="font-size: 18px; margin: 8px 0; font-weight: bold; padding: 6px; border: 2px solid #000; border-radius: 4px;">
               <p style="margin: 0 0 2px 0;">PEDIDO AGENDADO</p>
@@ -177,9 +180,22 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
         <div className="relative px-4 sm:px-6 py-5 bg-gradient-to-r from-primary/5 to-secondary/5 dark:from-primary/10 dark:to-secondary/10 border-b border-gray-200 dark:border-darkbg">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                Pedido #{order.id}
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  Pedido #{order.id}
+                </h2>
+                {order.is_takeaway ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">
+                    <ShoppingBag className="w-3.5 h-3.5" />
+                    Para Llevar
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300">
+                    <UtensilsCrossed className="w-3.5 h-3.5" />
+                    Comer Aquí
+                  </span>
+                )}
+              </div>
               {order.scheduled_delivery_time && (
                 <div className="flex items-center gap-2 mt-1">
                   <CalendarClock className="w-4 h-4 text-primary dark:text-secondary" />

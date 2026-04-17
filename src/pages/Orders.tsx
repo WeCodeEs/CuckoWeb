@@ -177,6 +177,9 @@ export default function Orders() {
         <div style="text-align: center; margin-bottom: 8px;">
           <h1 style="font-size: 22px; margin: 0 0 4px 0; font-weight: bold;">CuckooEats</h1>
           <p style="font-size: 24px; margin: 4px 0; font-weight: bold;">Pedido #${order.id}</p>
+          <div style="font-size: 20px; margin: 8px 0; font-weight: bold; padding: 6px; border: 3px solid #000; border-radius: 4px; text-align: center;">
+            ${order.is_takeaway ? '*** PARA LLEVAR ***' : '--- COMER AQUI ---'}
+          </div>
           ${order.scheduled_delivery_time ? `
             <div style="font-size: 18px; margin: 8px 0; font-weight: bold; padding: 6px; border: 2px solid #000; border-radius: 4px;">
               <p style="margin: 0 0 2px 0;">PEDIDO AGENDADO</p>

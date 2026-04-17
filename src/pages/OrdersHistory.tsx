@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, Search, CircleEllipsis, CalendarDays } from 'lucide-react';
+import { CircleAlert as AlertCircle, Search, CircleEllipsis, CalendarDays } from 'lucide-react';
 import { useOrderStore, Order } from '../stores/orderStore';
 import PedidoDrawer from '../components/pedidos/PedidoDrawer';
 import DateRangePicker from '../components/DateRangePicker';
@@ -188,7 +188,18 @@ export default function OrderHistory() {
                       className="hover:bg-gray-50/50 dark:hover:bg-darkbg/50 transition-colors"
                     >
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
-                        #{order.id}
+                        <div className="flex items-center gap-2">
+                          #{order.id}
+                          {order.is_takeaway ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300">
+                              Para Llevar
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 dark:bg-teal-900/20 text-teal-800 dark:text-teal-300">
+                              Comer Aquí
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                         {fullName}

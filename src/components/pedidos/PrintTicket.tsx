@@ -29,6 +29,7 @@ interface Order {
   ready_at?: string | null;
   delivered_at?: string | null;
   scheduled_delivery_time?: string | null;
+  is_takeaway?: boolean;
   status: string;
   total: number;
   user?: {
@@ -49,6 +50,7 @@ export default function PrintTicket({ order, isTest = false }: Props) {
     id: 0,
     created_at: new Date().toISOString(),
     status: 'Recibido',
+    is_takeaway: true,
     total: 25.5,
     user: {
       first_name: 'Test',
@@ -88,6 +90,17 @@ export default function PrintTicket({ order, isTest = false }: Props) {
         <p style={{ fontSize: 24, margin: '4px 0', fontWeight: 'bold' }}>
           {isTest ? 'PRUEBA DE IMPRESIÓN' : `Pedido #${displayOrder.id}`}
         </p>
+        <div style={{
+          fontSize: 20,
+          margin: '8px 0',
+          fontWeight: 'bold',
+          padding: '6px',
+          border: '3px solid #000',
+          borderRadius: '4px',
+          textAlign: 'center',
+        }}>
+          {displayOrder.is_takeaway ? '*** PARA LLEVAR ***' : '--- COMER AQUI ---'}
+        </div>
         {!isTest && displayOrder.scheduled_delivery_time && (
           <div style={{
             fontSize: 18,

@@ -181,7 +181,7 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                #{order.display_number ?? order.id}
+                #{order.display_number}
               </h3>
               {order.is_takeaway ? (
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 whitespace-nowrap">

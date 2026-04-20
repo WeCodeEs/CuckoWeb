@@ -70,7 +70,7 @@ export function buildTicketHtml(order?: Order, isTest = false): string {
   const o = isTest ? testOrder : order;
   if (!o) return '';
 
-  const title = isTest ? 'PRUEBA DE IMPRESIÓN' : `Pedido #${o.display_number ?? o.id}`;
+  const title = isTest ? 'PRUEBA DE IMPRESIÓN' : `Pedido #${o.display_number}`;
   const takeawayLabel = o.is_takeaway ? '*** PARA LLEVAR ***' : '--- COMER AQUI ---';
   const clientName = o.user
     ? `${escapeHtml(o.user.first_name)} ${escapeHtml(o.user.last_name)}`

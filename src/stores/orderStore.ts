@@ -138,7 +138,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
 
                 if ('Notification' in window && Notification.permission === 'granted') {
                   new Notification('Nuevo Pedido', {
-                    body: `Pedido #${payload.new.display_number ?? payload.new.id} recibido`,
+                    body: `Pedido #${payload.new.display_number} recibido`,
                     icon: '/vite.svg',
                     tag: 'new-order',
                     requireInteraction: false,

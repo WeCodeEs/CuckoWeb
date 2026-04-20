@@ -57,6 +57,7 @@ export type PaymentStatus = 'pending_payment' | 'paid' | 'payment_failed' | 'can
 
 export interface Order {
   id: number;
+  display_number: number | null;
   user_uuid: string;
   status: OrderStatus;
   payment_status: PaymentStatus;
@@ -137,7 +138,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
 
                 if ('Notification' in window && Notification.permission === 'granted') {
                   new Notification('Nuevo Pedido', {
-                    body: `Pedido #${payload.new.id} recibido`,
+                    body: `Pedido #${payload.new.display_number ?? payload.new.id} recibido`,
                     icon: '/vite.svg',
                     tag: 'new-order',
                     requireInteraction: false,
@@ -223,6 +224,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
           .from('orders')
           .select(`
             id,
+            display_number,
             user_uuid,
             status,
             total,
@@ -300,6 +302,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
           .from('orders_today')
           .select(`
             id,
+            display_number,
             user_uuid,
             status,
             total,

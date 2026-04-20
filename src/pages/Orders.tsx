@@ -167,7 +167,7 @@ export default function Orders() {
     }
     toast({
       title: 'Imprimiendo',
-      description: `Pedido #${order.id} enviado a impresora`,
+      description: `Pedido #${order.display_number ?? order.id} enviado a impresora`,
       className: "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20",
     });
   };
@@ -197,7 +197,7 @@ export default function Orders() {
       await updateOrderStatus(orderId, newStatus);
       toast({
         title: 'Estado actualizado',
-        description: `Pedido #${orderId} movido a ${columns.find(c => c.status === newStatus)?.title}`,
+        description: `Pedido #${order.display_number ?? orderId} movido a ${columns.find(c => c.status === newStatus)?.title}`,
         className: "border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20",
       });
     } catch (error: any) {

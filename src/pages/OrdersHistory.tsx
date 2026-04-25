@@ -189,7 +189,7 @@ export default function OrderHistory() {
                     >
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
                         <div className="flex items-center gap-2">
-                          #{order.id}
+                          #{order.display_number}
                           {order.is_takeaway ? (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300">
                               Para Llevar

@@ -91,7 +91,7 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  Pedido #{order.id}
+                  Pedido #{order.display_number}
                 </h2>
                 {order.is_takeaway ? (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">
@@ -211,7 +211,7 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                     const label = statusOptions.find(o => o.value === newStatus)?.label || newStatus;
                     toast({
                       title: 'Estado actualizado',
-                      description: `Pedido #${order.id} movido a ${label}`,
+                      description: `Pedido #${order.display_number} movido a ${label}`,
                       className: "border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20",
                     });
                   } catch (err: any) {
@@ -285,7 +285,7 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
               <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkbg dark:to-darkbg-darker rounded-xl p-5 shadow-sm border border-gray-200 dark:border-darkbg">
                 {order.user?.phone ? (
                   <a
-                    href={`https://api.whatsapp.com/send?phone=${order.user.phone}&text=Hola,%20te%20contactamos%20desde%20Cuckoo%20respecto%20a%20tu%20pedido%20%23${order.id}`}
+                    href={`https://api.whatsapp.com/send?phone=${order.user.phone}&text=Hola,%20te%20contactamos%20desde%20Cuckoo%20respecto%20a%20tu%20pedido%20%23${order.display_number}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 text-gray-900 dark:text-white font-semibold text-base hover:text-primary dark:hover:text-secondary transition-colors group mb-1 underline decoration-gray-400 dark:decoration-gray-600 hover:decoration-primary dark:hover:decoration-secondary underline-offset-2"

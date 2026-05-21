@@ -393,6 +393,3 @@ export function useOptionGroupManager() {
     refreshGroups,
   };
 }
-
-
-export { useOptionGroupManager }

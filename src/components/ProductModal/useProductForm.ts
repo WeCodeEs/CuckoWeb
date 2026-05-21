@@ -3,7 +3,6 @@ import { useProductStore } from '../../stores/productStore';
 import { useCategoryStore } from '../../stores/categoryStore';
 import { useToast } from '../ui/use-toast';
 import type { SelectedGroupState } from './types';
-import type { OptionGroup } from '../../stores/optionGroupStore';
 
 export function useProductForm(onClose: () => void) {
   const { selectedProduct, createProduct, updateProduct } = useProductStore();
@@ -92,8 +91,7 @@ export function useProductForm(onClose: () => void) {
 
   const handleSubmit = async (
     e: React.FormEvent,
-    selectedGroups: Record<number, SelectedGroupState>,
-    optionGroups: OptionGroup[]
+    selectedGroups: Record<number, SelectedGroupState>
   ) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -106,14 +104,12 @@ export function useProductForm(onClose: () => void) {
         .filter(([_, state]) => state.enabled)
         .map(([groupId, state]) => {
           const gId = parseInt(groupId);
-          const group = optionGroups.find(g => g.id === gId);
           return {
             groupId: gId,
-            groupName: group?.name || '',
             state,
           };
         })
-        .sort((a, b) => a.groupName.localeCompare(b.groupName));
+        .sort((a, b) => a.state.sortOrder - b.state.sortOrder);
 
       const optionGroupsData = enabledGroups.map((item, index) => ({
         option_group_id: item.groupId,

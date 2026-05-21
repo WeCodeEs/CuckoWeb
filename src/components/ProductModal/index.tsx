@@ -38,7 +38,6 @@ export default function ProductModal({ onClose }: ProductModalProps) {
   } = form;
 
   const {
-    optionGroups,
     selectedGroups,
     isGroupModalOpen,
     activeGroupsCount,
@@ -100,7 +99,7 @@ export default function ProductModal({ onClose }: ProductModalProps) {
           <div className="flex-1 overflow-y-auto">
             <form
               id="productForm"
-              onSubmit={(e) => handleSubmit(e, selectedGroups, optionGroups)}
+              onSubmit={(e) => handleSubmit(e, selectedGroups)}
               className="p-6"
             >
               {error && (

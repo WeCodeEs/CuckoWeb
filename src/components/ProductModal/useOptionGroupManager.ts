@@ -43,6 +43,7 @@ export function useOptionGroupManager() {
       selectedProduct.option_groups?.forEach(pog => {
         initialState[pog.option_group_id] = {
           enabled: true,
+          sortOrder: pog.sort_order,
           options: {},
         };
         pog.options.forEach(po => {
@@ -62,16 +63,25 @@ export function useOptionGroupManager() {
     };
   }, [setIsGroupModalOpen]);
 
-  const filteredGroups = useMemo(
+  const matchesSearch = (group: typeof optionGroups[number]) =>
+    group.active &&
+    (group.name.toLowerCase().includes(optionSearch.toLowerCase()) ||
+      group.options.some(opt => opt.name.toLowerCase().includes(optionSearch.toLowerCase())));
+
+  const enabledGroups = useMemo(
     () =>
       optionGroups
-        .filter(group =>
-          group.active &&
-          (group.name.toLowerCase().includes(optionSearch.toLowerCase()) ||
-            group.options.some(opt => opt.name.toLowerCase().includes(optionSearch.toLowerCase())))
-        )
+        .filter(group => matchesSearch(group) && selectedGroups[group.id]?.enabled)
+        .sort((a, b) => (selectedGroups[a.id]?.sortOrder ?? 0) - (selectedGroups[b.id]?.sortOrder ?? 0)),
+    [optionGroups, optionSearch, selectedGroups]
+  );
+
+  const availableGroups = useMemo(
+    () =>
+      optionGroups
+        .filter(group => matchesSearch(group) && !selectedGroups[group.id]?.enabled)
         .sort((a, b) => a.name.localeCompare(b.name)),
-    [optionGroups, optionSearch]
+    [optionGroups, optionSearch, selectedGroups]
   );
 
   const handleGroupToggle = (groupId: number) => {
@@ -87,6 +97,10 @@ export function useOptionGroupManager() {
         };
       }
 
+      const maxSortOrder = Object.values(prev)
+        .filter(s => s.enabled)
+        .reduce((max, s) => Math.max(max, s.sortOrder), -1);
+
       const activeOptions = group.options.filter(o => o.active);
       const existingOptions = current?.options ?? {};
 
@@ -101,7 +115,7 @@ export function useOptionGroupManager() {
 
       return {
         ...prev,
-        [groupId]: { enabled: true, options: optionsState },
+        [groupId]: { enabled: true, sortOrder: maxSortOrder + 1, options: optionsState },
       };
     });
   };
@@ -148,6 +162,49 @@ export function useOptionGroupManager() {
           },
         },
       };
+    });
+  };
+
+  const handleGroupSortDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const sortedIds = enabledGroups.map(g => g.id);
+    const oldIndex = sortedIds.indexOf(Number(active.id));
+    const newIndex = sortedIds.indexOf(Number(over.id));
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(sortedIds, oldIndex, newIndex);
+
+    setSelectedGroups(prev => {
+      const updated = { ...prev };
+      reordered.forEach((gId, idx) => {
+        if (updated[gId]) {
+          updated[gId] = { ...updated[gId], sortOrder: idx };
+        }
+      });
+      return updated;
+    });
+  };
+
+  const handleMoveGroup = (groupId: number, direction: 'up' | 'down') => {
+    const sortedIds = enabledGroups.map(g => g.id);
+    const currentIndex = sortedIds.indexOf(groupId);
+    if (currentIndex === -1) return;
+
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= sortedIds.length) return;
+
+    const reordered = arrayMove(sortedIds, currentIndex, targetIndex);
+
+    setSelectedGroups(prev => {
+      const updated = { ...prev };
+      reordered.forEach((gId, idx) => {
+        if (updated[gId]) {
+          updated[gId] = { ...updated[gId], sortOrder: idx };
+        }
+      });
+      return updated;
     });
   };
 
@@ -309,7 +366,8 @@ export function useOptionGroupManager() {
     loadingOptions,
     optionSearch,
     setOptionSearch,
-    filteredGroups,
+    enabledGroups,
+    availableGroups,
     isGroupModalOpen,
     setIsGroupModalOpen,
     newGroupData,
@@ -328,8 +386,13 @@ export function useOptionGroupManager() {
     removeGroupOptionRow,
     addGroupOptionRow,
     handleGroupDragEnd,
+    handleGroupSortDragEnd,
+    handleMoveGroup,
     handleSaveNewGroup,
     getGroupSelectionDescription,
     refreshGroups,
   };
 }
+
+
+export { useOptionGroupManager }

@@ -4,6 +4,7 @@ export interface ProductModalProps {
 
 export interface SelectedGroupState {
   enabled: boolean;
+  sortOrder: number;
   options: Record<number, { enabled: boolean; priceOverride: number | null }>;
 }
 

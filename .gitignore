@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+.bolt
+.env
+.env.staging
+.env.production
+repo-backup.bundle
+
+supabase/migrations/

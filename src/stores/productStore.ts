@@ -1,6 +1,35 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 
+export interface ProductOptionGroupOption {
+  id: number;
+  product_option_group_id: number;
+  option_id: number;
+  additional_price: number | null;
+  active: boolean;
+  option: {
+    id: number;
+    name: string;
+    additional_price: number;
+    active: boolean;
+  };
+}
+
+export interface ProductOptionGroup {
+  id: number;
+  product_id: number;
+  option_group_id: number;
+  sort_order: number;
+  option_group: {
+    id: number;
+    name: string;
+    min_select: number;
+    max_select: number;
+    active: boolean;
+  };
+  options: ProductOptionGroupOption[];
+}
+
 export interface Product {
   id: number;
   category_id: number;
@@ -12,22 +41,20 @@ export interface Product {
   created_at: string;
   category?: {
     name: string;
-  };
-  variants?: Array<{
-    variant_option_id: number;
-    additional_price: number;
     active: boolean;
-    variant_option: {
+    menu?: {
       name: string;
-      active: boolean;
     };
-  }>;
-  ingredients?: Array<{
-    ingredient_option_id: number;
-    ingredient_option: {
-      name: string;
-      active: boolean;
-    };
+  };
+  option_groups?: ProductOptionGroup[];
+}
+
+interface ProductOptionGroupInput {
+  option_group_id: number;
+  sort_order?: number;
+  options: Array<{
+    option_id: number;
+    additional_price?: number | null;
   }>;
 }
 
@@ -38,11 +65,7 @@ interface ProductForm {
   base_price: number;
   image_url: string | null;
   active: boolean;
-  ingredients?: number[];
-  variants?: Array<{
-    variant_option_id: number;
-    additional_price: number;
-  }>;
+  option_groups?: ProductOptionGroupInput[];
 }
 
 interface ProductState {
@@ -55,10 +78,11 @@ interface ProductState {
   createProduct: (product: ProductForm, imageFile?: File) => Promise<void>;
   updateProduct: (id: number, product: ProductForm, imageFile?: File) => Promise<void>;
   deleteProduct: (id: number) => Promise<void>;
+  deactivateProductsByCategory: (categoryId: number) => Promise<void>;
   setSelectedProduct: (product: Product | null) => void;
   setIsModalOpen: (isOpen: boolean) => void;
   uploadImage: (file: File) => Promise<string>;
-  fetchProductVariants: (productId: number) => Promise<any[]>;
+  toggleProductStatus: (id: number, active: boolean) => Promise<void>;
 }
 
 export const useProductStore = create<ProductState>((set, get) => ({
@@ -75,7 +99,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
       const filePath = `${fileName}`;
 
       const { data, error: uploadError } = await supabase.storage
-        .from('product_images')
+        .from('menu_items')
         .upload(filePath, file, {
           cacheControl: '3600',
           upsert: false
@@ -86,12 +110,12 @@ export const useProductStore = create<ProductState>((set, get) => ({
       }
 
       const { data: { publicUrl } } = supabase.storage
-        .from('product_images')
+        .from('menu_items')
         .getPublicUrl(filePath);
 
       return publicUrl;
     } catch (error: any) {
-      console.error('Error uploading image:', error);
+      console.error('ERROR en uploadImage:', error);
       throw new Error('Error al subir la imagen');
     }
   },
@@ -99,8 +123,8 @@ export const useProductStore = create<ProductState>((set, get) => ({
   fetchProducts: async () => {
     try {
       set({ loading: true, error: null });
-      
-      const { data, error } = await supabase
+
+      const { data: products, error: productsError } = await supabase
         .from('products')
         .select(`
           id,
@@ -112,101 +136,79 @@ export const useProductStore = create<ProductState>((set, get) => ({
           active,
           created_at,
           category:categories (
-            name
-          ),
-          ingredients:product_customizable_ingredients (
-            ingredient_option_id,
+            name,
             active,
-            ingredient_option:ingredient_options (
-              name,
-              extra_price,
-              active
+            menu:menus (
+              name
             )
           )
         `)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (productsError) throw productsError;
 
-      set({ products: data || [], loading: false });
-    } catch (error: any) {
-      set({ 
-        error: error.message || 'Error al cargar los productos',
-        loading: false 
-      });
-    }
-  },
-
-  fetchProductVariants: async (productId: number) => {
-    try {
-      
-      const { data, error } = await supabase
-        .from('variant_options')
+      const { data: productOptionGroups, error: pogError } = await supabase
+        .from('product_option_groups')
         .select(`
           id,
-          name,
-          additional_price,
-          active,
-          product_variants!left (
-            product_id,
-            active,
-            additional_price
+          product_id,
+          option_group_id,
+          sort_order,
+          option_group:option_groups (
+            id,
+            name,
+            min_select,
+            max_select,
+            active
           )
         `)
-        .eq('active', true)
-        .order('name');
+        .order('sort_order', { ascending: true });
 
-      if (error) throw error;
-      
-      // Filter to only include variants that have a relationship with this product
-      const filteredData = (data || []).map(variant => {
-        // Filter product_variants to only include those for this specific product
-        const productVariantsForThisProduct = variant.product_variants?.filter(
-          pv => pv.product_id === productId
-        ) || [];
-        
+      if (pogError) throw pogError;
+
+      const { data: productOptions, error: poError } = await supabase
+        .from('product_option_group_options')
+        .select(`
+          id,
+          product_option_group_id,
+          option_id,
+          additional_price,
+          active,
+          option:options (
+            id,
+            name,
+            additional_price,
+            active
+          )
+        `);
+
+      if (poError) throw poError;
+
+      const productsWithOptions: Product[] = (products || []).map(product => {
+        const groups = (productOptionGroups || [])
+          .filter(pog => pog.product_id === product.id)
+          .map(pog => ({
+            ...pog,
+            options: (productOptions || []).filter(
+              po => po.product_option_group_id === pog.id
+            ),
+          }));
+
         return {
-          ...variant,
-          product_variants: productVariantsForThisProduct
+          ...product,
+          option_groups: groups,
         };
       });
-      
-      return filteredData;
+
+      set({ products: productsWithOptions, loading: false });
     } catch (error: any) {
-      throw new Error(error.message || 'Error al cargar las variantes del producto');
+      set({
+        error: error.message || 'Error al cargar los productos',
+        loading: false,
+      });
     }
   },
 
-  saveProductVariants: async (productId: number, variants: Array<{ variant_option_id: number; active: boolean; additional_price: number }>) => {
-    try {
-      // First, delete existing variants for this product
-      const { error: deleteError } = await supabase
-        .from('product_variants')
-        .delete()
-        .eq('product_id', productId);
-
-      if (deleteError) throw deleteError;
-
-      // Then insert the new variants (only active ones)
-      const activeVariants = variants.filter(v => v.active);
-      if (activeVariants.length > 0) {
-        const { error: insertError } = await supabase
-          .from('product_variants')
-          .insert(
-            activeVariants.map(variant => ({
-              product_id: productId,
-              variant_option_id: variant.variant_option_id,
-              active: variant.active,
-              additional_price: variant.additional_price
-            }))
-          );
-
-        if (insertError) throw insertError;
-      }
-    } catch (error: any) {
-      throw new Error(error.message || 'Error al guardar las variantes del producto');
-    }
-  },
   createProduct: async (product: ProductForm, imageFile?: File) => {
     try {
       set({ loading: true, error: null });
@@ -217,7 +219,6 @@ export const useProductStore = create<ProductState>((set, get) => ({
         imageUrl = await get().uploadImage(imageFile);
       }
 
-      // First create the product
       const { data: newProduct, error: productError } = await supabase
         .from('products')
         .insert([{
@@ -233,43 +234,45 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
       if (productError) throw productError;
 
-      // Handle variants if provided
-      if (product.variants && product.variants.length > 0) {
-        const variantLinks = product.variants.map(variant => ({
-          product_id: newProduct.id,
-          variant_option_id: variant.variant_option_id,
-          additional_price: variant.additional_price,
-          active: true
-        }));
+      if (product.option_groups && product.option_groups.length > 0) {
+        for (let i = 0; i < product.option_groups.length; i++) {
+          const og = product.option_groups[i];
 
-        const { error: variantError } = await supabase
-          .from('product_variants')
-          .insert(variantLinks);
+          const { data: pog, error: pogError } = await supabase
+            .from('product_option_groups')
+            .insert({
+              product_id: newProduct.id,
+              option_group_id: og.option_group_id,
+              sort_order: og.sort_order ?? i,
+            })
+            .select()
+            .single();
 
-        if (variantError) throw variantError;
-      }
+          if (pogError) throw pogError;
 
-      // Handle ingredients if provided
-      if (product.ingredients && product.ingredients.length > 0) {
-        const ingredientLinks = product.ingredients.map(ingredientId => ({
-          product_id: newProduct.id,
-          ingredient_option_id: ingredientId,
-          active: true
-        }));
+          if (og.options && og.options.length > 0) {
+            const optionLinks = og.options.map(opt => ({
+              product_option_group_id: pog.id,
+              option_id: opt.option_id,
+              additional_price: opt.additional_price ?? null,
+              active: true,
+            }));
 
-        const { error: ingredientError } = await supabase
-          .from('product_customizable_ingredients')
-          .insert(ingredientLinks);
+            const { error: optError } = await supabase
+              .from('product_option_group_options')
+              .insert(optionLinks);
 
-        if (ingredientError) throw ingredientError;
+            if (optError) throw optError;
+          }
+        }
       }
 
       get().fetchProducts();
       set({ isModalOpen: false });
     } catch (error: any) {
-      set({ 
+      set({
         error: error.message || 'Error al crear el producto',
-        loading: false 
+        loading: false,
       });
       throw error;
     }
@@ -284,8 +287,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
       if (imageFile) {
         imageUrl = await get().uploadImage(imageFile);
       }
-      
-      // First update the product
+
       const { error: productError } = await supabase
         .from('products')
         .update({
@@ -300,65 +302,72 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
       if (productError) throw productError;
 
-      // Handle variants
-      if (product.variants !== undefined) {
-        // First remove all existing variants
-        const { error: deleteError } = await supabase
-          .from('product_variants')
-          .delete()
+      if (product.option_groups !== undefined) {
+        const { data: existingPogs, error: fetchPogsError } = await supabase
+          .from('product_option_groups')
+          .select('id')
           .eq('product_id', id);
 
-        if (deleteError) throw deleteError;
+        if (fetchPogsError) throw fetchPogsError;
 
-        // Then add new ones if any provided
-        if (product.variants.length > 0) {
-          const variantLinks = product.variants.map(variant => ({
-            product_id: id,
-            variant_option_id: variant.variant_option_id,
-            additional_price: variant.additional_price,
-            active: true
-          }));
+        if (existingPogs && existingPogs.length > 0) {
+          const pogIds = existingPogs.map(p => p.id);
 
-          const { error: variantError } = await supabase
-            .from('product_variants')
-            .insert(variantLinks);
+          const { error: deleteOptionsError } = await supabase
+            .from('product_option_group_options')
+            .delete()
+            .in('product_option_group_id', pogIds);
 
-          if (variantError) throw variantError;
+          if (deleteOptionsError) throw deleteOptionsError;
+
+          const { error: deletePogsError } = await supabase
+            .from('product_option_groups')
+            .delete()
+            .eq('product_id', id);
+
+          if (deletePogsError) throw deletePogsError;
         }
-      }
 
-      // Handle ingredients
-      if (product.ingredients !== undefined) {
-        // First remove all existing ingredients
-        const { error: deleteError } = await supabase
-          .from('product_customizable_ingredients')
-          .delete()
-          .eq('product_id', id);
+        if (product.option_groups.length > 0) {
+          for (let i = 0; i < product.option_groups.length; i++) {
+            const og = product.option_groups[i];
 
-        if (deleteError) throw deleteError;
+            const { data: pog, error: pogError } = await supabase
+              .from('product_option_groups')
+              .insert({
+                product_id: id,
+                option_group_id: og.option_group_id,
+                sort_order: og.sort_order ?? i,
+              })
+              .select()
+              .single();
 
-        // Then add new ones if any provided
-        if (product.ingredients.length > 0) {
-          const ingredientLinks = product.ingredients.map(ingredientId => ({
-            product_id: id,
-            ingredient_option_id: ingredientId,
-            active: true
-          }));
+            if (pogError) throw pogError;
 
-          const { error: ingredientError } = await supabase
-            .from('product_customizable_ingredients')
-            .insert(ingredientLinks);
+            if (og.options && og.options.length > 0) {
+              const optionLinks = og.options.map(opt => ({
+                product_option_group_id: pog.id,
+                option_id: opt.option_id,
+                additional_price: opt.additional_price ?? null,
+                active: true,
+              }));
 
-          if (ingredientError) throw ingredientError;
+              const { error: optError } = await supabase
+                .from('product_option_group_options')
+                .insert(optionLinks);
+
+              if (optError) throw optError;
+            }
+          }
         }
       }
 
       get().fetchProducts();
       set({ isModalOpen: false, selectedProduct: null });
     } catch (error: any) {
-      set({ 
+      set({
         error: error.message || 'Error al actualizar el producto',
-        loading: false 
+        loading: false,
       });
       throw error;
     }
@@ -367,7 +376,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
   deleteProduct: async (id: number) => {
     try {
       set({ loading: true, error: null });
-      
+
       const { error } = await supabase
         .from('products')
         .delete()
@@ -375,12 +384,52 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
       if (error) throw error;
 
-      get().fetchProducts();
+      await get().fetchProducts();
     } catch (error: any) {
-      set({ 
+      set({
         error: error.message || 'Error al eliminar el producto',
-        loading: false 
+        loading: false,
       });
+      throw error;
+    }
+  },
+
+  deactivateProductsByCategory: async (categoryId: number) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ active: false })
+        .eq('category_id', categoryId);
+
+      if (error) throw error;
+
+      set((state) => ({
+        products: state.products.map(p =>
+          p.category_id === categoryId ? { ...p, active: false } : p
+        ),
+      }));
+    } catch (error: any) {
+      console.error('Error al desactivar productos de la categoria:', error);
+      throw error;
+    }
+  },
+
+  toggleProductStatus: async (id: number, active: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ active })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      set((state) => ({
+        products: state.products.map(p =>
+          p.id === id ? { ...p, active } : p
+        ),
+      }));
+    } catch (error: any) {
+      console.error("Error al cambiar el estado del producto:", error);
       throw error;
     }
   },

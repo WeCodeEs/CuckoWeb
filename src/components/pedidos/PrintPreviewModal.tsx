@@ -1,67 +1,28 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import PrintTicket from './PrintTicket';
+import { useToast } from '../../components/ui/use-toast';
+import { buildTicketHtml } from '../../utils/buildTicketHtml';
+import { printViaIframe } from '../../utils/printViaIframe';
 
 interface Props {
   onClose: () => void;
 }
 
 export default function PrintPreviewModal({ onClose }: Props) {
-  const handlePrint = () => {
-    // Create an iframe for printing
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
+  const { toast } = useToast();
 
-    // Get the iframe document
-    const doc = iframe.contentWindow?.document;
-    if (!doc) {
-      alert('Error al preparar la impresión');
+  const handlePrint = () => {
+    const success = printViaIframe(buildTicketHtml(undefined, true));
+    if (!success) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Error al preparar la impresión',
+      });
       return;
     }
-
-    // Write the print content with 80mm paper configuration
-    doc.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            @page {
-              size: 80mm auto;
-              margin: 0mm;
-            }
-            body {
-              margin: 0;
-              padding: 8px;
-              width: 80mm;
-              font-family: 'Courier New', monospace;
-              font-size: 11px;
-              line-height: 1.2;
-            }
-            * {
-              box-sizing: border-box;
-            }
-            .print-ticket {
-              width: 80mm !important;
-            }
-          </style>
-        </head>
-        <body>
-          ${document.getElementById('print-content')?.innerHTML || ''}
-        </body>
-      </html>
-    `);
-    doc.close();
-
-    // Print and remove iframe
-    iframe.contentWindow?.focus();
-    iframe.contentWindow?.print();
-    
-    // Remove iframe after printing
-    setTimeout(() => {
-      document.body.removeChild(iframe);
-      onClose();
-    }, 500);
+    setTimeout(() => onClose(), 150);
   };
 
   return (
@@ -85,9 +46,8 @@ export default function PrintPreviewModal({ onClose }: Props) {
             <p>Fuente: Monospace para mejor legibilidad</p>
           </div>
           
-          <div 
-            id="print-content" 
-            className="bg-white rounded-lg p-4 shadow-sm mb-4 mx-auto" 
+          <div
+            className="bg-white rounded-lg p-4 shadow-sm mb-4 mx-auto"
             style={{ width: '80mm', maxWidth: '100%' }}
           >
             <PrintTicket isTest={true} />

@@ -1,6 +1,24 @@
-import React from 'react';
-import { X } from 'lucide-react';
+import React, { useState } from 'react';
+import { 
+  X, ChevronDown, ChevronUp, ForkKnife, Apple, Banana, Beef, Beer, CakeSlice, Candy, Carrot,
+  Cherry, Citrus, Coffee, Cookie, Croissant, CupSoda, Egg, Fish, Grape, 
+  IceCream, Leaf, Milk, Pizza, Salad, Sandwich, Soup, Wine, Bean, ChefHat, EggFried, Ham, Popcorn, Vegan, Wheat
+} from 'lucide-react';
 import { useMenuStore } from '../stores/menuStore';
+import { useCategoryStore } from '../stores/categoryStore';
+import { useProductStore } from '../stores/productStore';
+
+const foodIcons: { [key: string]: React.ElementType } = {
+  ForkKnife, ChefHat, Pizza, Sandwich, Soup, Salad, Beef, Fish,
+  Ham, Egg, EggFried, Croissant, Cookie, Popcorn, Bean, Wheat,
+  CakeSlice, IceCream, Candy, Apple, Banana, Cherry, Citrus,
+  Grape, Carrot, Leaf, Vegan, Coffee, CupSoda, Milk, Beer, Wine,
+};
+
+const IconRenderer = ({ name, ...props }: { name: string; [key: string]: any }) => {
+  const IconComponent = foodIcons[name];
+  return IconComponent ? <IconComponent {...props} /> : <ForkKnife {...props} />;
+};
 
 interface Props {
   onClose: () => void;
@@ -8,11 +26,22 @@ interface Props {
 
 export default function MenuModal({ onClose }: Props) {
   const { selectedMenu, createMenu, updateMenu } = useMenuStore();
-  const [formData, setFormData] = React.useState({
+  const { fetchCategories } = useCategoryStore();
+  const { fetchProducts } = useProductStore();
+  const [formData, setFormData] = useState({
     name: selectedMenu?.name || '',
     description: selectedMenu?.description || '',
     active: selectedMenu?.active ?? true,
+    icon_name: selectedMenu?.icon_name || 'ForkKnife',
+    is_default: selectedMenu?.is_default ?? false,
   });
+  
+  const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
+
+  const handleIconSelect = (iconName: string) => {
+    setFormData(prev => ({ ...prev, icon_name: iconName }));
+    setIsIconPickerOpen(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +51,7 @@ export default function MenuModal({ onClose }: Props) {
       } else {
         await createMenu(formData);
       }
+      await Promise.all([fetchCategories(), fetchProducts()]);
       onClose();
     } catch (error) {
       console.error('Error saving menu:', error);
@@ -44,28 +74,61 @@ export default function MenuModal({ onClose }: Props) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label 
-              htmlFor="name"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Nombre
-            </label>
-            <input
-              type="text"
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary bg-white dark:bg-darkbg text-gray-900 dark:text-white"
-              required
-            />
+          
+          <div className="grid grid-cols-4 gap-4">
+            <div className="col-span-3"> 
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                Nombre
+              </label>
+              <input
+                type="text"
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                className="w-full px-4 py-2 h-10 rounded-lg border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-darkbg text-gray-900 dark:text-white"
+                required
+              />
+            </div>
+            
+            <div> 
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Ícono
+              </label>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsIconPickerOpen(!isIconPickerOpen)}
+                  className="w-full flex items-center justify-between px-3 py-2 h-10 rounded-lg border border-gray-300 dark:border-darkbg bg-white dark:bg-darkbg"
+                >
+                  <IconRenderer name={formData.icon_name} className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                  {isIconPickerOpen ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
+                </button>
+              </div>
+            </div>
           </div>
 
+          {isIconPickerOpen && (
+            <div className="relative">
+              <div className="absolute z-10 -mt-3 w-full bg-white dark:bg-darkbg-darker rounded-md shadow-lg border border-gray-200 dark:border-darkbg">
+                <div className="p-2 grid grid-cols-8 gap-2 max-h-48 overflow-y-auto">
+                  {Object.keys(foodIcons).map(iconName => (
+                    <button
+                      key={iconName}
+                      type="button"
+                      onClick={() => handleIconSelect(iconName)}
+                      className="flex items-center justify-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-darkbg transition-colors"
+                      title={iconName}
+                    >
+                      <IconRenderer name={iconName} className="w-6 h-6 text-gray-700 dark:text-gray-300" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div>
-            <label 
-              htmlFor="description"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
               Descripción
             </label>
             <textarea
@@ -73,37 +136,68 @@ export default function MenuModal({ onClose }: Props) {
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               rows={3}
-              className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary bg-white dark:bg-darkbg text-gray-900 dark:text-white"
+              className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-darkbg text-gray-900 dark:text-white"
             />
           </div>
+          
+          <div className="space-y-3 pt-1">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="active"
+                checked={formData.active}
+                onChange={(e) => {
+                  const newActive = e.target.checked;
+                  setFormData(prev => ({
+                    ...prev,
+                    active: newActive,
+                    // If deactivating, it cannot remain as default
+                    is_default: newActive ? prev.is_default : false,
+                  }));
+                }}
+                className="rounded border-gray-300 dark:border-darkbg text-primary dark:text-secondary focus:ring-primary/20"
+              />
+              <label htmlFor="active" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Menú Activo
+              </label>
+            </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="active"
-              checked={formData.active}
-              onChange={(e) => setFormData(prev => ({ ...prev, active: e.target.checked }))}
-              className="rounded border-gray-300 dark:border-darkbg text-primary dark:text-secondary focus:ring-primary/20 dark:focus:ring-secondary/20 dark:bg-darkbg"
-            />
-            <label 
-              htmlFor="active"
-              className="text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
-              Menú Activo
-            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="is_default"
+                checked={formData.is_default}
+                onChange={(e) => {
+                  const newDefault = e.target.checked;
+                  setFormData(prev => ({
+                    ...prev,
+                    is_default: newDefault,
+                    // If marked as default, ensure it is active
+                    active: newDefault ? true : prev.active,
+                  }));
+                }}
+                className="rounded border-gray-300 dark:border-darkbg text-primary dark:text-secondary focus:ring-primary/20"
+              />
+              <label htmlFor="is_default" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                <span>Menú Predeterminado</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                  (Se abrirá por defecto al cargar la app)
+                </span>
+              </label>
+            </div>
           </div>
-
+          
           <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-darkbg rounded-lg hover:bg-gray-200 dark:hover:bg-darkbg-darker transition-colors"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 dark:bg-darkbg rounded-lg hover:bg-gray-200"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-primary dark:bg-secondary rounded-lg hover:bg-primary-dark dark:hover:bg-secondary/90 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-white bg-primary dark:bg-secondary rounded-lg hover:bg-primary-dark"
             >
               {selectedMenu ? 'Guardar Cambios' : 'Crear Menú'}
             </button>

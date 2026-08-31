@@ -9,6 +9,7 @@ export interface Category {
   created_at: string;
   menu?: {
     name: string;
+    active: boolean;
   };
 }
 
@@ -30,6 +31,7 @@ interface CategoryState {
   deleteCategory: (id: number) => Promise<void>;
   setSelectedCategory: (category: Category | null) => void;
   setIsModalOpen: (isOpen: boolean) => void;
+  toggleCategoryStatus: (id: number, active: boolean) => Promise<void>;
 }
 
 export const useCategoryStore = create<CategoryState>((set, get) => ({
@@ -52,7 +54,8 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
           active,
           created_at,
           menu:menus (
-            name
+            name,
+            active  
           )
         `)
         .order('created_at', { ascending: false });
@@ -116,7 +119,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
   deleteCategory: async (id: number) => {
     try {
       set({ loading: true, error: null });
-      
+
       const { error } = await supabase
         .from('categories')
         .delete()
@@ -124,12 +127,39 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 
       if (error) throw error;
 
-      get().fetchCategories();
+      await get().fetchCategories();
     } catch (error: any) {
-      set({ 
+      set({
         error: error.message || 'Error al eliminar la categoría',
-        loading: false 
+        loading: false,
       });
+      throw error;
+    }
+  },
+
+  toggleCategoryStatus: async (id: number, active: boolean) => {
+    try {
+      const { error: categoryError } = await supabase
+        .from('categories')
+        .update({ active })
+        .eq('id', id);
+
+      if (categoryError) throw categoryError;
+
+      const { error: productError } = await supabase
+        .from('products')
+        .update({ active: active }) 
+        .eq('category_id', id);
+      
+      if (productError) throw productError;
+      set((state) => ({
+        categories: state.categories.map(c =>
+          c.id === id ? { ...c, active } : c
+        ),
+      }));
+    } catch (error: any) {
+      console.error("Error al cambiar el estado de la categoría:", error);
+      throw error;
     }
   },
 

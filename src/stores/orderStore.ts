@@ -2,43 +2,94 @@ import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 
 export type OrderStatus = 'Recibido' | 'EnPreparacion' | 'Listo' | 'Entregado';
+export type NotificationType = 'NotificacionGeneral' | 'NotificacionPersonal' | 'PedidoRecibido' | 'PedidoEnPreparacion' | 'PedidoListo' | 'PedidoEntregado';
+
+function sortOrders(orders: Order[]): Order[] {
+  return orders.sort((a, b) => {
+    if (a.status === 'Recibido' && b.status === 'Recibido') {
+      const aHasScheduled = !!a.scheduled_delivery_time;
+      const bHasScheduled = !!b.scheduled_delivery_time;
+
+      if (!aHasScheduled && bHasScheduled) return -1;
+      if (aHasScheduled && !bHasScheduled) return 1;
+
+      if (!aHasScheduled && !bHasScheduled) {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+
+      return new Date(a.scheduled_delivery_time!).getTime() - new Date(b.scheduled_delivery_time!).getTime();
+    }
+
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+}
+
+export interface OrderItemOption {
+  id: number;
+  option_id: number | null;
+  price_at_moment: number;
+  quantity: number;
+  option_name: string;
+  option_group_name: string;
+  option: {
+    name: string;
+    option_group: {
+      name: string;
+    };
+  } | null;
+}
 
 export interface OrderDetail {
   id: number;
-  product_id: number;
-  product_variant_id: number | null;
+  product_id: number | null;
   quantity: number;
   unit_price: number;
+  subtotal: number;
+  product_name: string;
+  product_image_url: string | null;
   product: {
     name: string;
-    variant?: {
-      name?: string;
-    };
-  };
-  ingredients?: Array<{
-    name: string;
-    extra_price?: number;
-  }>;
+  } | null;
+  options?: OrderItemOption[];
 }
+
+export type PaymentStatus = 'pending_payment' | 'paid' | 'payment_failed' | 'canceled';
 
 export interface Order {
   id: number;
+  display_number: number | null;
   user_uuid: string;
   status: OrderStatus;
+  payment_status: PaymentStatus;
   total: number;
   created_at: string;
   started_at: string | null;
   ready_at: string | null;
   delivered_at: string | null;
   updated_at: string;
+  scheduled_delivery_time?: string | null;
+  is_takeaway?: boolean;
   details: OrderDetail[];
   user?: {
     uuid: string;
     first_name: string;
     last_name: string;
-    faculty_id?: number;
+    faculty?: string;
+    phone?: string;
   };
 }
+
+export interface OrderNotification {
+  id: number;
+  order_id: number | null;
+  user_uuid: string | null;
+  title: string;
+  message: string;
+  type: NotificationType;
+  created_at: string;
+}
+
+export type OrderTypeFilter = 'Todos' | 'Agendados' | 'Inmediatos';
 
 interface OrderStore {
   orders: Order[];
@@ -46,8 +97,11 @@ interface OrderStore {
   error: string | null;
   selectedOrder: Order | null;
   isDrawerOpen: boolean;
-  fetchOrders: () => Promise<void>;
+  fetchOrders: (opts: { startDate: Date; endDate: Date; typeFilter: OrderTypeFilter }) => Promise<void>;
+  fetchOrdersToday: (opts?: { silent?: boolean }) => Promise<void>;
   updateOrderStatus: (id: number, status: OrderStatus) => Promise<void>;
+  sendPersonalNotification: (order: Order, title: string, body: string) => Promise<void>;
+  fetchNotificationsByOrder: (orderId: number) => Promise<OrderNotification[]>;
   setSelectedOrder: (order: Order | null) => void;
   setIsDrawerOpen: (isOpen: boolean) => void;
   subscribeToOrders: () => void;
@@ -56,84 +110,103 @@ interface OrderStore {
 
 export const useOrderStore = create<OrderStore>((set, get) => {
   let subscription: any = null;
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   const subscribeToOrders = () => {
-    // Unsubscribe from any existing subscription
     if (subscription) {
       supabase.removeChannel(subscription);
     }
 
     subscription = supabase
       .channel('orders-realtime')
-      .on('postgres_changes', 
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'orders' 
-        }, 
-        async (payload) => {
-          try {
-            // Play sound if supported and user has interacted with page
-            if ('Audio' in window && document.hasFocus()) {
-              try {
-                const audio = new Audio('/assets/new-order.mp3');
-                audio.volume = 0.5;
-                await audio.play();
-              } catch (audioError) {
-                console.log('Audio play failed (expected on mobile):', audioError);
-              }
-            }
-
-            // Show browser notification if permitted
-            if ('Notification' in window && Notification.permission === 'granted') {
-              try {
-                new Notification('Nuevo Pedido', {
-                  body: `Pedido #${payload.new.id} recibido`,
-                  icon: '/vite.svg',
-                  tag: 'new-order',
-                  requireInteraction: false,
-                  silent: false
-                });
-              } catch (notificationError) {
-                console.log('Notification failed:', notificationError);
-              }
-            }
-
-            // Fetch updated orders list
-            await get().fetchOrders();
-          } catch (error) {
-            console.error('Error handling new order notification:', error);
-          }
-        }
-      )
       .on('postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'orders'
         },
-        async () => {
-          try {
-            await get().fetchOrders();
-          } catch (error) {
-            console.error('Error handling order update:', error);
+        async (payload) => {
+          if (payload.eventType === 'UPDATE') {
+            try {
+              const { new: newRow, old: oldRow } = payload;
+              if (newRow.status === 'Recibido' && oldRow.status !== 'Recibido') {
+                if ('Audio' in window) {
+                  const audio = new Audio('/assets/new-order.mp3');
+                  audio.volume = 0.7;
+                  await audio.play().catch(e => console.log('Audio play failed:', e));
+                }
+
+                if ('Notification' in window && Notification.permission === 'granted') {
+                  new Notification('Nuevo Pedido', {
+                    body: `Pedido #${payload.new.display_number} recibido`,
+                    icon: '/vite.svg',
+                    tag: 'new-order',
+                    requireInteraction: false,
+                    silent: false
+                  });
+                }
+              }
+            } catch (error) {
+              console.error('Error handling new order notification:', error);
+            }
           }
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            get().fetchOrdersToday({ silent: true });
+          }, 1500);
         }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('Successfully subscribed to orders');
+          console.log('Suscrito exitosamente a las órdenes de hoy.');
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('Error subscribing to orders');
+          console.error('Error al suscribirse a las órdenes.');
         }
       });
   };
 
   const unsubscribeFromOrders = () => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
     if (subscription) {
       supabase.removeChannel(subscription);
       subscription = null;
     }
+  };
+
+  const transformOrderData = (data: any[]): Order[] => {
+    return data.map((order: any) => {
+      if (order.details) {
+        order.details = order.details.map((detail: any) => {
+          const productName = detail.product_name || detail.product?.name || 'Producto eliminado';
+          const productImageUrl = detail.product_image_url ?? null;
+          if (detail.options) {
+            detail.options = detail.options.map((opt: any) => ({
+              id: opt.id,
+              option_id: opt.option_id,
+              option_name: opt.option_name || opt.option?.name || 'Opcion eliminada',
+              option_group_name: opt.option_group_name || opt.option?.option_group?.name || '',
+              price_at_moment: opt.price_at_moment,
+              quantity: opt.quantity,
+              option: opt.option ? {
+                name: opt.option.name,
+                option_group: {
+                  name: opt.option.option_group?.name || ''
+                }
+              } : null
+            }));
+          }
+          return {
+            ...detail,
+            product_name: productName,
+            product_image_url: productImageUrl,
+          };
+        });
+      }
+      return order;
+    });
   };
 
   return {
@@ -143,14 +216,15 @@ export const useOrderStore = create<OrderStore>((set, get) => {
     selectedOrder: null,
     isDrawerOpen: false,
 
-    fetchOrders: async () => {
+    fetchOrders: async ({ startDate, endDate, typeFilter }) => {
       try {
         set({ loading: true, error: null });
 
-        let { data, error } = await supabase
+        let query = supabase
           .from('orders')
           .select(`
             id,
+            display_number,
             user_uuid,
             status,
             total,
@@ -159,59 +233,58 @@ export const useOrderStore = create<OrderStore>((set, get) => {
             ready_at,
             delivered_at,
             updated_at,
+            scheduled_delivery_time,
+            is_takeaway,
             user:users (
               uuid,
               first_name,
               last_name,
-              faculty_id
+              faculty,
+              phone
             ),
             details:order_details (
               id,
               product_id,
-              variant_option_id,
-              product_variant_id,
+              product_name,
+              product_image_url,
               quantity,
               unit_price,
-              product:products (
-                name,
-                variant:variant_options!inner (
-                  name
-                )
-              ),
-              ingredients:order_detail_ingredients (
-                ingredient:ingredient_options (
+              subtotal,
+              product:products (name),
+              options:order_item_options (
+                id,
+                option_id,
+                option_name,
+                option_group_name,
+                price_at_moment,
+                quantity,
+                option:options!order_item_options_option_id_fkey (
                   name,
-                  extra_price
+                  option_group:option_groups (name)
                 )
               )
             )
           `)
+          .eq('payment_status', 'paid')
+          .gte('created_at', startDate.toISOString())
+          .lte('created_at', endDate.toISOString())
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
-
-        // Transform the data to include ingredients in a more accessible format
-        if (data) {
-          data = data.map(order => {
-            if (order.details) {
-              order.details = order.details.map(detail => {
-                // Transform ingredients from the nested structure to a simpler array
-                if (detail.ingredients) {
-                  detail.ingredients = detail.ingredients.map(ing => ({
-                    name: ing.ingredient.name,
-                    extra_price: ing.ingredient.extra_price
-                  }));
-                }
-                return detail;
-              });
-            }
-            return order;
-          });
+        if (typeFilter === 'Agendados') {
+          query = query.not('scheduled_delivery_time', 'is', null);
+        } else if (typeFilter === 'Inmediatos') {
+          query = query.is('scheduled_delivery_time', null);
         }
 
-        set({ orders: data || [], loading: false });
+        const { data, error } = await query;
+        if (error) throw error;
+
+        const transformedData = transformOrderData(data || []);
+        const sortedOrders = sortOrders(transformedData);
+
+        set({ orders: sortedOrders, loading: false });
       } catch (error: any) {
-        console.error('Error fetching orders:', error);
+        console.error('Error fetching orders (history):', error);
         set({
           error: error.message || 'Error al cargar los pedidos',
           loading: false
@@ -219,32 +292,228 @@ export const useOrderStore = create<OrderStore>((set, get) => {
       }
     },
 
-    updateOrderStatus: async (id: number, status: OrderStatus) => {
+    fetchOrdersToday: async ({ silent = false } = {}) => {
       try {
-        set({ loading: true, error: null });
+        if (!silent) {
+          set({ loading: true, error: null });
+        }
+
+        const { data, error } = await supabase
+          .from('orders_today')
+          .select(`
+            id,
+            display_number,
+            user_uuid,
+            status,
+            total,
+            created_at,
+            started_at,
+            ready_at,
+            delivered_at,
+            updated_at,
+            scheduled_delivery_time,
+            is_takeaway,
+            user:users (
+              uuid,
+              first_name,
+              last_name,
+              faculty,
+              phone
+            ),
+            details:order_details (
+              id,
+              product_id,
+              product_name,
+              product_image_url,
+              quantity,
+              unit_price,
+              subtotal,
+              product:products (name),
+              options:order_item_options (
+                id,
+                option_id,
+                option_name,
+                option_group_name,
+                price_at_moment,
+                quantity,
+                option:options!order_item_options_option_id_fkey (
+                  name,
+                  option_group:option_groups (name)
+                )
+              )
+            )
+          `)
+          .eq('payment_status', 'paid')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const transformedData = transformOrderData(data || []);
+        const sortedOrders = sortOrders(transformedData);
+
+        const selectedOrder = get().selectedOrder;
+        const updatedSelected = selectedOrder
+          ? sortedOrders.find(o => o.id === selectedOrder.id) ?? selectedOrder
+          : null;
+
+        set({
+          orders: sortedOrders,
+          ...(silent ? {} : { loading: false }),
+          selectedOrder: updatedSelected,
+        });
+      } catch (error: any) {
+        console.error('Error fetching orders:', error);
+        if (!silent) {
+          set({
+            error: error.message || 'Error al cargar los pedidos',
+            loading: false
+          });
+        }
+      }
+    },
+
+    updateOrderStatus: async (id: number, status: OrderStatus) => {
+      let originalOrder: Order | null = null;
+
+      try {
+        const current = get().orders.find(o => o.id === id) || null;
+        if (!current) {
+          throw new Error('Pedido no encontrado en memoria.');
+        }
+
+        if (current.status === status) {
+          return;
+        }
+
+        const STATUS_ORDER: Record<OrderStatus, number> = {
+          Recibido: 0,
+          EnPreparacion: 1,
+          Listo: 2,
+          Entregado: 3,
+        };
+
+        const currentRank = STATUS_ORDER[current.status];
+        const nextRank = STATUS_ORDER[status];
+
+        if (nextRank < currentRank) {
+          throw new Error('No puedes retroceder el estado del pedido.');
+        }
+
+        const now = new Date().toISOString();
+        const updateData: Record<string, any> = { status };
+
+        switch (status) {
+          case 'Recibido': {
+            updateData.started_at = null;
+            updateData.ready_at = null;
+            updateData.delivered_at = null;
+            break;
+          }
+          case 'EnPreparacion': {
+            updateData.started_at = now;
+            updateData.ready_at = null;
+            updateData.delivered_at = null;
+            break;
+          }
+          case 'Listo': {
+            updateData.ready_at = now;
+            if (!current?.started_at) {
+              updateData.started_at = now;
+            }
+            updateData.delivered_at = null;
+            break;
+          }
+          case 'Entregado': {
+            updateData.delivered_at = now;
+            if (!current?.ready_at) {
+              updateData.ready_at = now;
+            }
+            if (!current?.started_at) {
+              updateData.started_at = now;
+            }
+            break;
+          }
+        }
+
+        originalOrder = { ...current, details: [...current.details] };
+
+        const optimisticOrder = { ...current, ...updateData, updated_at: now };
+        set(state => ({
+          orders: sortOrders(state.orders.map(o => o.id === id ? optimisticOrder : o)),
+          ...(state.selectedOrder?.id === id ? { selectedOrder: optimisticOrder } : {}),
+        }));
 
         const { data, error } = await supabase
           .from('orders')
-          .update({ status })
+          .update(updateData)
           .eq('id', id)
           .select();
 
         if (error) throw error;
 
-        // Check if any rows were updated
         if (!data || data.length === 0) {
           throw new Error('No se pudo actualizar el pedido. Verifique que el pedido existe y que tiene permisos para modificarlo.');
         }
-
-        // Refresh orders list
-        await get().fetchOrders();
       } catch (error: any) {
         console.error('Error updating order status:', error);
-        set({
-          error: error.message || 'Error al actualizar el estado del pedido',
-          loading: false
-        });
+        if (originalOrder) {
+          const snapshot = originalOrder;
+          set(state => ({
+            orders: state.orders.map(o => o.id === id ? snapshot : o),
+            ...(state.selectedOrder?.id === id ? { selectedOrder: snapshot } : {}),
+          }));
+        }
         throw error;
+      }
+    },
+
+    sendPersonalNotification: async (order: Order, title: string, body: string) => {
+      if (!order?.user_uuid) {
+        throw new Error('El pedido no tiene un usuario asociado.');
+      }
+      if (!title?.trim() || !body?.trim()) {
+        throw new Error('Título y cuerpo son requeridos.');
+      }
+
+      const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+      if (sessionErr) {
+        throw new Error('No fue posible procesar la solicitud');
+      }
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) {
+        throw new Error('No fue posible procesar la solicitud. Inicia sesión nuevamente.');
+      }
+
+      const { data: sendResp, error: sendErr } = await supabase.functions.invoke('send-notification', {
+        body: {
+          type: 'NotificacionPersonal',
+          user_uuid: order.user_uuid,
+          title,
+          body,
+          order_id: order.id,
+        },
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (sendErr || sendResp?.success !== true) {
+        throw new Error('No fue posible enviar la notificación al usuario.');
+      }
+    },
+
+    fetchNotificationsByOrder: async (orderId: number) => {
+      try {
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('id, order_id, user_uuid, title, message, type, created_at')
+          .eq('order_id', orderId)
+          .eq('type', 'NotificacionPersonal')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        return (data ?? []) as OrderNotification[];
+      } catch (err: any) {
+        console.error('Error fetching notifications:', err);
+        return [];
       }
     },
 

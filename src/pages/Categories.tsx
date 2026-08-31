@@ -1,35 +1,121 @@
-import React, { useEffect } from 'react';
-import { Plus, Pencil, Trash2, AlertCircle } from 'lucide-react';
-import { useCategoryStore } from '../stores/categoryStore';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Plus, Pencil, Trash2, CircleAlert as AlertCircle } from 'lucide-react';
+import { useCategoryStore, Category } from '../stores/categoryStore';
+import { useProductStore, Product } from '../stores/productStore';
 import CategoryModal from '../components/CategoryModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import SkeletonTable from '../components/skeletons/SkeletonTable';
+import { getCategoryNameFrequencies, formatCategoryName } from '../utils/categoryUtils';
+import { useToast } from '../components/ui/use-toast';
 
 export default function Categories() {
-  const { 
+  const {
     categories,
     loading,
     error,
     isModalOpen,
     fetchCategories,
+    toggleCategoryStatus,
     deleteCategory,
     setSelectedCategory,
     setIsModalOpen
   } = useCategoryStore();
 
+  const { products, deactivateProductsByCategory, fetchProducts } = useProductStore();
+  const { toast } = useToast();
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [categoryToDeactivate, setCategoryToDeactivate] = useState<Category | null>(null);
+
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
 
-  const handleEdit = (category: any) => {
+  const categoryFrequencies = useMemo(() => {
+    return getCategoryNameFrequencies(categories);
+  }, [categories]);
+
+  const handleEdit = (category: Category) => {
     setSelectedCategory(category);
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar esta categoría?')) {
-      await deleteCategory(id);
+  const handleToggleStatus = (category: Category) => {
+    const newStatus = !category.active;
+
+    if (newStatus === true) {
+      if (category.menu && !category.menu.active) {
+        toast({
+          variant: 'destructive',
+          title: 'No se puede activar',
+          description: `La categoría "${category.name}" no se puede activar porque el menú "${category.menu.name}" está desactivado.`,
+        });
+        return;
+      }
+    }
+
+    if (newStatus === false) {
+      setCategoryToDeactivate(category);
+      return;
+    }
+
+    confirmToggleStatus(category, newStatus);
+  };
+
+  const confirmToggleStatus = async (category: Category, newStatus: boolean) => {
+    try {
+      await toggleCategoryStatus(category.id, newStatus);
+
+      if (newStatus === false) {
+        await deactivateProductsByCategory(category.id);
+        fetchProducts();
+      }
+
+      toast({
+        title: newStatus ? 'Categoría activada' : 'Categoría desactivada',
+        description: `"${category.name}" fue ${newStatus ? 'activada' : 'desactivada'} correctamente.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: err.message || 'No se pudo cambiar el estado de la categoría.',
+      });
+    }
+  };
+
+  const categoryProducts = useMemo(() => {
+    if (!categoryToDelete) return [];
+    return products.filter(p => p.category_id === categoryToDelete.id);
+  }, [categoryToDelete, products]);
+
+  const handleDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+    setIsDeleting(true);
+    try {
+      const name = categoryToDelete.name;
+      const prodCount = categoryProducts.length;
+
+      await deleteCategory(categoryToDelete.id);
+      fetchProducts();
+
+      toast({
+        title: 'Categoría eliminada',
+        description: prodCount > 0
+          ? `"${name}" fue eliminada junto con ${prodCount} ${prodCount === 1 ? 'producto' : 'productos'}.`
+          : `"${name}" fue eliminada.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error al eliminar',
+        description: err.message || 'No se pudo eliminar la categoría.',
+      });
+    } finally {
+      setIsDeleting(false);
+      setCategoryToDelete(null);
     }
   };
 
@@ -99,20 +185,26 @@ export default function Categories() {
                     className="hover:bg-gray-50/50 dark:hover:bg-darkbg/50 transition-colors"
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      {category.name}
+                      {formatCategoryName(category, categoryFrequencies)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                       {category.menu?.name || '-'}
                     </td>
+                    
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        category.active
-                          ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400'
-                      }`}>
+                      <button
+                        onClick={() => handleToggleStatus(category)}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${
+                          category.active
+                            ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/30'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                        title={category.active ? 'Clic para desactivar' : 'Clic para activar'}
+                      >
                         {category.active ? 'Activa' : 'Inactiva'}
-                      </span>
+                      </button>
                     </td>
+
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                       {format(new Date(category.created_at), "d 'de' MMMM, yyyy", { locale: es })}
                     </td>
@@ -126,8 +218,8 @@ export default function Categories() {
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(category.id)}
-                          className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors"
+                          onClick={() => setCategoryToDelete(category)}
+                          className="p-2 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                           title="Eliminar"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -149,6 +241,55 @@ export default function Categories() {
       )}
 
       {isModalOpen && <CategoryModal onClose={() => setIsModalOpen(false)} />}
+
+      <ConfirmationModal
+        isOpen={!!categoryToDelete}
+        onClose={() => setCategoryToDelete(null)}
+        onConfirm={handleDeleteCategory}
+        title="Eliminar categoría"
+        message={
+          categoryProducts.length > 0
+            ? `La categoría "${categoryToDelete?.name}" contiene ${categoryProducts.length} ${categoryProducts.length === 1 ? 'producto' : 'productos'}. Al eliminarla, se borrarán todos los productos asociados de forma permanente. Los pedidos anteriores conservarán su historial.`
+            : `La categoría "${categoryToDelete?.name}" será eliminada permanentemente.`
+        }
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={isDeleting}
+      >
+        {categoryProducts.length > 0 && (
+          <div className="mt-2 mb-2 max-h-32 overflow-y-auto rounded-lg border border-gray-200 dark:border-darkbg divide-y divide-gray-100 dark:divide-darkbg">
+            {categoryProducts.map(product => (
+              <div key={product.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                <span className="text-gray-700 dark:text-gray-300">{product.name}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  product.active
+                    ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                }`}>
+                  {product.active ? 'Activo' : 'Inactivo'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </ConfirmationModal>
+
+      <ConfirmationModal
+        isOpen={!!categoryToDeactivate}
+        onClose={() => setCategoryToDeactivate(null)}
+        onConfirm={() => {
+          if (categoryToDeactivate) {
+            confirmToggleStatus(categoryToDeactivate, false);
+            setCategoryToDeactivate(null);
+          }
+        }}
+        title="Desactivar categoría"
+        message={`¿Estás seguro de que deseas desactivar la categoría "${categoryToDeactivate?.name}"? Todos los productos dentro de esta categoría también se desactivarán.`}
+        confirmText="Desactivar"
+        cancelText="Cancelar"
+        variant="warning"
+      />
     </div>
   );
 }

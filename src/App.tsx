@@ -1,26 +1,21 @@
-import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Orders from './pages/Orders';
+import OrdersHistory from './pages/OrdersHistory';
 import Products from './pages/Products';
 import Menus from './pages/Menus';
 import Categories from './pages/Categories';
 import Usuarios from './pages/Usuarios';
-import VariantOptions from './pages/adicionales/VariantOptions';
-import IngredientOptions from './pages/adicionales/IngredientOptions';
+import Alumnos from './pages/Students';
+import Settings from './pages/Settings';
+import OptionLibrary from './pages/adicionales/OptionLibrary';
+import OptionsControl from './pages/adicionales/OptionsControl';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Toaster } from './components/ui/toaster';
-import VariantModal from './components/adicionales/VariantModal';
-import IngredientModal from './components/adicionales/IngredientModal';
-import { useVariantOptionStore } from './stores/variantOptionStore';
-import { useIngredientOptionStore } from './stores/ingredientOptionStore';
 
 function App() {
-  const { isModalOpen: isVariantModalOpen, setIsModalOpen: setVariantModalOpen } = useVariantOptionStore();
-  const { isModalOpen: isIngredientModalOpen, setIsModalOpen: setIngredientModalOpen } = useIngredientOptionStore();
-
   return (
     <BrowserRouter>
       <Routes>
@@ -33,7 +28,7 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="/dashboard\" replace />} />
+          <Route index element={<Navigate to="/dashboard" replace />} />
           <Route
             path="dashboard"
             element={
@@ -43,12 +38,13 @@ function App() {
             }
           />
           <Route path="pedidos" element={<Orders />} />
+          <Route path="historico" element={<OrdersHistory />} />
           <Route path="productos" element={<Products />} />
           <Route path="menus" element={<Menus />} />
           <Route path="categorias" element={<Categories />} />
           <Route path="adicionales">
-            <Route path="variantes" element={<VariantOptions />} />
-            <Route path="ingredientes" element={<IngredientOptions />} />
+            <Route index element={<OptionLibrary />} />
+            <Route path="opciones" element={<OptionsControl />} />
           </Route>
           <Route
             path="usuarios"
@@ -58,18 +54,26 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="*" element={<Navigate to="/dashboard\" replace />} />
+          <Route
+            path="alumnos"
+            element={
+              <ProtectedRoute requireAdmin>
+                <Alumnos />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="configuracion"
+            element={
+              <ProtectedRoute requireAdmin>
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>
       <Toaster />
-      
-      {isVariantModalOpen && (
-        <VariantModal onClose={() => setVariantModalOpen(false)} />
-      )}
-      
-      {isIngredientModalOpen && (
-        <IngredientModal onClose={() => setIngredientModalOpen(false)} />
-      )}
     </BrowserRouter>
   );
 }

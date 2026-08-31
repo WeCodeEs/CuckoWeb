@@ -8,6 +8,7 @@ export interface Menu {
   active: boolean;
   created_at: string;
   icon_name: string; 
+  is_default?: boolean;
 }
 
 interface MenuForm {
@@ -15,6 +16,7 @@ interface MenuForm {
   description: string;
   active: boolean;
   icon_name: string;
+  is_default?: boolean;
 }
 
 export interface MenuStats {
@@ -37,6 +39,7 @@ interface MenuState {
   setSelectedMenu: (menu: Menu | null) => void;
   setIsModalOpen: (isOpen: boolean) => void;
   toggleMenuStatus: (menuId: number, newStatus: boolean) => Promise<void>;
+  setDefaultMenu: (menuId: number) => Promise<void>;
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -208,6 +211,27 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     set({ isModalOpen: isOpen });
     if (!isOpen) {
       set({ selectedMenu: null });
+    }
+  },
+
+  setDefaultMenu: async (menuId: number) => {
+    try {
+      const { error } = await supabase
+        .from('menus')
+        .update({ is_default: true })
+        .eq('id', menuId);
+
+      if (error) throw error;
+
+      set((state) => ({
+        menus: state.menus.map((m) => ({
+          ...m,
+          is_default: m.id === menuId,
+        })),
+      }));
+    } catch (error: any) {
+      console.error('Error al establecer el menú por defecto:', error);
+      throw error;
     }
   },
 }));

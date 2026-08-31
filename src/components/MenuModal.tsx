@@ -5,6 +5,8 @@ import {
   IceCream, Leaf, Milk, Pizza, Salad, Sandwich, Soup, Wine, Bean, ChefHat, EggFried, Ham, Popcorn, Vegan, Wheat
 } from 'lucide-react';
 import { useMenuStore } from '../stores/menuStore';
+import { useCategoryStore } from '../stores/categoryStore';
+import { useProductStore } from '../stores/productStore';
 
 const foodIcons: { [key: string]: React.ElementType } = {
   ForkKnife, ChefHat, Pizza, Sandwich, Soup, Salad, Beef, Fish,
@@ -24,6 +26,8 @@ interface Props {
 
 export default function MenuModal({ onClose }: Props) {
   const { selectedMenu, createMenu, updateMenu } = useMenuStore();
+  const { fetchCategories } = useCategoryStore();
+  const { fetchProducts } = useProductStore();
   const [formData, setFormData] = useState({
     name: selectedMenu?.name || '',
     description: selectedMenu?.description || '',
@@ -47,6 +51,7 @@ export default function MenuModal({ onClose }: Props) {
       } else {
         await createMenu(formData);
       }
+      await Promise.all([fetchCategories(), fetchProducts()]);
       onClose();
     } catch (error) {
       console.error('Error saving menu:', error);

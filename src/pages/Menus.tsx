@@ -103,7 +103,7 @@ export default function Menus() {
   const confirmToggleStatus = async (menu: Menu, newStatus: boolean) => {
     try {
       await toggleMenuStatus(menu.id, newStatus);
-      await Promise.all([fetchCategories(), fetchProducts()]);
+      await Promise.all([fetchMenus(), fetchCategories(), fetchProducts()]);
 
       toast({
         title: newStatus ? 'Menú activado' : 'Menú desactivado',
@@ -123,9 +123,9 @@ export default function Menus() {
     try {
       if (!menu.active) {
         await toggleMenuStatus(menu.id, true);
-        await Promise.all([fetchCategories(), fetchProducts()]);
       }
       await setDefaultMenu(menu.id);
+      await Promise.all([fetchMenus(), fetchCategories(), fetchProducts()]);
       toast({
         title: 'Menú predeterminado actualizado',
         description: `"${menu.name}" es ahora el menú predeterminado al abrir la app.`,

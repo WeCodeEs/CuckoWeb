@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, CircleAlert as AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, CircleAlert as AlertCircle, Star } from 'lucide-react';
 import { useMenuStore, Menu, MenuStats } from '../stores/menuStore';
 import { useCategoryStore } from '../stores/categoryStore';
 import { useProductStore } from '../stores/productStore';
@@ -22,7 +22,8 @@ export default function Menus() {
     deleteMenu,
     getMenuStats,
     setSelectedMenu,
-    setIsModalOpen
+    setIsModalOpen,
+    setDefaultMenu,
   } = useMenuStore();
 
   const { fetchCategories } = useCategoryStore();
@@ -102,7 +103,7 @@ export default function Menus() {
   const confirmToggleStatus = async (menu: Menu, newStatus: boolean) => {
     try {
       await toggleMenuStatus(menu.id, newStatus);
-      await Promise.all([fetchCategories(), fetchProducts()]);
+      await Promise.all([fetchMenus(), fetchCategories(), fetchProducts()]);
 
       toast({
         title: newStatus ? 'Menú activado' : 'Menú desactivado',
@@ -113,6 +114,27 @@ export default function Menus() {
         variant: 'destructive',
         title: 'Error',
         description: err.message || 'No se pudo cambiar el estado del menú.',
+      });
+    }
+  };
+
+  const handleSetDefault = async (menu: Menu) => {
+    if (menu.is_default) return;
+    try {
+      if (!menu.active) {
+        await toggleMenuStatus(menu.id, true);
+      }
+      await setDefaultMenu(menu.id);
+      await Promise.all([fetchMenus(), fetchCategories(), fetchProducts()]);
+      toast({
+        title: 'Menú predeterminado actualizado',
+        description: `"${menu.name}" es ahora el menú predeterminado al abrir la app.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: err.message || 'No se pudo establecer el menú como predeterminado.',
       });
     }
   };
@@ -183,7 +205,18 @@ export default function Menus() {
                     className="hover:bg-gray-50/50 dark:hover:bg-darkbg/50 transition-colors"
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      {menu.name}
+                      <div className="flex items-center gap-2">
+                        <span>{menu.name}</span>
+                        {menu.is_default && (
+                          <span
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700/50"
+                            title="Menú predeterminado al abrir la app"
+                          >
+                            <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                            Predeterminado
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
                       {menu.description || '-'}
@@ -208,6 +241,18 @@ export default function Menus() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                       <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleSetDefault(menu)}
+                          disabled={menu.is_default}
+                          className={`p-2 rounded-lg transition-colors ${
+                            menu.is_default
+                              ? 'text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 cursor-default'
+                              : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                          }`}
+                          title={menu.is_default ? 'Menú predeterminado actual' : 'Establecer como menú predeterminado al abrir la app'}
+                        >
+                          <Star className={`w-4 h-4 ${menu.is_default ? 'fill-amber-500' : ''}`} />
+                        </button>
                         <button
                           onClick={() => handleEdit(menu)}
                           className="p-2 text-primary dark:text-secondary hover:bg-primary/5 dark:hover:bg-secondary/5 rounded-lg transition-colors"
@@ -260,7 +305,11 @@ export default function Menus() {
           }
         }}
         title="Desactivar menú"
-        message={`¿Estás seguro de que deseas desactivar el menú "${menuToDeactivate?.name}"? Todas sus categorías y productos también se desactivarán.`}
+        message={
+          menuToDeactivate?.is_default
+            ? `"${menuToDeactivate?.name}" está configurado como menú predeterminado. Al desactivarlo, la app seleccionará otro menú activo como respaldo y todas sus categorías y productos también se desactivarán. ¿Deseas continuar?`
+            : `¿Estás seguro de que deseas desactivar el menú "${menuToDeactivate?.name}"? Todas sus categorías y productos también se desactivarán.`
+        }
         confirmText="Desactivar"
         cancelText="Cancelar"
         variant="warning"

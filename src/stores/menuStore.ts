@@ -8,6 +8,7 @@ export interface Menu {
   active: boolean;
   created_at: string;
   icon_name: string; 
+  is_default?: boolean;
 }
 
 interface MenuForm {
@@ -15,6 +16,7 @@ interface MenuForm {
   description: string;
   active: boolean;
   icon_name: string;
+  is_default?: boolean;
 }
 
 export interface MenuStats {
@@ -37,6 +39,7 @@ interface MenuState {
   setSelectedMenu: (menu: Menu | null) => void;
   setIsModalOpen: (isOpen: boolean) => void;
   toggleMenuStatus: (menuId: number, newStatus: boolean) => Promise<void>;
+  setDefaultMenu: (menuId: number) => Promise<void>;
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -70,6 +73,14 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     try {
       set({ loading: true, error: null });
       
+      if (menu.is_default) {
+        const { error: clearError } = await supabase
+          .from('menus')
+          .update({ is_default: false })
+          .eq('is_default', true);
+        if (clearError) throw clearError;
+      }
+
       const { error } = await supabase
         .from('menus')
         .insert([menu]) 
@@ -78,13 +89,14 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
       if (error) throw error;
 
-      get().fetchMenus();
+      await get().fetchMenus();
       set({ isModalOpen: false });
     } catch (error: any) {
       set({ 
         error: error.message || 'Error al crear el menú',
         loading: false 
       });
+      throw error;
     }
   },
 
@@ -92,6 +104,18 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     try {
       set({ loading: true, error: null });
       
+      if (menu.is_default) {
+        const { error: clearError } = await supabase
+          .from('menus')
+          .update({ is_default: false })
+          .neq('id', id)
+          .eq('is_default', true);
+        if (clearError) throw clearError;
+      }
+
+      const currentMenu = get().menus.find(m => m.id === id);
+      const statusChanged = currentMenu !== undefined && currentMenu.active !== menu.active;
+
       const { error } = await supabase
         .from('menus')
         .update(menu)
@@ -101,21 +125,53 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
       if (error) throw error;
 
-      get().fetchMenus();
+      if (statusChanged) {
+        const { data: categories, error: categoryFetchError } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('menu_id', id);
+
+        if (categoryFetchError) throw categoryFetchError;
+
+        if (categories && categories.length > 0) {
+          const categoryIds = categories.map(c => c.id);
+
+          const { error: categoryError } = await supabase
+            .from('categories')
+            .update({ active: menu.active })
+            .in('id', categoryIds);
+          if (categoryError) throw categoryError;
+
+          const { error: productError } = await supabase
+            .from('products')
+            .update({ active: menu.active })
+            .in('category_id', categoryIds);
+          if (productError) throw productError;
+        }
+      }
+
+      await get().fetchMenus();
       set({ isModalOpen: false, selectedMenu: null });
     } catch (error: any) {
       set({ 
         error: error.message || 'Error al actualizar el menú',
         loading: false 
       });
+      throw error;
     }
   },
 
   toggleMenuStatus: async (menuId: number, newStatus: boolean) => {
     try {
+      const menuToUpdate = get().menus.find(m => m.id === menuId);
+      const updates: { active: boolean; is_default?: boolean } = { active: newStatus };
+      if (menuToUpdate?.is_default && !newStatus) {
+        updates.is_default = false;
+      }
+
       const { error: menuError } = await supabase
         .from('menus')
-        .update({ active: newStatus })
+        .update(updates)
         .eq('id', menuId);
       if (menuError) throw menuError;
 
@@ -143,7 +199,9 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
       set((state) => ({
         menus: state.menus.map(m =>
-          m.id === menuId ? { ...m, active: newStatus } : m
+          m.id === menuId
+            ? { ...m, active: newStatus, is_default: !newStatus && m.is_default ? false : m.is_default }
+            : m
         ),
       }));
     } catch (error: any) {
@@ -208,6 +266,37 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     set({ isModalOpen: isOpen });
     if (!isOpen) {
       set({ selectedMenu: null });
+    }
+  },
+
+  setDefaultMenu: async (menuId: number) => {
+    try {
+      set({ loading: true, error: null });
+
+      // Atomically clear any current default in database
+      const { error: clearError } = await supabase
+        .from('menus')
+        .update({ is_default: false })
+        .eq('is_default', true);
+
+      if (clearError) throw clearError;
+
+      // Set new default
+      const { error } = await supabase
+        .from('menus')
+        .update({ is_default: true })
+        .eq('id', menuId);
+
+      if (error) throw error;
+
+      await get().fetchMenus();
+    } catch (error: any) {
+      console.error('Error al establecer el menú por defecto:', error);
+      set({
+        error: error.message || 'Error al establecer el menú por defecto',
+        loading: false,
+      });
+      throw error;
     }
   },
 }));

@@ -5,6 +5,8 @@ import {
   IceCream, Leaf, Milk, Pizza, Salad, Sandwich, Soup, Wine, Bean, ChefHat, EggFried, Ham, Popcorn, Vegan, Wheat
 } from 'lucide-react';
 import { useMenuStore } from '../stores/menuStore';
+import { useCategoryStore } from '../stores/categoryStore';
+import { useProductStore } from '../stores/productStore';
 
 const foodIcons: { [key: string]: React.ElementType } = {
   ForkKnife, ChefHat, Pizza, Sandwich, Soup, Salad, Beef, Fish,
@@ -24,11 +26,14 @@ interface Props {
 
 export default function MenuModal({ onClose }: Props) {
   const { selectedMenu, createMenu, updateMenu } = useMenuStore();
+  const { fetchCategories } = useCategoryStore();
+  const { fetchProducts } = useProductStore();
   const [formData, setFormData] = useState({
     name: selectedMenu?.name || '',
     description: selectedMenu?.description || '',
     active: selectedMenu?.active ?? true,
     icon_name: selectedMenu?.icon_name || 'ForkKnife',
+    is_default: selectedMenu?.is_default ?? false,
   });
   
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
@@ -46,6 +51,7 @@ export default function MenuModal({ onClose }: Props) {
       } else {
         await createMenu(formData);
       }
+      await Promise.all([fetchCategories(), fetchProducts()]);
       onClose();
     } catch (error) {
       console.error('Error saving menu:', error);
@@ -134,17 +140,51 @@ export default function MenuModal({ onClose }: Props) {
             />
           </div>
           
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="active"
-              checked={formData.active}
-              onChange={(e) => setFormData(prev => ({ ...prev, active: e.target.checked }))}
-              className="rounded border-gray-300 dark:border-darkbg text-primary dark:text-secondary focus:ring-primary/20"
-            />
-            <label htmlFor="active" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Menú Activo
-            </label>
+          <div className="space-y-3 pt-1">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="active"
+                checked={formData.active}
+                onChange={(e) => {
+                  const newActive = e.target.checked;
+                  setFormData(prev => ({
+                    ...prev,
+                    active: newActive,
+                    // If deactivating, it cannot remain as default
+                    is_default: newActive ? prev.is_default : false,
+                  }));
+                }}
+                className="rounded border-gray-300 dark:border-darkbg text-primary dark:text-secondary focus:ring-primary/20"
+              />
+              <label htmlFor="active" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Menú Activo
+              </label>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="is_default"
+                checked={formData.is_default}
+                onChange={(e) => {
+                  const newDefault = e.target.checked;
+                  setFormData(prev => ({
+                    ...prev,
+                    is_default: newDefault,
+                    // If marked as default, ensure it is active
+                    active: newDefault ? true : prev.active,
+                  }));
+                }}
+                className="rounded border-gray-300 dark:border-darkbg text-primary dark:text-secondary focus:ring-primary/20"
+              />
+              <label htmlFor="is_default" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                <span>Menú Predeterminado</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                  (Se abrirá por defecto al cargar la app)
+                </span>
+              </label>
+            </div>
           </div>
           
           <div className="flex justify-end gap-3 pt-4">

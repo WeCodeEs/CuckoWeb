@@ -13,7 +13,7 @@ Aplicación web construida con Vite + React + TypeScript. Permite la gestión de
 1\. Clona el repositorio:  
 ```
 git clone <https://github.com/tu-usuario/CuckoWeb.git>  
-cd CuckoWeb
+cd CuckoWeb 
 ```
 
 2\. Instala dependencias:  

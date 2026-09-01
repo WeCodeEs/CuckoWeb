@@ -108,72 +108,250 @@ interface OrderStore {
   unsubscribeFromOrders: () => void;
 }
 
+const ORDER_SELECT_QUERY = `
+  id,
+  display_number,
+  user_uuid,
+  status,
+  total,
+  created_at,
+  started_at,
+  ready_at,
+  delivered_at,
+  updated_at,
+  scheduled_delivery_time,
+  is_takeaway,
+  payment_status,
+  user:users (
+    uuid,
+    first_name,
+    last_name,
+    faculty,
+    phone
+  ),
+  details:order_details (
+    id,
+    product_id,
+    product_name,
+    product_image_url,
+    quantity,
+    unit_price,
+    subtotal,
+    product:products (name),
+    options:order_item_options (
+      id,
+      option_id,
+      option_name,
+      option_group_name,
+      price_at_moment,
+      quantity,
+      option:options!order_item_options_option_id_fkey (
+        name,
+        option_group:option_groups (name)
+      )
+    )
+  )
+`;
+
+const VALID_STATUSES: Set<string> = new Set(['Recibido', 'EnPreparacion', 'Listo', 'Entregado']);
+
 export const useOrderStore = create<OrderStore>((set, get) => {
   let subscription: any = null;
-  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  let lastHiddenAt = 0;
+  const pendingUpdates = new Set<number>();
+  let visibilityHandler: (() => void) | null = null;
+  let onlineHandler: (() => void) | null = null;
+
+  const playNewOrderAlert = async (displayNumber: number | null) => {
+    try {
+      if ('Audio' in window) {
+        const audio = new Audio('/assets/new-order.mp3');
+        audio.volume = 0.7;
+        await audio.play().catch(e => console.log('Audio play failed:', e));
+      }
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Nuevo Pedido', {
+          body: `Pedido #${displayNumber} recibido`,
+          icon: '/vite.svg',
+          tag: 'new-order',
+          requireInteraction: false,
+          silent: false
+        });
+      }
+    } catch (error) {
+      console.error('Error handling new order notification:', error);
+    }
+  };
+
+  const fetchSingleOrder = async (orderId: number): Promise<Order | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('orders_today')
+        .select(ORDER_SELECT_QUERY)
+        .eq('id', orderId)
+        .eq('payment_status', 'paid')
+        .maybeSingle();
+
+      if (error || !data) return null;
+      const transformed = transformOrderData([data]);
+      return transformed[0] || null;
+    } catch {
+      return null;
+    }
+  };
+
+  const applyRealtimeUpdate = (payload: any) => {
+    const { eventType, new: newRow, old: oldRow } = payload;
+
+    if (eventType === 'INSERT') {
+      if (newRow.payment_status === 'paid') {
+        fetchSingleOrder(newRow.id).then(order => {
+          if (!order) return;
+          set(state => {
+            if (state.orders.some(o => o.id === order.id)) return state;
+            return { orders: sortOrders([...state.orders, order]) };
+          });
+          playNewOrderAlert(newRow.display_number);
+        });
+      }
+      return;
+    }
+
+    if (eventType === 'UPDATE') {
+      const orderId = newRow.id as number;
+
+      // A non-paid order just became paid — treat as new order appearing
+      if (newRow.payment_status === 'paid' && oldRow.payment_status !== 'paid') {
+        fetchSingleOrder(orderId).then(order => {
+          if (!order) return;
+          set(state => {
+            if (state.orders.some(o => o.id === order.id)) return state;
+            return { orders: sortOrders([...state.orders, order]) };
+          });
+          if (newRow.status === 'Recibido') {
+            playNewOrderAlert(newRow.display_number);
+          }
+        });
+        return;
+      }
+
+      // Skip if this device made this update (optimistic already applied)
+      if (pendingUpdates.has(orderId)) {
+        pendingUpdates.delete(orderId);
+        return;
+      }
+
+      // Status change from another device — apply directly
+      if (newRow.status && VALID_STATUSES.has(newRow.status)) {
+        set(state => {
+          const existing = state.orders.find(o => o.id === orderId);
+          if (!existing) return state;
+
+          const patched: Order = {
+            ...existing,
+            status: newRow.status as OrderStatus,
+            started_at: newRow.started_at ?? existing.started_at,
+            ready_at: newRow.ready_at ?? existing.ready_at,
+            delivered_at: newRow.delivered_at ?? existing.delivered_at,
+            updated_at: newRow.updated_at ?? existing.updated_at,
+          };
+
+          const updatedOrders = sortOrders(
+            state.orders.map(o => o.id === orderId ? patched : o)
+          );
+
+          return {
+            orders: updatedOrders,
+            ...(state.selectedOrder?.id === orderId ? { selectedOrder: patched } : {}),
+          };
+        });
+      }
+
+      // Detect new order notification (status changed TO Recibido from something else)
+      if (newRow.status === 'Recibido' && oldRow.status !== 'Recibido') {
+        playNewOrderAlert(newRow.display_number);
+      }
+
+      return;
+    }
+
+    if (eventType === 'DELETE') {
+      const orderId = oldRow?.id as number;
+      if (orderId) {
+        set(state => ({
+          orders: state.orders.filter(o => o.id !== orderId),
+          ...(state.selectedOrder?.id === orderId
+            ? { selectedOrder: null, isDrawerOpen: false }
+            : {}),
+        }));
+      }
+    }
+  };
 
   const subscribeToOrders = () => {
     if (subscription) {
       supabase.removeChannel(subscription);
+      subscription = null;
     }
 
     subscription = supabase
       .channel('orders-realtime')
       .on('postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'orders'
-        },
-        async (payload) => {
-          if (payload.eventType === 'UPDATE') {
-            try {
-              const { new: newRow, old: oldRow } = payload;
-              if (newRow.status === 'Recibido' && oldRow.status !== 'Recibido') {
-                if ('Audio' in window) {
-                  const audio = new Audio('/assets/new-order.mp3');
-                  audio.volume = 0.7;
-                  await audio.play().catch(e => console.log('Audio play failed:', e));
-                }
-
-                if ('Notification' in window && Notification.permission === 'granted') {
-                  new Notification('Nuevo Pedido', {
-                    body: `Pedido #${payload.new.display_number} recibido`,
-                    icon: '/vite.svg',
-                    tag: 'new-order',
-                    requireInteraction: false,
-                    silent: false
-                  });
-                }
-              }
-            } catch (error) {
-              console.error('Error handling new order notification:', error);
-            }
-          }
-          if (debounceTimer) clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(() => {
-            get().fetchOrdersToday({ silent: true });
-          }, 1500);
-        }
+        { event: '*', schema: 'public', table: 'orders' },
+        (payload) => { applyRealtimeUpdate(payload); }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           console.log('Suscrito exitosamente a las órdenes de hoy.');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('Error al suscribirse a las órdenes.');
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error('Error en canal de órdenes, reconectando...');
+          setTimeout(() => {
+            subscribeToOrders();
+            get().fetchOrdersToday({ silent: true });
+          }, 2000);
         }
       });
+
+    // Visibility change: re-sync when tab/app comes back to foreground
+    if (!visibilityHandler) {
+      visibilityHandler = () => {
+        if (document.visibilityState === 'hidden') {
+          lastHiddenAt = Date.now();
+        } else if (document.visibilityState === 'visible') {
+          const awayMs = Date.now() - lastHiddenAt;
+          // If away for more than 30 seconds, do a full re-sync
+          if (awayMs > 30_000) {
+            get().fetchOrdersToday({ silent: true });
+          }
+        }
+      };
+      document.addEventListener('visibilitychange', visibilityHandler);
+    }
+
+    // Online event: re-sync when network comes back
+    if (!onlineHandler) {
+      onlineHandler = () => {
+        subscribeToOrders();
+        get().fetchOrdersToday({ silent: true });
+      };
+      window.addEventListener('online', onlineHandler);
+    }
   };
 
   const unsubscribeFromOrders = () => {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-      debounceTimer = null;
-    }
     if (subscription) {
       supabase.removeChannel(subscription);
       subscription = null;
     }
+    if (visibilityHandler) {
+      document.removeEventListener('visibilitychange', visibilityHandler);
+      visibilityHandler = null;
+    }
+    if (onlineHandler) {
+      window.removeEventListener('online', onlineHandler);
+      onlineHandler = null;
+    }
+    pendingUpdates.clear();
   };
 
   const transformOrderData = (data: any[]): Order[] => {
@@ -222,49 +400,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
 
         let query = supabase
           .from('orders')
-          .select(`
-            id,
-            display_number,
-            user_uuid,
-            status,
-            total,
-            created_at,
-            started_at,
-            ready_at,
-            delivered_at,
-            updated_at,
-            scheduled_delivery_time,
-            is_takeaway,
-            user:users (
-              uuid,
-              first_name,
-              last_name,
-              faculty,
-              phone
-            ),
-            details:order_details (
-              id,
-              product_id,
-              product_name,
-              product_image_url,
-              quantity,
-              unit_price,
-              subtotal,
-              product:products (name),
-              options:order_item_options (
-                id,
-                option_id,
-                option_name,
-                option_group_name,
-                price_at_moment,
-                quantity,
-                option:options!order_item_options_option_id_fkey (
-                  name,
-                  option_group:option_groups (name)
-                )
-              )
-            )
-          `)
+          .select(ORDER_SELECT_QUERY)
           .eq('payment_status', 'paid')
           .gte('created_at', startDate.toISOString())
           .lte('created_at', endDate.toISOString())
@@ -300,49 +436,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
 
         const { data, error } = await supabase
           .from('orders_today')
-          .select(`
-            id,
-            display_number,
-            user_uuid,
-            status,
-            total,
-            created_at,
-            started_at,
-            ready_at,
-            delivered_at,
-            updated_at,
-            scheduled_delivery_time,
-            is_takeaway,
-            user:users (
-              uuid,
-              first_name,
-              last_name,
-              faculty,
-              phone
-            ),
-            details:order_details (
-              id,
-              product_id,
-              product_name,
-              product_image_url,
-              quantity,
-              unit_price,
-              subtotal,
-              product:products (name),
-              options:order_item_options (
-                id,
-                option_id,
-                option_name,
-                option_group_name,
-                price_at_moment,
-                quantity,
-                option:options!order_item_options_option_id_fkey (
-                  name,
-                  option_group:option_groups (name)
-                )
-              )
-            )
-          `)
+          .select(ORDER_SELECT_QUERY)
           .eq('payment_status', 'paid')
           .order('created_at', { ascending: false });
 
@@ -437,6 +531,9 @@ export const useOrderStore = create<OrderStore>((set, get) => {
 
         originalOrder = { ...current, details: [...current.details] };
 
+        // Mark this order as a pending local update so the realtime event is skipped
+        pendingUpdates.add(id);
+
         const optimisticOrder = { ...current, ...updateData, updated_at: now };
         set(state => ({
           orders: sortOrders(state.orders.map(o => o.id === id ? optimisticOrder : o)),
@@ -456,6 +553,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
         }
       } catch (error: any) {
         console.error('Error updating order status:', error);
+        pendingUpdates.delete(id);
         if (originalOrder) {
           const snapshot = originalOrder;
           set(state => ({

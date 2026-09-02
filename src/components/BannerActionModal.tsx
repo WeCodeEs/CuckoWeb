@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Link2, Search } from 'lucide-react';
 import { useToast } from './ui/use-toast';
+import { transformImage, IMAGE_PRESETS } from '../utils/transformImage';
 import {
   Dialog,
   DialogContent,
@@ -162,7 +163,7 @@ export default function BannerActionModal({ banner, onClose }: Props) {
             <div className="w-full rounded-lg border border-gray-200 dark:border-darkbg overflow-hidden bg-gray-50 dark:bg-darkbg">
               <div className="aspect-[3/1] bg-gray-100 dark:bg-darkbg">
                 <img
-                  src={banner.image_url}
+                  src={transformImage(banner.image_url, IMAGE_PRESETS.bannerCard)!}
                   alt="Banner actual"
                   className="w-full h-full object-cover"
                 />

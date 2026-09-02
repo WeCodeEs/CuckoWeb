@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { Plus, Pencil, Trash2, CircleAlert as AlertCircle, Search } from 'lucide-react';
 import { useProductStore, Product } from '../stores/productStore';
+import { transformImage, IMAGE_PRESETS } from '../utils/transformImage';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { formatCurrency } from '../utils/formatCurrency';
@@ -268,7 +269,7 @@ export default function Products() {
                       <div className="flex items-center gap-3">
                         {product.image_url && (
                           <img 
-                            src={product.image_url} 
+                            src={transformImage(product.image_url, IMAGE_PRESETS.thumbnail)!} 
                             alt={product.name}
                             className="w-10 h-10 rounded-lg object-cover"
                           />

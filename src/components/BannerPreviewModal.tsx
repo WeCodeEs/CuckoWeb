@@ -1,5 +1,6 @@
 import { X, ChevronLeft, ChevronRight, Eye, EyeOff, Trash2, Link2 } from 'lucide-react';
 import { Banner } from '../stores/bannersStore';
+import { transformImage, IMAGE_PRESETS } from '../utils/transformImage';
 
 interface BannerPreviewModalProps {
   banner: Banner;
@@ -71,7 +72,7 @@ export default function BannerPreviewModal({
           <div className="relative">
             <div className="aspect-[3/1] bg-gray-900 flex items-center justify-center">
               <img
-                src={banner.image_url}
+                src={transformImage(banner.image_url, IMAGE_PRESETS.bannerFull)!}
                 alt={`Banner ${banner.sort_order}`}
                 className="w-full h-full object-contain"
               />

@@ -1,12 +1,18 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { X, Search, Users, Building2, UserCheck, ChevronDown } from 'lucide-react';
+import { X, Search, Users, Building2, UserCheck, UserX, ChevronDown } from 'lucide-react';
 import { useToast } from './ui/use-toast';
 import { supabase } from '../lib/supabase';
 import { parseEdgeError } from '../stores/usuariosStore';
 import type { Student } from '../stores/studentsStore';
 import clsx from 'clsx';
 
-type AudienceMode = 'all' | 'faculty' | 'manual';
+type AudienceMode = 'all' | 'faculty' | 'manual' | 'incomplete';
+
+const INCOMPLETE_FACULTIES = new Set(['Default', 'Sin escuela', '']);
+
+function isIncomplete(s: Student): boolean {
+  return !s.first_name.trim() || !s.last_name.trim() || !s.email.trim() || INCOMPLETE_FACULTIES.has(s.faculty);
+}
 
 interface Props {
   onClose: () => void;
@@ -82,6 +88,11 @@ export default function StudentNotificationModal({
     [allStudents, selectedFaculty]
   );
 
+  const incompleteStudents = useMemo(
+    () => allStudents.filter(isIncomplete),
+    [allStudents]
+  );
+
   const searchResults = useMemo(() => {
     if (!studentSearch.trim()) return [];
     const q = studentSearch.toLowerCase();
@@ -120,6 +131,10 @@ export default function StudentNotificationModal({
         return selectedStudents.length > 0
           ? `Se enviará a ${selectedStudents.length} alumno${selectedStudents.length === 1 ? '' : 's'} seleccionado${selectedStudents.length === 1 ? '' : 's'}.`
           : 'Busca y selecciona al menos un alumno.';
+      case 'incomplete':
+        return incompleteStudents.length > 0
+          ? `Se enviará a ${incompleteStudents.length} alumno${incompleteStudents.length === 1 ? '' : 's'} con registro pendiente.`
+          : 'No hay alumnos con registro pendiente.';
     }
   }, [audienceMode, allStudents.length, studentsForFaculty.length, selectedFaculty, selectedStudents.length]);
 
@@ -127,8 +142,9 @@ export default function StudentNotificationModal({
     if (!title.trim() || !body.trim()) return false;
     if (audienceMode === 'faculty' && studentsForFaculty.length === 0) return false;
     if (audienceMode === 'manual' && selectedStudents.length === 0) return false;
+    if (audienceMode === 'incomplete' && incompleteStudents.length === 0) return false;
     return true;
-  }, [title, body, audienceMode, studentsForFaculty.length, selectedStudents.length]);
+  }, [title, body, audienceMode, studentsForFaculty.length, selectedStudents.length, incompleteStudents.length]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -155,7 +171,11 @@ export default function StudentNotificationModal({
             className: 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20',
           });
         } else {
-          const targets = audienceMode === 'faculty' ? studentsForFaculty : selectedStudents;
+          const targets = audienceMode === 'faculty'
+            ? studentsForFaculty
+            : audienceMode === 'incomplete'
+              ? incompleteStudents
+              : selectedStudents;
           let succeeded = 0;
           let failed = 0;
           setProgress({ sent: 0, total: targets.length });
@@ -200,7 +220,7 @@ export default function StudentNotificationModal({
         setProgress(null);
       }
     },
-    [canSubmit, audienceMode, title, body, studentsForFaculty, selectedStudents, toast, onClose]
+    [canSubmit, audienceMode, title, body, studentsForFaculty, selectedStudents, incompleteStudents, toast, onClose]
   );
 
   return (
@@ -226,7 +246,7 @@ export default function StudentNotificationModal({
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Destinatarios
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-4 gap-2">
                 <AudienceButton
                   active={audienceMode === 'all'}
                   onClick={() => setAudienceMode('all')}
@@ -244,6 +264,13 @@ export default function StudentNotificationModal({
                   onClick={() => setAudienceMode('manual')}
                   icon={<UserCheck className="w-4 h-4" />}
                   label="Seleccionar"
+                />
+                <AudienceButton
+                  active={audienceMode === 'incomplete'}
+                  onClick={() => setAudienceMode('incomplete')}
+                  icon={<UserX className="w-4 h-4" />}
+                  label="Pendientes"
+                  badge={incompleteStudents.length > 0 ? incompleteStudents.length : undefined}
                 />
               </div>
             </div>
@@ -440,18 +467,20 @@ function AudienceButton({
   onClick,
   icon,
   label,
+  badge,
 }: {
   active: boolean;
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
+  badge?: number;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={clsx(
-        'flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
+        'relative flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-lg text-sm font-medium transition-all',
         active
           ? 'bg-primary dark:bg-secondary text-white shadow-sm'
           : 'bg-gray-100 dark:bg-darkbg text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-darkbg/80'
@@ -459,6 +488,18 @@ function AudienceButton({
     >
       {icon}
       {label}
+      {badge !== undefined && (
+        <span
+          className={clsx(
+            'absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold leading-none px-1',
+            active
+              ? 'bg-white text-primary dark:text-secondary'
+              : 'bg-amber-500 text-white'
+          )}
+        >
+          {badge}
+        </span>
+      )}
     </button>
   );
 }

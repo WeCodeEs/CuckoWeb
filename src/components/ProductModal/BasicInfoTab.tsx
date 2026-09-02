@@ -3,7 +3,8 @@ import { X, Upload } from 'lucide-react';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { getActiveCategories, getSortedCategories, getCategoryNameFrequencies, formatCategoryName } from '../../utils/categoryUtils';
-import { transformImage, IMAGE_PRESETS } from '../../utils/transformImage';
+import { IMAGE_PRESETS } from '../../utils/transformImage';
+import OptimizedImage from '../OptimizedImage';
 import type { Category } from '../../stores/categoryStore';
 
 interface BasicInfoTabProps {
@@ -134,8 +135,9 @@ export default function BasicInfoTab({
           <div className="mt-2 space-y-4">
             {imagePreview && (
               <div className="relative w-full h-48 rounded-lg overflow-hidden bg-gray-100 dark:bg-darkbg">
-                <img
-                  src={imagePreview.startsWith('blob:') ? imagePreview : transformImage(imagePreview, IMAGE_PRESETS.productPreview)!}
+                <OptimizedImage
+                  src={imagePreview}
+                  transform={imagePreview.startsWith('blob:') ? undefined : IMAGE_PRESETS.productPreview}
                   alt="Preview"
                   className="w-full h-full object-cover"
                 />

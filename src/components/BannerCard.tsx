@@ -2,7 +2,8 @@ import { Eye, EyeOff, Trash2, Link2 } from 'lucide-react';
 import { Banner } from '../stores/bannersStore';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { transformImage, IMAGE_PRESETS } from '../utils/transformImage';
+import { IMAGE_PRESETS } from '../utils/transformImage';
+import OptimizedImage from './OptimizedImage';
 
 interface BannerCardProps {
   banner: Banner;
@@ -50,10 +51,11 @@ export default function BannerCard({
       } overflow-hidden transition-all hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-600`}
     >
       <div className="relative aspect-[3/1] bg-gray-100 dark:bg-darkbg">
-        <img
+        <OptimizedImage
           {...attributes}
           {...listeners}
-          src={transformImage(banner.image_url, IMAGE_PRESETS.bannerCard)!}
+          src={banner.image_url}
+          transform={IMAGE_PRESETS.bannerCard}
           alt={`Banner ${banner.sort_order}`}
           className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
           onClick={() => onPreview(banner)}

@@ -1,6 +1,6 @@
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 
-interface TransformOptions {
+export interface TransformOptions {
   width?: number;
   height?: number;
   quality?: number;

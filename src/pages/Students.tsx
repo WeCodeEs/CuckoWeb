@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { Megaphone, AlertCircle, Search } from 'lucide-react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { Megaphone, AlertCircle, Search, Bell } from 'lucide-react';
 import { useStudentStore, Student } from '../stores/studentsStore';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import clsx from 'clsx';
 import SkeletonTable from '../components/skeletons/SkeletonTable';
-import GeneralNotificationModal from '../components/GeneralNotificationModal';
+import StudentNotificationModal from '../components/StudentNotificationModal';
 
 type SortOrder = 'recent' | 'oldest' | 'az' | 'za';
 
@@ -48,14 +48,12 @@ export default function Students() {
 
   const [sortOrder, setSortOrder] = useState<SortOrder>('recent');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [preselected, setPreselected] = useState<Student[]>([]);
 
   useEffect(() => {
     fetchAlumnos();
   }, [fetchAlumnos]);
-
-  const handleAnuncioClick = () => {
-    setIsModalOpen(true);
-  };
 
   const sortedAndFilteredStudents = useMemo(() => {
     const filtered = alumnos.filter(user => {
@@ -74,20 +72,73 @@ export default function Students() {
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         case 'oldest':
           return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        case 'az':
+        case 'az': {
           const nameA = `${a.first_name} ${a.last_name}`.toLocaleLowerCase();
           const nameB = `${b.first_name} ${b.last_name}`.toLocaleLowerCase();
           return nameA.localeCompare(nameB);
-        case 'za':
+        }
+        case 'za': {
           const nameA_za = `${a.first_name} ${a.last_name}`.toLocaleLowerCase();
           const nameB_za = `${b.first_name} ${b.last_name}`.toLocaleLowerCase();
           return nameB_za.localeCompare(nameA_za);
+        }
         default:
           return 0;
       }
     });
-
   }, [alumnos, searchTerm, facultyFilter, sortOrder]);
+
+  const visibleIds = useMemo(
+    () => new Set(sortedAndFilteredStudents.map((s) => s.id)),
+    [sortedAndFilteredStudents]
+  );
+
+  const allVisibleSelected = useMemo(
+    () => sortedAndFilteredStudents.length > 0 && sortedAndFilteredStudents.every((s) => selectedIds.has(s.id)),
+    [sortedAndFilteredStudents, selectedIds]
+  );
+
+  const toggleOne = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleAll = useCallback(() => {
+    setSelectedIds((prev) => {
+      if (allVisibleSelected) {
+        const next = new Set(prev);
+        for (const id of visibleIds) next.delete(id);
+        return next;
+      } else {
+        const next = new Set(prev);
+        for (const id of visibleIds) next.add(id);
+        return next;
+      }
+    });
+  }, [allVisibleSelected, visibleIds]);
+
+  const handleAnuncioClick = useCallback(() => {
+    setPreselected([]);
+    setIsModalOpen(true);
+  }, []);
+
+  const handleNotifySelected = useCallback(() => {
+    const students = alumnos.filter((s) => selectedIds.has(s.id));
+    setPreselected(students);
+    setIsModalOpen(true);
+  }, [alumnos, selectedIds]);
+
+  const handleModalClose = useCallback(() => {
+    setIsModalOpen(false);
+    setPreselected([]);
+    setSelectedIds(new Set());
+  }, []);
+
+  const selectedCount = selectedIds.size;
 
   if (error) {
     return (
@@ -158,13 +209,21 @@ export default function Students() {
       </div>
 
       {loading ? (
-        <SkeletonTable rows={5} columns={5} hasActions={false} />
+        <SkeletonTable rows={5} columns={6} hasActions={false} />
       ) : (
         <div className="bg-white dark:bg-darkbg-lighter rounded-xl shadow-soft dark:shadow-dark overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-100 dark:divide-darkbg">
               <thead>
                 <tr className="bg-gray-50/50 dark:bg-darkbg/50">
+                  <th className="px-4 py-4 text-center w-12">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={toggleAll}
+                      className="w-4 h-4 rounded border-gray-300 dark:border-darkbg text-primary dark:text-secondary focus:ring-primary/20 dark:focus:ring-secondary/20 cursor-pointer"
+                    />
+                  </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Nombre
                   </th>
@@ -183,34 +242,51 @@ export default function Students() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-darkbg">
-                {sortedAndFilteredStudents.map((user) => (
-                  <tr 
-                    key={user.id}
-                    className="hover:bg-gray-50/50 dark:hover:bg-darkbg/50 transition-colors"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      {`${user.first_name} ${user.last_name}`.trim() || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                      {user.email || '-'}
-                    </td>
-                    <td className="px-6 py-4 text-center whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                      {user.phone || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                      {/* MODIFICADO: Se aplica la función de color dinámicamente */}
-                      <span className={clsx(
-                        'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                        getFacultyColors(user.faculty || 'Sin escuela')
-                      )}>
-                        {user.faculty || 'Sin escuela'} 
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300 text-center">
-                      {format(new Date(user.created_at), "d 'de' MMMM, yyyy", { locale: es })}
-                    </td>
-                  </tr>
-                ))}
+                {sortedAndFilteredStudents.map((user) => {
+                  const isSelected = selectedIds.has(user.id);
+                  return (
+                    <tr 
+                      key={user.id}
+                      onClick={() => toggleOne(user.id)}
+                      className={clsx(
+                        'transition-colors cursor-pointer',
+                        isSelected
+                          ? 'bg-primary/5 dark:bg-secondary/5'
+                          : 'hover:bg-gray-50/50 dark:hover:bg-darkbg/50'
+                      )}
+                    >
+                      <td className="px-4 py-4 text-center w-12">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleOne(user.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-4 h-4 rounded border-gray-300 dark:border-darkbg text-primary dark:text-secondary focus:ring-primary/20 dark:focus:ring-secondary/20 cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                        {`${user.first_name} ${user.last_name}`.trim() || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                        {user.email || '-'}
+                      </td>
+                      <td className="px-6 py-4 text-center whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                        {user.phone || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                        <span className={clsx(
+                          'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+                          getFacultyColors(user.faculty || 'Sin escuela')
+                        )}>
+                          {user.faculty || 'Sin escuela'} 
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300 text-center">
+                        {format(new Date(user.created_at), "d 'de' MMMM, yyyy", { locale: es })}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -223,7 +299,38 @@ export default function Students() {
         </div>
       )}
 
-      {isModalOpen && <GeneralNotificationModal onClose={() => setIsModalOpen(false)} />}
+      {/* Floating selection bar */}
+      {selectedCount > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-4 fade-in duration-200">
+          <div className="flex items-center gap-4 px-5 py-3 bg-white dark:bg-darkbg-lighter rounded-xl shadow-xl dark:shadow-dark border border-gray-200 dark:border-darkbg">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+              {selectedCount} alumno{selectedCount === 1 ? '' : 's'} seleccionado{selectedCount === 1 ? '' : 's'}
+            </span>
+            <button
+              onClick={handleNotifySelected}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary dark:bg-secondary rounded-lg hover:bg-primary-dark dark:hover:bg-secondary/90 transition-colors"
+            >
+              <Bell className="w-4 h-4" />
+              Notificar Seleccionados
+            </button>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="px-3 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+            >
+              Limpiar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isModalOpen && (
+        <StudentNotificationModal
+          onClose={handleModalClose}
+          allStudents={alumnos}
+          faculties={faculties}
+          preselectedStudents={preselected.length > 0 ? preselected : undefined}
+        />
+      )}
     </div>
   );
 }

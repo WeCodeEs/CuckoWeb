@@ -246,30 +246,34 @@ export default function StudentNotificationModal({
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Destinatarios
               </label>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <AudienceButton
                   active={audienceMode === 'all'}
                   onClick={() => setAudienceMode('all')}
                   icon={<Users className="w-4 h-4" />}
                   label="Todos"
+                  description={`${allStudents.length} alumnos`}
                 />
                 <AudienceButton
                   active={audienceMode === 'faculty'}
                   onClick={() => setAudienceMode('faculty')}
                   icon={<Building2 className="w-4 h-4" />}
                   label="Por Escuela"
+                  description="Filtrar por escuela"
                 />
                 <AudienceButton
                   active={audienceMode === 'manual'}
                   onClick={() => setAudienceMode('manual')}
                   icon={<UserCheck className="w-4 h-4" />}
                   label="Seleccionar"
+                  description="Elegir manualmente"
                 />
                 <AudienceButton
                   active={audienceMode === 'incomplete'}
                   onClick={() => setAudienceMode('incomplete')}
                   icon={<UserX className="w-4 h-4" />}
                   label="Pendientes"
+                  description="Registro incompleto"
                   badge={incompleteStudents.length > 0 ? incompleteStudents.length : undefined}
                 />
               </div>
@@ -467,12 +471,14 @@ function AudienceButton({
   onClick,
   icon,
   label,
+  description,
   badge,
 }: {
   active: boolean;
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
+  description?: string;
   badge?: number;
 }) {
   return (
@@ -480,20 +486,52 @@ function AudienceButton({
       type="button"
       onClick={onClick}
       className={clsx(
-        'relative flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-lg text-sm font-medium transition-all',
+        'relative flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all border',
         active
-          ? 'bg-primary dark:bg-secondary text-white shadow-sm'
-          : 'bg-gray-100 dark:bg-darkbg text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-darkbg/80'
+          ? 'bg-primary/5 dark:bg-secondary/10 border-primary dark:border-secondary ring-1 ring-primary/20 dark:ring-secondary/20'
+          : 'bg-white dark:bg-darkbg border-gray-200 dark:border-darkbg hover:border-gray-300 dark:hover:border-gray-600'
       )}
     >
-      {icon}
-      {label}
+      <div
+        className={clsx(
+          'flex items-center justify-center w-8 h-8 rounded-lg shrink-0',
+          active
+            ? 'bg-primary dark:bg-secondary text-white'
+            : 'bg-gray-100 dark:bg-darkbg-lighter text-gray-500 dark:text-gray-400'
+        )}
+      >
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p
+          className={clsx(
+            'text-sm font-semibold leading-tight',
+            active
+              ? 'text-primary-dark dark:text-white'
+              : 'text-gray-700 dark:text-gray-200'
+          )}
+        >
+          {label}
+        </p>
+        {description && (
+          <p
+            className={clsx(
+              'text-[11px] leading-tight mt-0.5',
+              active
+                ? 'text-primary/70 dark:text-secondary/70'
+                : 'text-gray-400 dark:text-gray-500'
+            )}
+          >
+            {description}
+          </p>
+        )}
+      </div>
       {badge !== undefined && (
         <span
           className={clsx(
-            'absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold leading-none px-1',
+            'absolute -top-1.5 -right-1.5 min-w-[20px] h-[20px] flex items-center justify-center rounded-full text-[10px] font-bold leading-none px-1 shadow-sm',
             active
-              ? 'bg-white text-primary dark:text-secondary'
+              ? 'bg-primary dark:bg-secondary text-white'
               : 'bg-amber-500 text-white'
           )}
         >

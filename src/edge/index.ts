@@ -102,6 +102,28 @@ async function sendExpoBatches(messages: ExpoMessage[]): Promise<{ results: unkn
   return { results: allResults, failedCount };
 }
 
+const IN_CHUNK_SIZE = 80;
+
+async function queryInChunks<T>(
+  sb: ReturnType<typeof createClient>,
+  table: string,
+  columns: string,
+  filterCol: string,
+  ids: string[],
+  extraFilters?: (q: any) => any,
+): Promise<{ data: T[]; error: any }> {
+  const allRows: T[] = [];
+  for (let i = 0; i < ids.length; i += IN_CHUNK_SIZE) {
+    const chunk = ids.slice(i, i + IN_CHUNK_SIZE);
+    let q = sb.from(table).select(columns).in(filterCol, chunk);
+    if (extraFilters) q = extraFilters(q);
+    const { data, error } = await q;
+    if (error) return { data: allRows, error };
+    if (data) allRows.push(...(data as T[]));
+  }
+  return { data: allRows, error: null };
+}
+
 function jsonResp(data: unknown, status: number, requestId?: string) {
   return new Response(
     JSON.stringify({ ...data as object, requestId }),
@@ -251,15 +273,14 @@ Deno.serve(async (req) => {
           return errResp("bad_request", "Se requiere al menos un user_uuid en filter.user_uuids", 400, requestId);
         }
         if (usesPersonalization) {
-          const { data, error: usersErr } = await supabase
-            .from("users")
-            .select("uuid, first_name, last_name")
-            .in("uuid", uuids);
+          const { data, error: usersErr } = await queryInChunks<UserRow>(
+            supabase, "users", "uuid, first_name, last_name", "uuid", uuids,
+          );
           if (usersErr) {
             console.error("Error al consultar users preseleccionados:", usersErr.message, { requestId });
             return errResp("db_read_failed", "Error al obtener usuarios", 500, requestId);
           }
-          userRows = data ?? [];
+          userRows = data;
         }
         targetUserIds = uuids;
 
@@ -302,11 +323,10 @@ Deno.serve(async (req) => {
           console.log("NotificacionGeneral filtrada: no hay usuarios que coincidan", { requestId });
           return jsonResp({ success: true, data: { sentTo: 0, failed: 0 } }, 200, requestId);
         }
-        const { data: tokenRows, error: tokensErr } = await supabase
-          .from("push_tokens")
-          .select("user_uuid, expo_push_token")
-          .in("user_uuid", targetUserIds)
-          .not("expo_push_token", "is", null);
+        const { data: tokenRows, error: tokensErr } = await queryInChunks<{ user_uuid: string; expo_push_token: string }>(
+          supabase, "push_tokens", "user_uuid, expo_push_token", "user_uuid", targetUserIds,
+          (q: any) => q.not("expo_push_token", "is", null),
+        );
         if (tokensErr) {
           console.error("Error al obtener tokens filtrados:", tokensErr.message, { requestId });
           return errResp("db_read_failed", "Error al obtener tokens", 500, requestId);

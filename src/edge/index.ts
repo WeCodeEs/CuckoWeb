@@ -1,39 +1,11 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-/**
- * @file Envía una notificación push mediante Expo a un usuario y registra el evento en `notifications`.
- * @returns {Response} JSON `{ success: boolean, 
- *                             data?: { sentTo: number, expoResults: unknown[] }, 
- *                             error?: { code: string, message: string }, 
- *                             requestId?: string }`
- */
-
-// CORS
-// NOTA: El siguiente CORS permite peticiones desde cualquier dominio.
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "OPTIONS, POST",
 };
-
-// NOTA: Descomentar el CORS endurecido cuandos se cuente con un dominio fijo
-// function getAllowedOrigin(req: Request): string | null {
-//   const origin = req.headers.get("Origin");
-//   const allowList = (Deno.env.get("ALLOWED_ORIGINS") ?? "").split(",").map(s => s.trim()).filter(Boolean);
-//   if (!origin) return null;
-//   if (allowList.includes("*")) return origin;
-//   return allowList.includes(origin) ? origin : null;
-// }
-// function buildCorsHeaders(origin: string | null, methods: string[]) {
-//   const base: Record<string, string> = {
-//     "Vary": "Origin",
-//     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-//     "Access-Control-Allow-Methods": methods.join(", "),
-//   };
-//   if (origin) base["Access-Control-Allow-Origin"] = origin;
-//   return base;
-// }
 
 const notificationOptions = [
   { type: "PedidoRecibido",      title: "¡Pedido creado!",        body: "Hemos recibido tu pedido. ¡Pronto lo podrás disfrutar!" },
@@ -43,25 +15,77 @@ const notificationOptions = [
 ] as const;
 
 type StatusType = typeof notificationOptions[number]["type"];
-type SpecialType = "NotificacionGeneral" | "NotificacionPersonal";
+type SpecialType = "NotificacionGeneral" | "NotificacionPersonal" | "NotificacionMasiva";
 type KnownType = StatusType | SpecialType;
 
-// Helpers
 function sanitizeStr(s?: unknown): string | undefined {
   if (typeof s !== "string") return undefined;
   const v = s.trim();
   return v.length ? v : undefined;
 }
+
 function isKnownType(t?: string): t is KnownType {
   return !!t && (
     t === "NotificacionGeneral" ||
     t === "NotificacionPersonal" ||
+    t === "NotificacionMasiva" ||
     notificationOptions.some(o => o.type === t)
   );
 }
 
 function uniq<T>(arr: T[]): T[] {
   return Array.from(new Set(arr));
+}
+
+interface ExpoMessage {
+  to: string;
+  sound: string;
+  title: string;
+  body: string;
+  data: { screen: string };
+}
+
+async function sendExpoBatches(messages: ExpoMessage[]): Promise<{ results: unknown[]; failedCount: number }> {
+  const chunkSize = 100;
+  const allResults: unknown[] = [];
+  let failedCount = 0;
+
+  for (let i = 0; i < messages.length; i += chunkSize) {
+    const chunk = messages.slice(i, i + chunkSize);
+
+    const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify(chunk),
+    });
+
+    if (!expoResponse.ok) {
+      const text = await expoResponse.text().catch(() => "");
+      throw new Error(`Expo HTTP ${expoResponse.status} ${expoResponse.statusText} ${text}`);
+    }
+
+    const chunkResult = await expoResponse.json().catch(() => ({} as any));
+
+    if (Array.isArray(chunkResult?.errors) && chunkResult.errors.length > 0) {
+      const msg = chunkResult.errors[0]?.message || "Expo returned errors";
+      throw new Error(msg);
+    }
+
+    const results = Array.isArray(chunkResult)
+      ? chunkResult
+      : (Array.isArray(chunkResult?.data) ? chunkResult.data : null);
+
+    if (!Array.isArray(results)) {
+      throw new Error("Formato de respuesta de Expo no reconocido (sin tickets)");
+    }
+
+    for (const r of results) {
+      allResults.push(r);
+      if ((r as any)?.status !== "ok") failedCount++;
+    }
+  }
+
+  return { results: allResults, failedCount };
 }
 
 Deno.serve(async (req) => {
@@ -75,14 +99,10 @@ Deno.serve(async (req) => {
     req.headers.get("x-amzn-trace-id") ||
     undefined;
 
-  // Preflight CORS
   if (req.method === "OPTIONS") {
-    console.log("Preflight CORS recibido", { requestId });
     return new Response("ok", { headers: corsHeaders });
   }
-  // Validación de método
   if (req.method !== "POST") {
-    console.warn(`Método no permitido [${req.method}]`, { requestId });
     return new Response(
       JSON.stringify({ success: false, error: { code: "method_not_allowed", message: "No fue posible procesar la solicitud" }, requestId }),
       { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json", "Allow": "OPTIONS, POST" } }
@@ -96,10 +116,9 @@ Deno.serve(async (req) => {
   );
 
   try {
-    // Autenticación
+    // Auth
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      console.log("Autenticación fallida: falta cabecera de autorización", { requestId });
       return new Response(
         JSON.stringify({ success: false, error: { code: "unauthorized", message: "No fue posible procesar la solicitud" }, requestId }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -109,14 +128,9 @@ Deno.serve(async (req) => {
     const tokenAuth = authHeader.replace("Bearer ", "").trim();
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-    // Llamada interna desde Postgres/pg_net usando Service Role
-    let isInternal = false;
-    if (tokenAuth === SERVICE_ROLE) {
-      isInternal = true;
-    } else {
+    if (tokenAuth !== SERVICE_ROLE) {
       const { data: { user }, error: verifyError } = await supabase.auth.getUser(tokenAuth);
       if (verifyError || !user) {
-        console.log("Autenticación fallida: token inválido", { requestId });
         return new Response(
           JSON.stringify({ success: false, error: { code: "unauthorized", message: "No fue posible procesar la solicitud" }, requestId }),
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -124,49 +138,257 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Parseo y validación de input
+    // Parse body
     type Body = {
-      user_uuid?: string; // requerido para NotificacionPersonal y Notificacion de pedido
-      type?: string;      // requerido siempre
-      title?: string;     // requerido: NotificacionGeneral, NotificacionPersonal
-      body?: string;      // requerido: NotificacionGeneral, NotificacionPersonal
-      order_id?: number | null; // opcional (para registrar contexto)
+      user_uuid?: string;
+      user_uuids?: string[];
+      type?: string;
+      title?: string;
+      body?: string;
+      order_id?: number | null;
+      messages?: { user_uuid: string; title: string; body: string }[];
     };
     let body: Body;
     try {
       body = await req.json();
     } catch {
-      console.log("JSON inválido en solicitud", { requestId });
       return new Response(
         JSON.stringify({ success: false, error: { code: "bad_request", message: "No fue posible procesar la solicitud" }, requestId }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const incomingUserUuid = sanitizeStr(body.user_uuid);
-    console.log("Usuario recibido: ", incomingUserUuid);
     const ntype = sanitizeStr(body.type);
-    const orderId = typeof body.order_id === "number" && Number.isFinite(body.order_id) ? body.order_id : null;
-
     if (!isKnownType(ntype)) {
-      console.log("Validación fallida: tipo de notificación inválido", { requestId, ntype });
       return new Response(
-        JSON.stringify({ success: false, error: { code: "bad_request", message: "Se presentaron problemas enviando la notificación. Tipo de notificación inválido" }, requestId }),
+        JSON.stringify({ success: false, error: { code: "bad_request", message: "Tipo de notificación inválido" }, requestId }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Resolver título y cuerpo
-    let titleToSend: string;
-    let bodyToSend: string;
+    // ── NotificacionMasiva ──
+    // Receives an array of { user_uuid, title, body } and sends each user
+    // their own personalized message in a single server round-trip.
+    if (ntype === "NotificacionMasiva") {
+      const msgs = body.messages;
+      if (!Array.isArray(msgs) || msgs.length === 0) {
+        return new Response(
+          JSON.stringify({ success: false, error: { code: "bad_request", message: "Se requiere un arreglo 'messages' con al menos un elemento" }, requestId }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
-    if (ntype === "NotificacionGeneral" || ntype === "NotificacionPersonal") {
+      for (const m of msgs) {
+        if (!sanitizeStr(m.user_uuid) || !sanitizeStr(m.title) || !sanitizeStr(m.body)) {
+          return new Response(
+            JSON.stringify({ success: false, error: { code: "bad_request", message: "Cada mensaje requiere user_uuid, title y body" }, requestId }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
+      const allUserIds = uniq(msgs.map(m => m.user_uuid));
+
+      const { data: tokenRows, error: tokensErr } = await supabase
+        .from("push_tokens")
+        .select("user_uuid, expo_push_token")
+        .in("user_uuid", allUserIds)
+        .not("expo_push_token", "is", null);
+
+      if (tokensErr) {
+        console.error("Error al obtener tokens para masiva:", tokensErr.message, { requestId });
+        return new Response(
+          JSON.stringify({ success: false, error: { code: "db_read_failed", message: "Error al obtener tokens" }, requestId }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const tokenMap = new Map<string, string[]>();
+      for (const row of tokenRows ?? []) {
+        if (!row.expo_push_token) continue;
+        const arr = tokenMap.get(row.user_uuid) ?? [];
+        arr.push(row.expo_push_token);
+        tokenMap.set(row.user_uuid, arr);
+      }
+
+      const expoMessages: ExpoMessage[] = [];
+      for (const m of msgs) {
+        const tokens = tokenMap.get(m.user_uuid);
+        if (!tokens) continue;
+        for (const t of tokens) {
+          expoMessages.push({
+            to: t,
+            sound: "default",
+            title: m.title.trim(),
+            body: m.body.trim(),
+            data: { screen: "notifications" },
+          });
+        }
+      }
+
+      if (expoMessages.length === 0) {
+        console.log("NotificacionMasiva: no hay tokens registrados para los usuarios indicados", { requestId });
+        return new Response(
+          JSON.stringify({ success: true, data: { sentTo: 0, failed: 0, expoResults: [] }, requestId }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      }
+
+      let expoResults: unknown[];
+      let failedCount: number;
+      try {
+        ({ results: expoResults, failedCount } = await sendExpoBatches(expoMessages));
+      } catch (error: any) {
+        console.error("Error enviando masiva a Expo:", error?.message, { requestId });
+        return new Response(
+          JSON.stringify({ success: false, error: { code: "push_send_failed", message: "No se pudieron enviar las notificaciones push." }, requestId }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const notifRows = msgs.map(m => ({
+        user_uuid: m.user_uuid,
+        order_id: null,
+        title: m.title.trim(),
+        message: m.body.trim(),
+        type: "NotificacionPersonal" as const,
+      }));
+
+      const { error: insertErr } = await supabase.from("notifications").insert(notifRows);
+      if (insertErr) {
+        console.error("DB insert falló en NotificacionMasiva:", insertErr.message, { requestId });
+      }
+
+      const sentOk = expoMessages.length - failedCount;
+      console.log(`OUT::NotificacionMasiva - ${sentOk} enviados, ${failedCount} fallidos`, { requestId });
+
+      return new Response(
+        JSON.stringify({ success: true, data: { sentTo: sentOk, failed: failedCount, expoResults }, requestId }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+
+    // ── NotificacionGeneral (with optional user_uuids filter) ──
+    if (ntype === "NotificacionGeneral") {
       const customTitle = sanitizeStr(body.title);
       const customBody = sanitizeStr(body.body);
       if (!customTitle || !customBody) {
-        console.log("Validación fallida: falta title o body para notificación personalizada.", { requestId, ntype });
         return new Response(
-          JSON.stringify({ success: false, error: { code: "bad_request", message: "Se presentaron problemas enviando la notificación. Falta title o body." }, requestId }),
+          JSON.stringify({ success: false, error: { code: "bad_request", message: "Falta title o body." }, requestId }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const filterUuids = Array.isArray(body.user_uuids) && body.user_uuids.length > 0
+        ? body.user_uuids.filter((id: unknown) => typeof id === "string" && id.trim().length > 0)
+        : null;
+
+      let tokensToSend: string[];
+
+      if (filterUuids && filterUuids.length > 0) {
+        const { data: rows, error: tokensErr } = await supabase
+          .from("push_tokens")
+          .select("expo_push_token")
+          .in("user_uuid", filterUuids)
+          .not("expo_push_token", "is", null);
+        if (tokensErr) {
+          console.error("Error al obtener tokens filtrados:", tokensErr.message, { requestId });
+          return new Response(
+            JSON.stringify({ success: false, error: { code: "db_read_failed", message: "Error al obtener tokens" }, requestId }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        tokensToSend = uniq((rows ?? []).map(r => r.expo_push_token).filter(Boolean));
+      } else {
+        const { data: allTokens, error: tokensErr } = await supabase
+          .from("push_tokens")
+          .select("expo_push_token")
+          .not("expo_push_token", "is", null);
+        if (tokensErr) {
+          console.error("Error al obtener tokens para broadcast:", tokensErr.message, { requestId });
+          return new Response(
+            JSON.stringify({ success: false, error: { code: "db_read_failed", message: "Error al obtener tokens" }, requestId }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        tokensToSend = uniq((allTokens ?? []).map(r => r.expo_push_token).filter(Boolean));
+      }
+
+      if (tokensToSend.length === 0) {
+        console.log("NotificacionGeneral: no hay tokens", { requestId });
+        return new Response(
+          JSON.stringify({ success: true, data: { sentTo: 0, failed: 0, expoResults: [] }, requestId }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      }
+
+      const messages: ExpoMessage[] = tokensToSend.map(t => ({
+        to: t,
+        sound: "default",
+        title: customTitle,
+        body: customBody,
+        data: { screen: "notifications" },
+      }));
+
+      let expoResults: unknown[];
+      let failedCount: number;
+      try {
+        ({ results: expoResults, failedCount } = await sendExpoBatches(messages));
+      } catch (error: any) {
+        console.error("Error enviando general a Expo:", error?.message, { requestId });
+        return new Response(
+          JSON.stringify({ success: false, error: { code: "push_send_failed", message: "No se pudieron enviar las notificaciones push." }, requestId }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (filterUuids && filterUuids.length > 0) {
+        const notifRows = filterUuids.map((uuid: string) => ({
+          user_uuid: uuid,
+          order_id: null,
+          title: customTitle,
+          message: customBody,
+          type: "NotificacionGeneral" as const,
+        }));
+        const { error: insertErr } = await supabase.from("notifications").insert(notifRows);
+        if (insertErr) {
+          console.error("DB insert falló (general filtrada):", insertErr.message, { requestId });
+        }
+      } else {
+        const { error: insertErr } = await supabase.from("notifications").insert({
+          user_uuid: null,
+          order_id: null,
+          title: customTitle,
+          message: customBody,
+          type: "NotificacionGeneral",
+        });
+        if (insertErr) {
+          console.error("DB insert falló (general broadcast):", insertErr.message, { requestId });
+        }
+      }
+
+      const sentOk = tokensToSend.length - failedCount;
+      console.log(`OUT::NotificacionGeneral - ${sentOk} enviados, ${failedCount} fallidos`, { requestId });
+
+      return new Response(
+        JSON.stringify({ success: true, data: { sentTo: sentOk, failed: failedCount, expoResults }, requestId }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+
+    // ── NotificacionPersonal & Order types ──
+    const incomingUserUuid = sanitizeStr(body.user_uuid);
+    const orderId = typeof body.order_id === "number" && Number.isFinite(body.order_id) ? body.order_id : null;
+
+    let titleToSend: string;
+    let bodyToSend: string;
+
+    if (ntype === "NotificacionPersonal") {
+      const customTitle = sanitizeStr(body.title);
+      const customBody = sanitizeStr(body.body);
+      if (!customTitle || !customBody) {
+        return new Response(
+          JSON.stringify({ success: false, error: { code: "bad_request", message: "Falta title o body." }, requestId }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -178,91 +400,38 @@ Deno.serve(async (req) => {
       bodyToSend = option.body;
     }
 
-    // Determinar destinatarios (tokens) y user (si aplica)
-    let tokensToSend: string[] = [];
-    let targetUserId: string | null = null;
-
-    if (ntype === "NotificacionGeneral") {
-      // Broadcast: a todos los tokens registrados
-      const { data: allTokens, error: tokensErr } = await supabase
-        .from("push_tokens")
-        .select("expo_push_token")
-        .not("expo_push_token", "is", null);
-
-      if (tokensErr) {
-        console.error("Error al obtener tokens para broadcast: ", tokensErr.message, { requestId });
-        return new Response(
-          JSON.stringify({ success: false, error: { code: "db_read_failed", message: "Error al obtener tokens" }, requestId }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      tokensToSend = uniq((allTokens ?? []).map(r => r.expo_push_token).filter(Boolean));
-      if (tokensToSend.length === 0) {
-        console.log("Broadcast: no hay tokens registrados", { requestId });
-        return new Response(
-          JSON.stringify({ success: true, data: { sentTo: 0, expoResults: [] }, requestId }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-        );
-      }
-      // targetUserId permanece null (no registramos por-usuario en broadcast)
-    } else if (ntype === "NotificacionPersonal" || notificationOptions.some(o => o.type === ntype)) {
-      if (!incomingUserUuid) {
-        console.error("Validación fallida: No se proporcionó un user_uuid para Notificación Personal o Notificación de pedido", { requestId, ntype });
-        return new Response(
-          JSON.stringify({ success: false, error: { code: "bad_request", message: "La notificación no tiene destinatario" }, requestId }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      targetUserId = incomingUserUuid;
-      const { data: rows, error: fetchErr } = await supabase
-        .from("push_tokens")
-        .select("expo_push_token")
-        .eq("user_uuid", targetUserId)
-        .not("expo_push_token", "is", null);
-      if (fetchErr) {
-        console.error("Error al obtener tokens del usuario: ", fetchErr.message, { requestId });
-        return new Response(
-          JSON.stringify({ success: false, error: { code: "db_read_failed", message: "Error al procesar la solicitud" }, requestId }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      tokensToSend = uniq((rows ?? []).map(r => r.expo_push_token).filter(Boolean));
+    if (!incomingUserUuid) {
+      return new Response(
+        JSON.stringify({ success: false, error: { code: "bad_request", message: "La notificación no tiene destinatario" }, requestId }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    if (targetUserId) {
-      const { data: rows, error: fetchErr } = await supabase
-        .from("push_tokens")
-        .select("expo_push_token")
-        .eq("user_uuid", targetUserId);
+    const { data: rows, error: fetchErr } = await supabase
+      .from("push_tokens")
+      .select("expo_push_token")
+      .eq("user_uuid", incomingUserUuid)
+      .not("expo_push_token", "is", null);
 
-      if (fetchErr) {
-        console.error("Error al obtener tokens del usuario: ", fetchErr.message, { requestId });
-        return new Response(
-          JSON.stringify({ success: false, error: { code: "db_read_failed", message: "Error al procesar la solicitud" }, requestId }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      tokensToSend = uniq((rows ?? []).map(r => r.expo_push_token));
+    if (fetchErr) {
+      console.error("Error al obtener tokens del usuario:", fetchErr.message, { requestId });
+      return new Response(
+        JSON.stringify({ success: false, error: { code: "db_read_failed", message: "Error al procesar la solicitud" }, requestId }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // tokensToSend -  Gral - todos los tokens
-    // personal - todos los del userId obtenido
-    // pedido - todos los del userID ibtenido
-    console.warn("tokensToSend: ", tokensToSend);
+    const tokensToSend = uniq((rows ?? []).map(r => r.expo_push_token).filter(Boolean));
 
     if (tokensToSend.length === 0) {
-      console.log("No hay tokens a los cuales enviar", { requestId, ntype });
+      console.log("No hay tokens para el usuario", { requestId, ntype });
       return new Response(
         JSON.stringify({ success: true, data: { sentTo: 0, expoResults: [] }, requestId }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
 
-    console.log("Validaciones completadas. Iniciando envío de notificaciones", { requestId });
-
-    // Construcción de mensajes
-    const messages = tokensToSend.map(t => ({
+    const messages: ExpoMessage[] = tokensToSend.map(t => ({
       to: t,
       sound: "default",
       title: titleToSend,
@@ -270,110 +439,35 @@ Deno.serve(async (req) => {
       data: { screen: "notifications" },
     }));
 
-    // Envío a Expo por lotes
-    const chunkSize = 100;
-    const expoResults: unknown[] = [];
+    let expoResults: unknown[];
     try {
-      for (let i = 0; i < messages.length; i += chunkSize) {
-        const chunk = messages.slice(i, i + chunkSize);
-
-        const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Accept": "application/json" },
-          body: JSON.stringify(chunk),
-        });
-
-        if (!expoResponse.ok) {
-          const text = await expoResponse.text().catch(() => "");
-          throw new Error(`Expo HTTP ${expoResponse.status} ${expoResponse.statusText} ${text}`);
-        }
-
-        const chunkResult = await expoResponse.json().catch(() => ({} as any));
-
-        // Si Expo incluye un arreglo de errores a nivel respuesta
-        if (Array.isArray(chunkResult?.errors) && chunkResult.errors.length > 0) {
-          const msg = chunkResult.errors[0]?.message || "Expo returned errors";
-          throw new Error(msg);
-        }
-
-        const results = Array.isArray(chunkResult)
-          ? chunkResult
-          : (Array.isArray(chunkResult?.data) ? chunkResult.data : null);
-
-        if (!Array.isArray(results)) {
-          throw new Error("Formato de respuesta de Expo no reconocido (sin tickets)");
-        }
-
-        expoResults.push(...results);
-
-        // Si cualquier ticket no es "ok" → falla toda la función
-        const failed = results.find((r: any) => r?.status !== "ok");
-        if (failed) {
-          throw new Error(
-            failed?.message ||
-            failed?.details?.error ||
-            failed?.details?.code ||
-            "Expo ticket error"
-          );
-        }
-      }
+      ({ results: expoResults } = await sendExpoBatches(messages));
     } catch (error: any) {
-      console.error("Error enviando notificaciones a Expo:", error?.message, { requestId });
+      console.error("Error enviando a Expo:", error?.message, { requestId });
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: { code: "push_send_failed", message: "No se pudieron enviar las notificaciones push." },
-          requestId
-        }),
+        JSON.stringify({ success: false, error: { code: "push_send_failed", message: "No se pudieron enviar las notificaciones push." }, requestId }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Registrar notificación (solo cuando conocemos el usuario destino)
-    // - NotificacionGeneral: broadcast → no registramos por usuario (podrías crear un log global si lo necesitas)
-    // - NotificacionPersonal: registramos si resolvimos user_uuid
-    // - Tipos de pedido: registramos si resolvimos user_uuid
-    if (ntype === "NotificacionGeneral") {
-      const { error: insertBroadcastErr } = await supabase.from("notifications").insert({
-        user_uuid: null,
-        order_id: null,
-        title: titleToSend,
-        message: bodyToSend,
-        type: ntype,
-      });
-      if (insertBroadcastErr) {
-        console.error("DB insert falló en tabla notifications: ", insertBroadcastErr.message, { requestId });
-        return new Response(
-          JSON.stringify({ success: false, error: { code: "db_insert_failed", message: "Error al registrar notificación. Intenta nuevamente." }, requestId }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    } else if (targetUserId) {
-      const { error: insertError } = await supabase.from("notifications").insert({
-        user_uuid: targetUserId,
-        order_id: orderId,
-        title: titleToSend,
-        message: bodyToSend,
-        type: ntype,
-      });
-      if (insertError) {
-        console.error("DB insert falló en tabla notifications: ", insertError.message, { requestId });
-        return new Response(
-          JSON.stringify({ success: false, error: { code: "db_insert_failed", message: "Error al registrar notificación. Intenta nuevamente." }, requestId }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );        // manejar error como ya lo haces
-      }
-    } else {
-      console.warn("No se resolvió targetUserId; se omite registro en notifications.", { requestId });
+    const { error: insertError } = await supabase.from("notifications").insert({
+      user_uuid: incomingUserUuid,
+      order_id: orderId,
+      title: titleToSend,
+      message: bodyToSend,
+      type: ntype,
+    });
+    if (insertError) {
+      console.error("DB insert falló:", insertError.message, { requestId });
     }
 
-    console.log("OUT::send-notification() - Envío de notifacion push realizado exitoasamente.", { requestId });
+    console.log("OUT::send-notification() OK", { requestId });
     return new Response(
       JSON.stringify({ success: true, data: { sentTo: tokensToSend.length, expoResults }, requestId }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error: any) {
-    console.error("Error inesperado: ", error?.message, { requestId });
+    console.error("Error inesperado:", error?.message, { requestId });
     return new Response(
       JSON.stringify({ success: false, error: { code: "internal_error", message: "Error interno" }, requestId }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }

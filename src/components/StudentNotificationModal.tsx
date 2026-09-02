@@ -42,11 +42,24 @@ async function getAccessToken(): Promise<string> {
   return session.access_token;
 }
 
-async function sendToAll(token: string, title: string, body: string) {
+async function sendGeneralNotification(
+  token: string,
+  title: string,
+  body: string,
+  userUuids?: string[],
+): Promise<{ sentTo: number; failed: number }> {
+  const payload: Record<string, unknown> = {
+    type: 'NotificacionGeneral',
+    title,
+    body,
+  };
+  if (userUuids && userUuids.length > 0) {
+    payload.user_uuids = userUuids;
+  }
   const { data: response, error: invokeError } = await supabase.functions.invoke('send-notification', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
-    body: { type: 'NotificacionGeneral', title, body },
+    body: payload,
   });
   if (invokeError) {
     const msg = await parseEdgeError(invokeError);
@@ -55,20 +68,32 @@ async function sendToAll(token: string, title: string, body: string) {
   if (!response?.success) {
     throw new Error(response?.error?.message || 'No fue posible enviar el anuncio');
   }
-  return response.data?.sentTo ?? 0;
+  return {
+    sentTo: response.data?.sentTo ?? 0,
+    failed: response.data?.failed ?? 0,
+  };
 }
 
-async function sendToUser(token: string, userUuid: string, title: string, body: string) {
+async function sendBulkPersonalized(
+  token: string,
+  messages: { user_uuid: string; title: string; body: string }[],
+): Promise<{ sentTo: number; failed: number }> {
   const { data: response, error: invokeError } = await supabase.functions.invoke('send-notification', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
-    body: { type: 'NotificacionPersonal', user_uuid: userUuid, title, body },
+    body: { type: 'NotificacionMasiva', messages },
   });
   if (invokeError) {
     const msg = await parseEdgeError(invokeError);
     throw new Error(msg || 'Error al invocar la función');
   }
-  return response?.success === true;
+  if (!response?.success) {
+    throw new Error(response?.error?.message || 'No fue posible enviar las notificaciones');
+  }
+  return {
+    sentTo: response.data?.sentTo ?? 0,
+    failed: response.data?.failed ?? 0,
+  };
 }
 
 export default function StudentNotificationModal({
@@ -87,7 +112,6 @@ export default function StudentNotificationModal({
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [progress, setProgress] = useState<{ sent: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -170,67 +194,56 @@ export default function StudentNotificationModal({
       setError(null);
       if (!canSubmit) return;
       setSubmitting(true);
-      setProgress(null);
 
       try {
         const token = await getAccessToken();
-
         const trimmedTitle = title.trim();
         const trimmedBody = body.trim();
         const usesPersonalization = hasVariables(trimmedTitle) || hasVariables(trimmedBody);
 
-        if (audienceMode === 'all' && !usesPersonalization) {
-          const sentTo = await sendToAll(token, trimmedTitle, trimmedBody);
-          let description: string;
-          if (sentTo === 0) {
-            description = 'El anuncio se procesó, pero no había dispositivos registrados para recibirlo.';
-          } else {
-            description = `El anuncio fue enviado a ${sentTo} dispositivo${sentTo === 1 ? '' : 's'}.`;
-          }
+        const targets = audienceMode === 'all'
+          ? allStudents
+          : audienceMode === 'faculty'
+            ? studentsForFaculty
+            : audienceMode === 'incomplete'
+              ? incompleteStudents
+              : selectedStudents;
+
+        let sentTo = 0;
+        let failed = 0;
+
+        if (usesPersonalization) {
+          const messages = targets.map((student) => ({
+            user_uuid: student.id,
+            title: personalize(trimmedTitle, student),
+            body: personalize(trimmedBody, student),
+          }));
+          ({ sentTo, failed } = await sendBulkPersonalized(token, messages));
+        } else if (audienceMode === 'all') {
+          ({ sentTo, failed } = await sendGeneralNotification(token, trimmedTitle, trimmedBody));
+        } else {
+          const userUuids = targets.map((s) => s.id);
+          ({ sentTo, failed } = await sendGeneralNotification(token, trimmedTitle, trimmedBody, userUuids));
+        }
+
+        if (sentTo === 0 && failed === 0) {
+          toast({
+            title: 'Anuncio procesado',
+            description: 'El anuncio se procesó, pero no había dispositivos registrados para recibirlo.',
+            className: 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20',
+          });
+        } else if (failed === 0) {
           toast({
             title: 'Anuncio enviado',
-            description,
+            description: `Enviado exitosamente a ${sentTo} dispositivo${sentTo === 1 ? '' : 's'}.`,
             className: 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20',
           });
         } else {
-          const targets = audienceMode === 'all'
-            ? allStudents
-            : audienceMode === 'faculty'
-              ? studentsForFaculty
-              : audienceMode === 'incomplete'
-                ? incompleteStudents
-                : selectedStudents;
-          let succeeded = 0;
-          let failed = 0;
-          setProgress({ sent: 0, total: targets.length });
-
-          for (let i = 0; i < targets.length; i++) {
-            const student = targets[i];
-            const personalizedTitle = usesPersonalization ? personalize(trimmedTitle, student) : trimmedTitle;
-            const personalizedBody = usesPersonalization ? personalize(trimmedBody, student) : trimmedBody;
-            try {
-              const ok = await sendToUser(token, student.id, personalizedTitle, personalizedBody);
-              if (ok) succeeded++;
-              else failed++;
-            } catch {
-              failed++;
-            }
-            setProgress({ sent: i + 1, total: targets.length });
-          }
-
-          if (failed === 0) {
-            toast({
-              title: 'Notificación enviada',
-              description: `Enviada exitosamente a ${succeeded} alumno${succeeded === 1 ? '' : 's'}.`,
-              className: 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20',
-            });
-          } else {
-            toast({
-              variant: 'destructive',
-              title: 'Envío parcial',
-              description: `Enviada a ${succeeded} de ${targets.length} alumnos. ${failed} no pudieron ser notificados.`,
-            });
-          }
+          toast({
+            variant: 'destructive',
+            title: 'Envío parcial',
+            description: `Se enviaron ${sentTo} de ${sentTo + failed} notificaciones. ${failed} no pudieron ser entregadas.`,
+          });
         }
 
         onClose();
@@ -244,7 +257,6 @@ export default function StudentNotificationModal({
         });
       } finally {
         setSubmitting(false);
-        setProgress(null);
       }
     },
     [canSubmit, audienceMode, title, body, allStudents, studentsForFaculty, selectedStudents, incompleteStudents, toast, onClose]
@@ -504,22 +516,6 @@ export default function StudentNotificationModal({
               )}
             </div>
 
-            {/* Progress bar */}
-            {progress && (
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-                  <span>Enviando...</span>
-                  <span>{progress.sent} / {progress.total}</span>
-                </div>
-                <div className="h-1.5 bg-gray-200 dark:bg-darkbg rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary dark:bg-secondary rounded-full transition-all duration-300"
-                    style={{ width: `${(progress.sent / progress.total) * 100}%` }}
-                  />
-                </div>
-              </div>
-            )}
-
             {error && (
               <div className="text-sm text-red-600 dark:text-red-400">{error}</div>
             )}
@@ -540,11 +536,7 @@ export default function StudentNotificationModal({
               className="px-4 py-2 text-sm font-medium text-white bg-primary dark:bg-secondary rounded-lg hover:bg-primary-dark dark:hover:bg-secondary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               disabled={submitting || !canSubmit}
             >
-              {submitting
-                ? progress
-                  ? `Enviando ${progress.sent}/${progress.total}...`
-                  : 'Enviando...'
-                : 'Enviar Anuncio'}
+              {submitting ? 'Enviando...' : 'Enviar Anuncio'}
             </button>
           </div>
         </form>

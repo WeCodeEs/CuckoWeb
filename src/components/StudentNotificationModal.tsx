@@ -42,19 +42,24 @@ async function getAccessToken(): Promise<string> {
   return session.access_token;
 }
 
+type FilterPayload =
+  | { type: 'escuela'; value: string }
+  | { type: 'preseleccionado'; user_uuids: string[] }
+  | { type: 'pendientes' };
+
 async function sendGeneralNotification(
   token: string,
   title: string,
   body: string,
-  userUuids?: string[],
+  filter?: FilterPayload,
 ): Promise<{ sentTo: number; failed: number }> {
   const payload: Record<string, unknown> = {
     type: 'NotificacionGeneral',
     title,
     body,
   };
-  if (userUuids && userUuids.length > 0) {
-    payload.user_uuids = userUuids;
+  if (filter) {
+    payload.filter = filter;
   }
   const { data: response, error: invokeError } = await supabase.functions.invoke('send-notification', {
     method: 'POST',
@@ -67,28 +72,6 @@ async function sendGeneralNotification(
   }
   if (!response?.success) {
     throw new Error(response?.error?.message || 'No fue posible enviar el anuncio');
-  }
-  return {
-    sentTo: response.data?.sentTo ?? 0,
-    failed: response.data?.failed ?? 0,
-  };
-}
-
-async function sendBulkPersonalized(
-  token: string,
-  messages: { user_uuid: string; title: string; body: string }[],
-): Promise<{ sentTo: number; failed: number }> {
-  const { data: response, error: invokeError } = await supabase.functions.invoke('send-notification', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: { type: 'NotificacionMasiva', messages },
-  });
-  if (invokeError) {
-    const msg = await parseEdgeError(invokeError);
-    throw new Error(msg || 'Error al invocar la función');
-  }
-  if (!response?.success) {
-    throw new Error(response?.error?.message || 'No fue posible enviar las notificaciones');
   }
   return {
     sentTo: response.data?.sentTo ?? 0,
@@ -199,32 +182,23 @@ export default function StudentNotificationModal({
         const token = await getAccessToken();
         const trimmedTitle = title.trim();
         const trimmedBody = body.trim();
-        const usesPersonalization = hasVariables(trimmedTitle) || hasVariables(trimmedBody);
 
-        const targets = audienceMode === 'all'
-          ? allStudents
-          : audienceMode === 'faculty'
-            ? studentsForFaculty
-            : audienceMode === 'incomplete'
-              ? incompleteStudents
-              : selectedStudents;
+        let filter: FilterPayload | undefined;
 
-        let sentTo = 0;
-        let failed = 0;
-
-        if (usesPersonalization) {
-          const messages = targets.map((student) => ({
-            user_uuid: student.id,
-            title: personalize(trimmedTitle, student),
-            body: personalize(trimmedBody, student),
-          }));
-          ({ sentTo, failed } = await sendBulkPersonalized(token, messages));
-        } else if (audienceMode === 'all') {
-          ({ sentTo, failed } = await sendGeneralNotification(token, trimmedTitle, trimmedBody));
-        } else {
-          const userUuids = targets.map((s) => s.id);
-          ({ sentTo, failed } = await sendGeneralNotification(token, trimmedTitle, trimmedBody, userUuids));
+        switch (audienceMode) {
+          case 'faculty':
+            filter = { type: 'escuela', value: selectedFaculty };
+            break;
+          case 'manual':
+            filter = { type: 'preseleccionado', user_uuids: selectedStudents.map(s => s.id) };
+            break;
+          case 'incomplete':
+            filter = { type: 'pendientes' };
+            break;
+          // 'all' → sin filtro
         }
+
+        const { sentTo, failed } = await sendGeneralNotification(token, trimmedTitle, trimmedBody, filter);
 
         if (sentTo === 0 && failed === 0) {
           toast({
@@ -259,7 +233,7 @@ export default function StudentNotificationModal({
         setSubmitting(false);
       }
     },
-    [canSubmit, audienceMode, title, body, allStudents, studentsForFaculty, selectedStudents, incompleteStudents, toast, onClose]
+    [canSubmit, audienceMode, title, body, selectedFaculty, selectedStudents, toast, onClose]
   );
 
   return (

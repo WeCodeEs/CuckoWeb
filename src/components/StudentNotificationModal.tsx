@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { X, Search, Users, Building2, UserCheck, UserX, ChevronDown } from 'lucide-react';
+import { X, Search, Users, Building2, UserCheck, UserX, ChevronDown, Sparkles } from 'lucide-react';
 import { useToast } from './ui/use-toast';
 import { supabase } from '../lib/supabase';
 import { parseEdgeError } from '../stores/usuariosStore';
@@ -10,8 +10,23 @@ type AudienceMode = 'all' | 'faculty' | 'manual' | 'incomplete';
 
 const INCOMPLETE_FACULTIES = new Set(['Default', 'Sin escuela', '']);
 
+function isDeletedAccount(s: Student): boolean {
+  return s.email.includes('@deleted.') || s.first_name === 'User Deleted';
+}
+
 function isIncomplete(s: Student): boolean {
+  if (isDeletedAccount(s)) return false;
   return !s.first_name.trim() || !s.last_name.trim() || !s.email.trim() || INCOMPLETE_FACULTIES.has(s.faculty);
+}
+
+const VARIABLE_TOKEN = '{{nombre}}';
+
+function personalize(template: string, student: Student): string {
+  return template.replaceAll(VARIABLE_TOKEN, student.first_name.trim() || student.last_name.trim() || 'Alumno');
+}
+
+function hasVariables(text: string): boolean {
+  return text.includes(VARIABLE_TOKEN);
 }
 
 interface Props {
@@ -77,6 +92,9 @@ export default function StudentNotificationModal({
   const { toast } = useToast();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const bodyTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const [lastFocusedField, setLastFocusedField] = useState<'title' | 'body'>('body');
 
   const selectedIds = useMemo(
     () => new Set(selectedStudents.map((s) => s.id)),
@@ -157,8 +175,12 @@ export default function StudentNotificationModal({
       try {
         const token = await getAccessToken();
 
-        if (audienceMode === 'all') {
-          const sentTo = await sendToAll(token, title.trim(), body.trim());
+        const trimmedTitle = title.trim();
+        const trimmedBody = body.trim();
+        const usesPersonalization = hasVariables(trimmedTitle) || hasVariables(trimmedBody);
+
+        if (audienceMode === 'all' && !usesPersonalization) {
+          const sentTo = await sendToAll(token, trimmedTitle, trimmedBody);
           let description: string;
           if (sentTo === 0) {
             description = 'El anuncio se procesó, pero no había dispositivos registrados para recibirlo.';
@@ -171,18 +193,23 @@ export default function StudentNotificationModal({
             className: 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20',
           });
         } else {
-          const targets = audienceMode === 'faculty'
-            ? studentsForFaculty
-            : audienceMode === 'incomplete'
-              ? incompleteStudents
-              : selectedStudents;
+          const targets = audienceMode === 'all'
+            ? allStudents
+            : audienceMode === 'faculty'
+              ? studentsForFaculty
+              : audienceMode === 'incomplete'
+                ? incompleteStudents
+                : selectedStudents;
           let succeeded = 0;
           let failed = 0;
           setProgress({ sent: 0, total: targets.length });
 
           for (let i = 0; i < targets.length; i++) {
+            const student = targets[i];
+            const personalizedTitle = usesPersonalization ? personalize(trimmedTitle, student) : trimmedTitle;
+            const personalizedBody = usesPersonalization ? personalize(trimmedBody, student) : trimmedBody;
             try {
-              const ok = await sendToUser(token, targets[i].id, title.trim(), body.trim());
+              const ok = await sendToUser(token, student.id, personalizedTitle, personalizedBody);
               if (ok) succeeded++;
               else failed++;
             } catch {
@@ -220,7 +247,7 @@ export default function StudentNotificationModal({
         setProgress(null);
       }
     },
-    [canSubmit, audienceMode, title, body, studentsForFaculty, selectedStudents, incompleteStudents, toast, onClose]
+    [canSubmit, audienceMode, title, body, allStudents, studentsForFaculty, selectedStudents, incompleteStudents, toast, onClose]
   );
 
   return (
@@ -393,9 +420,11 @@ export default function StudentNotificationModal({
                 Título
               </label>
               <input
+                ref={titleInputRef}
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                onFocus={() => setLastFocusedField('title')}
                 placeholder="Escribe el título del anuncio"
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary bg-white dark:bg-darkbg text-gray-900 dark:text-white"
                 required
@@ -408,13 +437,71 @@ export default function StudentNotificationModal({
                 Cuerpo del mensaje
               </label>
               <textarea
+                ref={bodyTextareaRef}
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
+                onFocus={() => setLastFocusedField('body')}
                 placeholder="Escribe el cuerpo del anuncio"
                 rows={3}
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary bg-white dark:bg-darkbg text-gray-900 dark:text-white resize-y"
                 required
               />
+            </div>
+
+            {/* Personalization chip */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500 dark:text-gray-400">Personalización:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (lastFocusedField === 'title') {
+                      const el = titleInputRef.current;
+                      if (el) {
+                        const start = el.selectionStart ?? title.length;
+                        const end = el.selectionEnd ?? title.length;
+                        setTitle(title.slice(0, start) + VARIABLE_TOKEN + title.slice(end));
+                        requestAnimationFrame(() => {
+                          const pos = start + VARIABLE_TOKEN.length;
+                          el.setSelectionRange(pos, pos);
+                          el.focus();
+                        });
+                      }
+                    } else {
+                      const el = bodyTextareaRef.current;
+                      if (el) {
+                        const start = el.selectionStart ?? body.length;
+                        const end = el.selectionEnd ?? body.length;
+                        setBody(body.slice(0, start) + VARIABLE_TOKEN + body.slice(end));
+                        requestAnimationFrame(() => {
+                          const pos = start + VARIABLE_TOKEN.length;
+                          el.setSelectionRange(pos, pos);
+                          el.focus();
+                        });
+                      }
+                    }
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  {'{'}{'{'} nombre {'}'}{'}'}
+                </button>
+              </div>
+              {(hasVariables(title) || hasVariables(body)) && allStudents.length > 0 && (
+                <div className="bg-gray-50 dark:bg-darkbg rounded-lg px-3 py-2 border border-dashed border-gray-200 dark:border-gray-700">
+                  <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 mb-0.5">Vista previa:</p>
+                  {hasVariables(title) && (
+                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">
+                      {personalize(title, allStudents[0])}
+                    </p>
+                  )}
+                  {hasVariables(body) && (
+                    <p className="text-xs text-gray-600 dark:text-gray-300">
+                      {personalize(body, allStudents[0])}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Progress bar */}

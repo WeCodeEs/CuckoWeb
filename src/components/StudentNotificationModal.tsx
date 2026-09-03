@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { X, Search, Users, Building2, UserCheck, UserX, ChevronDown, Sparkles, Bird } from 'lucide-react';
+import { X, Search, Users, Building2, UserCheck, UserX, ChevronDown, Sparkles } from 'lucide-react';
 import { useToast } from './ui/use-toast';
 import { supabase } from '../lib/supabase';
 import { parseEdgeError } from '../stores/usuariosStore';
@@ -490,9 +490,11 @@ export default function StudentNotificationModal({
                 <div className="space-y-1.5">
                   <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500">Vista previa:</p>
                   <div className="rounded-2xl bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-lg px-3.5 py-3 flex gap-3 items-start">
-                    <div className="w-10 h-10 rounded-[10px] bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shrink-0 shadow-sm">
-                      <Bird className="w-5 h-5 text-white" />
-                    </div>
+                    <img
+                      src="/assets/image.png"
+                      alt="Cuckoo Eats"
+                      className="w-10 h-10 rounded-[10px] shrink-0 shadow-sm object-cover"
+                    />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2 mb-0.5">
                         <span className="text-[11px] font-semibold text-gray-900 dark:text-white/90 tracking-wide">Cuckoo Eats</span>

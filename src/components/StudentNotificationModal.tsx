@@ -492,12 +492,12 @@ export default function StudentNotificationModal({
                   <div className="rounded-2xl bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-lg px-3.5 py-3 flex gap-3 items-start">
                     <img
                       src="/assets/image.png"
-                      alt="CuckooEats"
+                      alt="Cuckoo Eats"
                       className="w-10 h-10 rounded-[10px] shrink-0 shadow-sm object-cover"
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2 mb-0.5">
-                        <span className="text-[11px] font-semibold text-gray-900 dark:text-white/90 tracking-wide">Cuckoo Eats</span>
+                        <span className="text-[11px] font-semibold text-gray-900 dark:text-white/90 tracking-wide">CuckooEats</span>
                         <span className="text-[10px] text-gray-400 dark:text-gray-500 shrink-0">ahora</span>
                       </div>
                       {title.trim() && (

@@ -45,6 +45,6 @@ export function transformImage(
 export const IMAGE_PRESETS = {
   thumbnail: { width: 80, height: 80, quality: 60, resize: 'cover' as const, format: 'webp' as const },
   productPreview: { width: 500, quality: 75, resize: 'cover' as const, format: 'webp' as const },
-  bannerCard: { width: 600, quality: 70, resize: 'cover' as const, format: 'webp' as const },
-  bannerFull: { width: 1200, quality: 85, resize: 'contain' as const, format: 'webp' as const },
+  bannerCard: { width: 600, height: 200, quality: 70, resize: 'cover' as const, format: 'webp' as const },
+  bannerFull: { width: 1200, height: 400, quality: 85, resize: 'cover' as const, format: 'webp' as const },
 } as const;

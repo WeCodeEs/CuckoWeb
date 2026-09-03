@@ -492,7 +492,7 @@ export default function StudentNotificationModal({
                   <div className="rounded-2xl bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-lg px-3.5 py-3 flex gap-3 items-start">
                     <img
                       src="/assets/image.png"
-                      alt="Cuckoo Eats"
+                      alt="CuckooEats"
                       className="w-10 h-10 rounded-[10px] shrink-0 shadow-sm object-cover"
                     />
                     <div className="min-w-0 flex-1">

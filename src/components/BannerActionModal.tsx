@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { X, Link2, Search } from 'lucide-react';
 import { useToast } from './ui/use-toast';
+import { IMAGE_PRESETS } from '../utils/transformImage';
+import OptimizedImage from './OptimizedImage';
 import {
   Dialog,
   DialogContent,
@@ -161,8 +163,9 @@ export default function BannerActionModal({ banner, onClose }: Props) {
           <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-6">
             <div className="w-full rounded-lg border border-gray-200 dark:border-darkbg overflow-hidden bg-gray-50 dark:bg-darkbg">
               <div className="aspect-[3/1] bg-gray-100 dark:bg-darkbg">
-                <img
+                <OptimizedImage
                   src={banner.image_url}
+                  transform={IMAGE_PRESETS.bannerCard}
                   alt="Banner actual"
                   className="w-full h-full object-cover"
                 />

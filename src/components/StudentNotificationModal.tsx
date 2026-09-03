@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { X, Search, Users, Building2, UserCheck, UserX, ChevronDown, Sparkles } from 'lucide-react';
+import { X, Search, Users, Building2, UserCheck, UserX, ChevronDown, Sparkles, Coffee } from 'lucide-react';
 import { useToast } from './ui/use-toast';
 import { supabase } from '../lib/supabase';
 import { parseEdgeError } from '../stores/usuariosStore';
@@ -103,32 +103,37 @@ export default function StudentNotificationModal({
   const bodyTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [lastFocusedField, setLastFocusedField] = useState<'title' | 'body'>('body');
 
+  const activeStudents = useMemo(
+    () => allStudents.filter((s) => !isDeletedAccount(s)),
+    [allStudents]
+  );
+
   const selectedIds = useMemo(
     () => new Set(selectedStudents.map((s) => s.id)),
     [selectedStudents]
   );
 
   const studentsForFaculty = useMemo(
-    () => allStudents.filter((s) => s.faculty === selectedFaculty),
-    [allStudents, selectedFaculty]
+    () => activeStudents.filter((s) => s.faculty === selectedFaculty),
+    [activeStudents, selectedFaculty]
   );
 
   const incompleteStudents = useMemo(
-    () => allStudents.filter(isIncomplete),
-    [allStudents]
+    () => activeStudents.filter(isIncomplete),
+    [activeStudents]
   );
 
   const searchResults = useMemo(() => {
     if (!studentSearch.trim()) return [];
     const q = studentSearch.toLowerCase();
-    return allStudents
+    return activeStudents
       .filter((s) => {
         if (selectedIds.has(s.id)) return false;
         const name = `${s.first_name} ${s.last_name}`.toLowerCase();
         return name.includes(q) || s.email.toLowerCase().includes(q);
       })
       .slice(0, 8);
-  }, [studentSearch, allStudents, selectedIds]);
+  }, [studentSearch, activeStudents, selectedIds]);
 
   const addStudent = useCallback((student: Student) => {
     setSelectedStudents((prev) => {
@@ -147,7 +152,7 @@ export default function StudentNotificationModal({
   const audienceSummary = useMemo(() => {
     switch (audienceMode) {
       case 'all':
-        return `Se enviará a todos los alumnos registrados (${allStudents.length}).`;
+        return `Se enviará a todos los alumnos registrados (${activeStudents.length}).`;
       case 'faculty':
         return studentsForFaculty.length > 0
           ? `Se enviará a ${studentsForFaculty.length} alumno${studentsForFaculty.length === 1 ? '' : 's'} de ${selectedFaculty}.`
@@ -161,7 +166,7 @@ export default function StudentNotificationModal({
           ? `Se enviará a ${incompleteStudents.length} alumno${incompleteStudents.length === 1 ? '' : 's'} con registro pendiente.`
           : 'No hay alumnos con registro pendiente.';
     }
-  }, [audienceMode, allStudents.length, studentsForFaculty.length, selectedFaculty, selectedStudents.length]);
+  }, [audienceMode, activeStudents.length, studentsForFaculty.length, selectedFaculty, selectedStudents.length, incompleteStudents.length]);
 
   const canSubmit = useMemo(() => {
     if (!title.trim() || !body.trim()) return false;
@@ -265,7 +270,7 @@ export default function StudentNotificationModal({
                   onClick={() => setAudienceMode('all')}
                   icon={<Users className="w-4 h-4" />}
                   label="Todos"
-                  description={`${allStudents.length} alumnos`}
+                  description={`${activeStudents.length} alumnos`}
                 />
                 <AudienceButton
                   active={audienceMode === 'faculty'}
@@ -473,19 +478,34 @@ export default function StudentNotificationModal({
                   {'{'}{'{'} nombre {'}'}{'}'}
                 </button>
               </div>
-              {(hasVariables(title) || hasVariables(body)) && allStudents.length > 0 && (
-                <div className="bg-gray-50 dark:bg-darkbg rounded-lg px-3 py-2 border border-dashed border-gray-200 dark:border-gray-700">
-                  <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 mb-0.5">Vista previa:</p>
-                  {hasVariables(title) && (
-                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">
-                      {personalize(title, allStudents[0])}
-                    </p>
-                  )}
-                  {hasVariables(body) && (
-                    <p className="text-xs text-gray-600 dark:text-gray-300">
-                      {personalize(body, allStudents[0])}
-                    </p>
-                  )}
+              {(title.trim() || body.trim()) && (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500">Vista previa:</p>
+                  <div className="rounded-2xl bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-lg px-3.5 py-3 flex gap-3 items-start">
+                    <div className="w-10 h-10 rounded-[10px] bg-gradient-to-br from-teal-500 to-teal-700 flex items-center justify-center shrink-0 shadow-sm">
+                      <Coffee className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2 mb-0.5">
+                        <span className="text-[11px] font-semibold text-gray-900 dark:text-white/90 uppercase tracking-wide">Café Admin</span>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500 shrink-0">ahora</span>
+                      </div>
+                      {title.trim() && (
+                        <p className="text-[13px] font-semibold text-gray-900 dark:text-white leading-tight">
+                          {hasVariables(title) && activeStudents.length > 0
+                            ? personalize(title, activeStudents[0])
+                            : title}
+                        </p>
+                      )}
+                      {body.trim() && (
+                        <p className="text-[12px] text-gray-600 dark:text-gray-300 leading-snug mt-0.5 line-clamp-2">
+                          {hasVariables(body) && activeStudents.length > 0
+                            ? personalize(body, activeStudents[0])
+                            : body}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

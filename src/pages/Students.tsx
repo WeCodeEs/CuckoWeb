@@ -202,7 +202,7 @@ export default function Students() {
           className="px-4 py-2 rounded-lg border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary bg-white dark:bg-darkbg-lighter text-gray-900 dark:text-white"
         >
           <option value="Todos">Todas las escuelas</option>
-          {faculties.map(faculty => (
+          {faculties.filter(f => f !== 'Default').map(faculty => (
             <option key={faculty} value={faculty}>{faculty || 'Sin escuela'}</option>
           ))}
         </select>

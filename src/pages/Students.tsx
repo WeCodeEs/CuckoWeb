@@ -57,6 +57,8 @@ export default function Students() {
 
   const sortedAndFilteredStudents = useMemo(() => {
     const filtered = alumnos.filter(user => {
+      if (user.email?.includes('@deleted.')) return false;
+
       const fullName = `${user.first_name} ${user.last_name}`;
       const matchesSearch = 
         fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||

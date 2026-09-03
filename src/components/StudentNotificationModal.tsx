@@ -487,7 +487,7 @@ export default function StudentNotificationModal({
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2 mb-0.5">
-                        <span className="text-[11px] font-semibold text-gray-900 dark:text-white/90 uppercase tracking-wide">Café Admin</span>
+                        <span className="text-[11px] font-semibold text-gray-900 dark:text-white/90 uppercase tracking-wide">CuckooEats</span>
                         <span className="text-[10px] text-gray-400 dark:text-gray-500 shrink-0">ahora</span>
                       </div>
                       {title.trim() && (

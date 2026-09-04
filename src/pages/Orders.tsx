@@ -247,11 +247,17 @@ export default function Orders() {
           <h1 className="text-xl md:text-2xl font-bold text-primary-dark dark:text-white">
             Pedidos
           </h1>
-          <p className="text-base text-gray-500 dark:text-gray-400 tabular-nums">
-            <span className="capitalize">{format(now, "EEEE d 'de' MMMM", { locale: es })}</span>
-            <span className="mx-1.5 text-gray-300 dark:text-gray-600">|</span>
-            <span className="font-medium text-gray-700 dark:text-gray-200">{format(now, 'h:mm:ss a')}</span>
-          </p>
+          <div className="flex items-center gap-3 mt-1">
+            <span className="text-sm text-gray-500 dark:text-gray-400 capitalize">
+              {format(now, "EEEE d 'de' MMMM", { locale: es })}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 dark:bg-white/10 px-3 py-0.5 tabular-nums">
+              <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                {format(now, 'h:mm a')}
+              </span>
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button

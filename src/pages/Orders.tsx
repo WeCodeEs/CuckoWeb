@@ -1,4 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { useOrderStore, OrderStatus } from '../stores/orderStore';
 import PedidoCard from '../components/pedidos/PedidoCard';
 import PedidoDrawer from '../components/pedidos/PedidoDrawer';
@@ -85,7 +87,13 @@ export default function Orders() {
   const [showPrintPreview, setShowPrintPreview] = React.useState(false);
   const [activeId, setActiveId] = React.useState<number | null>(null);
   const [isTouchDevice, setIsTouchDevice] = React.useState(false);
+  const [now, setNow] = useState(new Date());
   const { toast } = useToast();
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Enhanced device detection
   useEffect(() => {
@@ -239,8 +247,10 @@ export default function Orders() {
           <h1 className="text-xl md:text-2xl font-bold text-primary-dark dark:text-white">
             Pedidos
           </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            Gestiona los pedidos del sistema
+          <p className="text-sm text-gray-500 dark:text-gray-400 tabular-nums">
+            <span className="capitalize">{format(now, "EEEE d 'de' MMMM", { locale: es })}</span>
+            <span className="mx-1.5 text-gray-300 dark:text-gray-600">|</span>
+            <span className="font-medium text-gray-700 dark:text-gray-200">{format(now, 'h:mm:ss a')}</span>
           </p>
         </div>
         <div className="flex items-center gap-2">

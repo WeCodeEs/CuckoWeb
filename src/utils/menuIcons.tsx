@@ -4,6 +4,10 @@ import {
   Cherry, Citrus, Coffee, Cookie, Croissant, CupSoda, Egg, Fish, Grape,
   IceCream, Leaf, Milk, Pizza, Salad, Sandwich, Soup, Wine, Bean, ChefHat,
   EggFried, Ham, Popcorn, Vegan, Wheat,
+  Hamburger, Donut, Drumstick, Cake, CandyCane, IceCreamCone, Nut, FishSymbol, LeafyGreen,
+  GlassWater, Martini,
+  Utensils, UtensilsCrossed, ForkKnifeCrossed, CookingPot, IceCreamBowl, Microwave, Refrigerator,
+  NutOff, MilkOff, EggOff, FishOff, WheatOff, BeanOff, BeerOff,
 } from 'lucide-react';
 
 export const foodIcons: { [key: string]: React.ElementType } = {
@@ -11,6 +15,10 @@ export const foodIcons: { [key: string]: React.ElementType } = {
   Ham, Egg, EggFried, Croissant, Cookie, Popcorn, Bean, Wheat,
   CakeSlice, IceCream, Candy, Apple, Banana, Cherry, Citrus,
   Grape, Carrot, Leaf, Vegan, Coffee, CupSoda, Milk, Beer, Wine,
+  Hamburger, Donut, Drumstick, Cake, CandyCane, IceCreamCone, Nut, FishSymbol, LeafyGreen,
+  GlassWater, Martini,
+  Utensils, UtensilsCrossed, ForkKnifeCrossed, CookingPot, IceCreamBowl, Microwave, Refrigerator,
+  NutOff, MilkOff, EggOff, FishOff, WheatOff, BeanOff, BeerOff,
 };
 
 export function MenuIcon({ name, ...props }: { name: string; [key: string]: any }) {

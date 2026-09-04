@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, CircleAlert as AlertCircle, Star } from 'lucide-react';
+import { MenuIcon } from '../utils/menuIcons';
 import { useMenuStore, Menu, MenuStats } from '../stores/menuStore';
 import { useCategoryStore } from '../stores/categoryStore';
 import { useProductStore } from '../stores/productStore';
@@ -205,7 +206,10 @@ export default function Menus() {
                     className="hover:bg-gray-50/50 dark:hover:bg-darkbg/50 transition-colors"
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-primary/10 dark:bg-secondary/10 flex items-center justify-center">
+                          <MenuIcon name={menu.icon_name} className="w-5 h-5 text-primary dark:text-secondary" />
+                        </div>
                         <span>{menu.name}</span>
                         {menu.is_default && (
                           <span

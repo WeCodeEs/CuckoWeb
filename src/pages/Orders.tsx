@@ -247,7 +247,7 @@ export default function Orders() {
           <h1 className="text-xl md:text-2xl font-bold text-primary-dark dark:text-white">
             Pedidos
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 tabular-nums">
+          <p className="text-base text-gray-500 dark:text-gray-400 tabular-nums">
             <span className="capitalize">{format(now, "EEEE d 'de' MMMM", { locale: es })}</span>
             <span className="mx-1.5 text-gray-300 dark:text-gray-600">|</span>
             <span className="font-medium text-gray-700 dark:text-gray-200">{format(now, 'h:mm:ss a')}</span>

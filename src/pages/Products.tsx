@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { Plus, Pencil, Trash2, CircleAlert as AlertCircle, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, CircleAlert as AlertCircle, Search, Package, CheckCircle2, XCircle, LayoutGrid } from 'lucide-react';
 import { useProductStore, Product } from '../stores/productStore';
 import { IMAGE_PRESETS } from '../utils/transformImage';
 import OptimizedImage from '../components/OptimizedImage';
@@ -11,6 +11,8 @@ import SkeletonTable from '../components/skeletons/SkeletonTable';
 import ProductModal from '../components/ProductModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { useToast } from '../components/ui/use-toast';
+
+type StatusFilter = 'all' | 'active' | 'inactive';
 
 export default function Products() {
   const {
@@ -32,10 +34,23 @@ export default function Products() {
   const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('asc');
   const [productToDelete, setProductToDelete] = React.useState<Product | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [statusFilter, setStatusFilter] = React.useState<StatusFilter>('all');
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  const stats = useMemo(() => {
+    const total = products.length;
+    const active = products.filter(p => p.active).length;
+    const inactive = total - active;
+    const categoriesInUse = new Set(
+      products.filter(p => p.category?.name).map(p => {
+        return p.category!.name + '::' + (p.category?.menu?.name || '');
+      })
+    ).size;
+    return { total, active, inactive, categoriesInUse };
+  }, [products]);
 
   const handleEdit = (product: Product) => {
     setSelectedProduct(product);
@@ -126,6 +141,10 @@ export default function Products() {
     product.category?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.description?.toLowerCase().includes(searchTerm.toLowerCase())
   ).filter(product => {
+    if (statusFilter === 'active') return product.active;
+    if (statusFilter === 'inactive') return !product.active;
+    return true;
+  }).filter(product => {
     if (selectedCategory === 'all') return true;
     if (selectedCategory === 'uncategorized') return !product.category?.name;
     const productKey = (product.category?.name || '') + '::' + (product.category?.menu?.name || '');
@@ -185,6 +204,104 @@ export default function Products() {
           Nuevo Producto
         </button>
       </div>
+
+      {/* Stats cards */}
+      {loading ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="bg-white dark:bg-darkbg-lighter rounded-xl p-5 shadow-soft dark:shadow-dark animate-pulse"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-slate-200/60 dark:bg-darkbg/40" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 bg-slate-200/60 dark:bg-darkbg/40 rounded w-20" />
+                  <div className="h-5 bg-slate-200/60 dark:bg-darkbg/40 rounded w-12" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {([
+            {
+              key: 'all' as StatusFilter,
+              label: 'Total Productos',
+              value: stats.total,
+              icon: Package,
+              iconBg: 'bg-primary/10 dark:bg-primary/20',
+              iconColor: 'text-primary dark:text-secondary',
+              ring: 'ring-primary/30 dark:ring-secondary/30',
+            },
+            {
+              key: 'active' as StatusFilter,
+              label: 'Activos',
+              value: stats.active,
+              icon: CheckCircle2,
+              iconBg: 'bg-emerald-50 dark:bg-emerald-900/20',
+              iconColor: 'text-emerald-600 dark:text-emerald-400',
+              ring: 'ring-emerald-400/40 dark:ring-emerald-500/30',
+            },
+            {
+              key: 'inactive' as StatusFilter,
+              label: 'Inactivos',
+              value: stats.inactive,
+              icon: XCircle,
+              iconBg: 'bg-gray-100 dark:bg-gray-800/60',
+              iconColor: 'text-gray-500 dark:text-gray-400',
+              ring: 'ring-gray-400/30 dark:ring-gray-500/30',
+            },
+            {
+              key: null,
+              label: 'Categorias',
+              value: stats.categoriesInUse,
+              icon: LayoutGrid,
+              iconBg: 'bg-accent/10 dark:bg-accent/20',
+              iconColor: 'text-accent',
+              ring: 'ring-accent/30',
+            },
+          ] as const).map((card) => {
+            const isClickable = card.key !== null;
+            const isSelected = isClickable && statusFilter === card.key;
+            return (
+              <button
+                key={card.label}
+                type="button"
+                onClick={() => {
+                  if (!isClickable) return;
+                  setStatusFilter(statusFilter === card.key ? 'all' : card.key);
+                }}
+                className={`relative text-left rounded-xl p-5 shadow-soft dark:shadow-dark transition-all duration-200 ${
+                  isClickable ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5' : 'cursor-default'
+                } ${
+                  isSelected
+                    ? 'bg-white dark:bg-darkbg-lighter ring-2 ' + card.ring
+                    : 'bg-white dark:bg-darkbg-lighter'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${card.iconBg}`}>
+                    <card.icon className={`w-5 h-5 ${card.iconColor}`} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                      {card.label}
+                    </p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-white tabular-nums">
+                      {card.value}
+                    </p>
+                  </div>
+                </div>
+                {isSelected && (
+                  <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary dark:bg-secondary" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1 relative">

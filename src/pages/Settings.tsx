@@ -61,7 +61,7 @@ export default function Settings() {
   }, [schedules]);
 
   const isDirtyHours = useMemo(() => {
-    if (schedules.length === 0) return false;
+    if (schedules.length === 0 && Object.keys(draftSchedules).length > 0) return true;
     for (const d of DAYS_OF_WEEK) {
       const draft = draftSchedules[d.id];
       const orig = schedules.find((s) => s.day_of_week === d.id);

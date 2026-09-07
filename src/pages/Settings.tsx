@@ -62,13 +62,17 @@ export default function Settings() {
   }, [schedules]);
 
   const isDirtyHours = useMemo(() => {
+    if (isLoading) return false;
+    if (Object.keys(draftSchedules).length === 0) return false;
+    
     if (schedules.length === 0 && Object.keys(draftSchedules).length > 0) return true;
     for (const d of DAYS_OF_WEEK) {
       const draft = draftSchedules[d.id];
+      if (!draft) return false;
       const orig = schedules.find((s) => s.day_of_week === d.id);
       if (!orig) return true;
       
-      const cleanTime = (t: string) => t.substring(0, 5); // handle HH:MM:SS from DB
+      const cleanTime = (t) => t.substring(0, 5); // handle HH:MM:SS from DB
       
       if (
         draft.is_open !== orig.is_open ||
@@ -79,7 +83,7 @@ export default function Settings() {
       }
     }
     return false;
-  }, [schedules, draftSchedules]);
+  }, [schedules, draftSchedules, isLoading]);
 
   useEffect(() => {
     fetchSettings().catch(() => {});

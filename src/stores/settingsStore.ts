@@ -133,6 +133,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       if (!isValidTime(s.open_time) || !isValidTime(s.close_time)) {
         throw new Error('Formato de hora inválido.');
       }
+      if (s.is_open && s.open_time >= s.close_time) {
+        throw new Error('La hora de cierre debe ser posterior a la de apertura.');
+      }
     }
     
     set({ schedules: newSchedules, error: null });

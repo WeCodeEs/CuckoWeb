@@ -242,49 +242,56 @@ export default function Settings() {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {DAYS_OF_WEEK.map((day) => {
+          <div className="flex flex-col border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm">
+            {DAYS_OF_WEEK.map((day, index) => {
               const draft = draftSchedules[day.id];
               if (!draft) return null;
               
               const cleanTime = (t: string) => t.substring(0, 5);
 
               return (
-                <div key={day.id} className="p-4 border border-gray-100 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-darkbg/50 flex flex-col gap-4 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <span className={`font-semibold ${draft.is_open ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
-                      {day.name}
-                    </span>
+                <div 
+                  key={day.id} 
+                  className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white dark:bg-darkbg-lighter transition-colors hover:bg-gray-50 dark:hover:bg-darkbg/50 ${
+                    index !== DAYS_OF_WEEK.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''
+                  }`}
+                >
+                  <div className="flex items-center gap-4 w-48 mb-4 sm:mb-0">
                     <Switch
                       checked={draft.is_open}
                       onChange={(val) => handleScheduleChange(day.id, 'is_open', val)}
                     />
+                    <span className={`font-medium ${draft.is_open ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
+                      {day.name}
+                    </span>
                   </div>
                   
                   {draft.is_open ? (
-                    <div className="flex items-center gap-3">
-                      <div className="flex flex-col flex-1">
-                        <label className="text-xs text-gray-500 dark:text-gray-400 mb-1">Apertura</label>
+                    <div className="flex items-center gap-4 sm:flex-1 sm:justify-end">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-500 dark:text-gray-400 w-6">De</span>
                         <input
                           type="time"
                           value={cleanTime(draft.open_time)}
                           onChange={(e) => handleScheduleChange(day.id, 'open_time', e.target.value)}
-                          className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-darkbg text-gray-900 dark:text-white focus:ring-1 focus:ring-primary"
+                          className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all"
                         />
                       </div>
-                      <div className="flex flex-col flex-1">
-                        <label className="text-xs text-gray-500 dark:text-gray-400 mb-1">Cierre</label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-500 dark:text-gray-400 w-6">a</span>
                         <input
                           type="time"
                           value={cleanTime(draft.close_time)}
                           onChange={(e) => handleScheduleChange(day.id, 'close_time', e.target.value)}
-                          className="px-3 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-darkbg text-gray-900 dark:text-white focus:ring-1 focus:ring-primary"
+                          className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all"
                         />
                       </div>
                     </div>
                   ) : (
-                    <div className="flex-1 sm:text-right text-sm text-gray-500 dark:text-gray-400">
-                      Cerrado
+                    <div className="sm:flex-1 flex sm:justify-end">
+                      <span className="text-sm text-gray-400 dark:text-gray-500 italic py-1.5 px-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                        Día inactivo
+                      </span>
                     </div>
                   )}
                 </div>

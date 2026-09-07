@@ -45,6 +45,7 @@ export default function Settings() {
 
   const [draftSchedules, setDraftSchedules] = useState<Record<number, StoreSchedule>>({});
   const [savingHours, setSavingHours] = useState(false);
+  const [activeDayTab, setActiveDayTab] = useState<number>(1);
 
   // Initialize draft schedules from store
   useEffect(() => {
@@ -242,61 +243,82 @@ export default function Settings() {
             </button>
           </div>
 
-          <div className="flex flex-col border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm">
-            {DAYS_OF_WEEK.map((day, index) => {
-              const draft = draftSchedules[day.id];
-              if (!draft) return null;
-              
-              const cleanTime = (t: string) => t.substring(0, 5);
+          <div className="flex flex-col border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-darkbg-lighter">
+            {/* Tabs Header */}
+            <div className="flex border-b border-gray-200 dark:border-gray-800 overflow-x-auto hide-scrollbar">
+              {DAYS_OF_WEEK.map((day) => {
+                const isActive = activeDayTab === day.id;
+                const draft = draftSchedules[day.id];
+                return (
+                  <button
+                    key={day.id}
+                    onClick={() => setActiveDayTab(day.id)}
+                    className={`flex-1 min-w-[80px] py-3 text-sm font-medium transition-colors border-b-2 
+                      ${isActive 
+                        ? 'border-primary text-primary dark:border-secondary dark:text-secondary bg-primary/5 dark:bg-secondary/10' 
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-darkbg'
+                      }`}
+                  >
+                    <div className="flex flex-col items-center gap-1.5">
+                      <span>{day.name.substring(0, 3)}</span>
+                      <div className={`w-1.5 h-1.5 rounded-full ${draft?.is_open ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
 
-              return (
-                <div 
-                  key={day.id} 
-                  className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white dark:bg-darkbg-lighter transition-colors hover:bg-gray-50 dark:hover:bg-darkbg/50 ${
-                    index !== DAYS_OF_WEEK.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-4 w-48 mb-4 sm:mb-0">
-                    <Switch
-                      checked={draft.is_open}
-                      onChange={(val) => handleScheduleChange(day.id, 'is_open', val)}
-                    />
-                    <span className={`font-medium ${draft.is_open ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
-                      {day.name}
-                    </span>
+            {/* Tab Content */}
+            <div className="p-6 min-h-[120px] flex items-center">
+              {(() => {
+                const draft = draftSchedules[activeDayTab];
+                if (!draft) return null;
+                const cleanTime = (t: string) => t.substring(0, 5);
+                const activeDayName = DAYS_OF_WEEK.find(d => d.id === activeDayTab)?.name;
+
+                return (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 w-full">
+                    <div className="flex items-center gap-4">
+                      <Switch
+                        checked={draft.is_open}
+                        onChange={(val) => handleScheduleChange(activeDayTab, 'is_open', val)}
+                      />
+                      <div>
+                        <p className={`font-semibold text-base ${draft.is_open ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>
+                          {activeDayName}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {draft.is_open ? 'Abierto en este horario' : 'Cerrado todo el día'}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {draft.is_open && (
+                      <div className="flex items-center gap-4">
+                        <div className="flex flex-col">
+                          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 ml-1">Apertura</label>
+                          <input
+                            type="time"
+                            value={cleanTime(draft.open_time)}
+                            onChange={(e) => handleScheduleChange(activeDayTab, 'open_time', e.target.value)}
+                            className="px-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all"
+                          />
+                        </div>
+                        <div className="flex flex-col">
+                          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 ml-1">Cierre</label>
+                          <input
+                            type="time"
+                            value={cleanTime(draft.close_time)}
+                            onChange={(e) => handleScheduleChange(activeDayTab, 'close_time', e.target.value)}
+                            className="px-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  
-                  {draft.is_open ? (
-                    <div className="flex items-center gap-4 sm:flex-1 sm:justify-end">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-500 dark:text-gray-400 w-6">De</span>
-                        <input
-                          type="time"
-                          value={cleanTime(draft.open_time)}
-                          onChange={(e) => handleScheduleChange(day.id, 'open_time', e.target.value)}
-                          className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-500 dark:text-gray-400 w-6">a</span>
-                        <input
-                          type="time"
-                          value={cleanTime(draft.close_time)}
-                          onChange={(e) => handleScheduleChange(day.id, 'close_time', e.target.value)}
-                          className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all"
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="sm:flex-1 flex sm:justify-end">
-                      <span className="text-sm text-gray-400 dark:text-gray-500 italic py-1.5 px-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                        Día inactivo
-                      </span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })()}
+            </div>
           </div>
         </div>
 

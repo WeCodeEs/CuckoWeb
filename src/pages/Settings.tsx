@@ -242,7 +242,7 @@ export default function Settings() {
             </button>
           </div>
 
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {DAYS_OF_WEEK.map((day) => {
               const draft = draftSchedules[day.id];
               if (!draft) return null;
@@ -250,30 +250,30 @@ export default function Settings() {
               const cleanTime = (t: string) => t.substring(0, 5);
 
               return (
-                <div key={day.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-darkbg/50 rounded-lg">
-                  <div className="flex items-center gap-4 mb-4 sm:mb-0 w-32">
+                <div key={day.id} className="p-4 border border-gray-100 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-darkbg/50 flex flex-col gap-4 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className={`font-semibold ${draft.is_open ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
+                      {day.name}
+                    </span>
                     <Switch
                       checked={draft.is_open}
                       onChange={(val) => handleScheduleChange(day.id, 'is_open', val)}
                     />
-                    <span className={`font-medium ${draft.is_open ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
-                      {day.name}
-                    </span>
                   </div>
                   
                   {draft.is_open ? (
-                    <div className="flex items-center gap-4 flex-1 sm:justify-end">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-500 dark:text-gray-400">De</span>
+                    <div className="flex items-center gap-3">
+                      <div className="flex flex-col flex-1">
+                        <label className="text-xs text-gray-500 dark:text-gray-400 mb-1">Apertura</label>
                         <input
                           type="time"
                           value={cleanTime(draft.open_time)}
                           onChange={(e) => handleScheduleChange(day.id, 'open_time', e.target.value)}
-                          className="px-3 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-darkbg text-gray-900 dark:text-white focus:ring-1 focus:ring-primary"
+                          className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-darkbg text-gray-900 dark:text-white focus:ring-1 focus:ring-primary"
                         />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-500 dark:text-gray-400">a</span>
+                      <div className="flex flex-col flex-1">
+                        <label className="text-xs text-gray-500 dark:text-gray-400 mb-1">Cierre</label>
                         <input
                           type="time"
                           value={cleanTime(draft.close_time)}

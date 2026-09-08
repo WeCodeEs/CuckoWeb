@@ -52,11 +52,11 @@ const testOrder: Order = {
 };
 
 function formatDate(dateStr: string): string {
-  return format(new Date(dateStr), 'dd/MM/yyyy HH:mm aaaa', { locale: es });
+  return format(new Date(dateStr), 'dd/MM/yyyy HH:mm', { locale: es });
 }
 
 function formatTime(dateStr: string, storeTimezone: string): string {
-  return formatInTimeZone(new Date(dateStr), storeTimezone, 'HH:mm aaaa');
+  return formatInTimeZone(new Date(dateStr), storeTimezone, 'HH:mm');
 }
 
 function escapeHtml(text: string): string {

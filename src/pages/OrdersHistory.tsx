@@ -178,12 +178,12 @@ export default function OrderHistory() {
               <tbody className="divide-y divide-gray-100 dark:divide-darkbg">
                 {filteredOrders.map((order) => {
                   const fullName = `${order.user?.first_name ?? ''} ${order.user?.last_name ?? ''}`.trim() || '-';
-                  const fecha = formatInTimeZone(new Date(order.created_at), storeTimezone, "d 'de' MMMM, yyyy' a las 'HH:mm aaaa", { locale: es });
-                  const creado = formatInTimeZone(new Date(order.created_at), storeTimezone, "HH:mm aaaa", { locale: es });
-                  const agendado = order.scheduled_delivery_time ? formatInTimeZone(new Date(order.scheduled_delivery_time), storeTimezone, "HH:mm aaaa", { locale: es }) : null;
-                  const preparando = order.started_at ? formatInTimeZone(new Date(order.started_at), storeTimezone, "HH:mm aaaa", { locale: es }) : null;
-                  const listo = order.ready_at ? formatInTimeZone(new Date(order.ready_at), storeTimezone, "HH:mm aaaa", { locale: es }) : null;
-                  const entregado = order.delivered_at ? formatInTimeZone(new Date(order.delivered_at), storeTimezone, "HH:mm aaaa", { locale: es }) : null;
+                  const fecha = formatInTimeZone(new Date(order.created_at), storeTimezone, "d 'de' MMMM, yyyy' a las 'HH:mm", { locale: es });
+                  const creado = formatInTimeZone(new Date(order.created_at), storeTimezone, "HH:mm", { locale: es });
+                  const agendado = order.scheduled_delivery_time ? formatInTimeZone(new Date(order.scheduled_delivery_time), storeTimezone, "HH:mm", { locale: es }) : null;
+                  const preparando = order.started_at ? formatInTimeZone(new Date(order.started_at), storeTimezone, "HH:mm", { locale: es }) : null;
+                  const listo = order.ready_at ? formatInTimeZone(new Date(order.ready_at), storeTimezone, "HH:mm", { locale: es }) : null;
+                  const entregado = order.delivered_at ? formatInTimeZone(new Date(order.delivered_at), storeTimezone, "HH:mm", { locale: es }) : null;
                   const tipo = order.scheduled_delivery_time ? 'Agendado' : 'Inmediato';
                   return (
                     <tr

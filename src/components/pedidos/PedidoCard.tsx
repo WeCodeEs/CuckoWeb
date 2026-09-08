@@ -137,14 +137,14 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
               <>
                 <Timer className={clsx("w-4 h-4 text-white dark:text-white", alertInfo.iconAnimation)} />
                 <span className="text-xs sm:text-sm font-bold truncate">
-                  {alertInfo.badgeText} - Entrega: {formatInTimeZone(new Date(order.scheduled_delivery_time as string), storeTimezone, 'HH:mm aaaa')}
+                  {alertInfo.badgeText} - Entrega: {formatInTimeZone(new Date(order.scheduled_delivery_time as string), storeTimezone, 'HH:mm')}
                 </span>
               </>
             ) : (
               <>
                 <CalendarClock className="w-4 h-4 text-white dark:text-white" />
                 <span className="text-xs sm:text-sm font-medium">
-                  Agendado para la(s) {formatInTimeZone(new Date(order.scheduled_delivery_time as string), storeTimezone, 'HH:mm aaaa')}
+                  Agendado para la(s) {formatInTimeZone(new Date(order.scheduled_delivery_time as string), storeTimezone, 'HH:mm')}
                 </span>
               </>
             )}

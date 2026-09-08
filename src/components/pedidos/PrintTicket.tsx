@@ -1,5 +1,6 @@
 import type { Order } from '../../stores/orderStore';
 import { buildTicketHtml } from '../../utils/buildTicketHtml';
+import { useSettingsStore } from '../../stores/settingsStore';
 
 interface Props {
   order?: Order;
@@ -7,7 +8,8 @@ interface Props {
 }
 
 export default function PrintTicket({ order, isTest = false }: Props) {
-  const html = buildTicketHtml(order, isTest);
+  const storeTimezone = useSettingsStore((state) => state.timezone);
+  const html = buildTicketHtml(storeTimezone, order, isTest);
   if (!html) return null;
 
   return (

@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import PrintTicket from './PrintTicket';
 import { useToast } from '../../components/ui/use-toast';
 import { buildTicketHtml } from '../../utils/buildTicketHtml';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { printViaIframe } from '../../utils/printViaIframe';
 
 interface Props {
@@ -13,7 +14,7 @@ export default function PrintPreviewModal({ onClose }: Props) {
   const { toast } = useToast();
 
   const handlePrint = () => {
-    const success = printViaIframe(buildTicketHtml(undefined, true));
+    const success = printViaIframe(buildTicketHtml(storeTimezone, undefined, true));
     if (!success) {
       toast({
         variant: 'destructive',

@@ -3,6 +3,7 @@ import { X, Printer, Clock, CircleCheck as CheckCircle, Truck, Play, Mail, Calen
 import { Order, OrderStatus, OrderNotification, useOrderStore } from '../../stores/orderStore';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { format } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import { es } from 'date-fns/locale';
 import NotificationModal from './NotificationModal';
 import { getScheduledOrderAlert } from '../../utils/timeAlerts';
@@ -59,7 +60,7 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
     : null;
 
   const handlePrint = () => {
-    const success = printViaIframe(buildTicketHtml(order));
+    const success = printViaIframe(buildTicketHtml(storeTimezone, order));
     if (!success) {
       toast({
         variant: 'destructive',
@@ -190,7 +191,7 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                       alertInfo.level === 'warning' ? 'text-yellow-600 dark:text-yellow-400' :
                       'text-blue-600 dark:text-blue-400'
                     }`}>
-                      Hora programada: {format(new Date(order.scheduled_delivery_time), 'HH:mm')}
+                      Hora programada: {formatInTimeZone(new Date(order.scheduled_delivery_time), storeTimezone, 'HH:mm')}
                     </p>
                   </div>
                 </div>
@@ -321,7 +322,7 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">Pedido Recibido</p>
                     <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                      {format(new Date(order.created_at), "d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
+                      {formatInTimeZone(new Date(order.created_at), storeTimezone, "d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
                     </p>
                   </div>
                 </div>
@@ -334,7 +335,7 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-orange-900 dark:text-orange-200">Preparación Iniciada</p>
                       <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
-                        {format(new Date(order.started_at), "d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
+                        {formatInTimeZone(new Date(order.started_at), storeTimezone, "d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
                       </p>
                     </div>
                   </div>
@@ -348,7 +349,7 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-green-900 dark:text-green-200">Pedido Listo</p>
                       <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-                        {format(new Date(order.ready_at), "d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
+                        {formatInTimeZone(new Date(order.ready_at), storeTimezone, "d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
                       </p>
                     </div>
                   </div>
@@ -362,7 +363,7 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-gray-900 dark:text-gray-200">Pedido Entregado</p>
                       <p className="text-xs text-gray-700 dark:text-gray-300 mt-1">
-                        {format(new Date(order.delivered_at), "d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
+                        {formatInTimeZone(new Date(order.delivered_at), storeTimezone, "d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
                       </p>
                     </div>
                   </div>
@@ -394,12 +395,12 @@ export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) 
                           )}
                         </div>
                         <p className="text-gray-900 dark:text-white font-bold flex-shrink-0">
-                          {format(new Date(n.created_at), 'HH:mm')}
+                          {formatInTimeZone(new Date(n.created_at), storeTimezone, 'HH:mm')}
                         </p>
                       </div>
                       <div className="mt-2 text-left">
                         <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {format(new Date(n.created_at), "d 'de' MMMM 'de' yyyy'", { locale: es })}
+                          {formatInTimeZone(new Date(n.created_at), storeTimezone, "d 'de' MMMM 'de' yyyy'", { locale: es })}
                         </span>
                       </div>
                     </div>

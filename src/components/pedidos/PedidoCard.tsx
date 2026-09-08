@@ -1,3 +1,6 @@
+import { formatInTimeZone } from "date-fns-tz";
+import { useSettingsStore } from "../../stores/settingsStore";
+
 import React, { useState, useEffect } from 'react';
 import { Clock, CalendarClock, Printer, Timer, ShoppingBag, Utensils } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -39,6 +42,7 @@ const statusLabels = {
 };
 
 export default function PedidoCard({ order, onClick, onPrint, isDragging = false, enableDrag = true }: Props) {
+  const storeTimezone = useSettingsStore((state) => state.timezone);
   const [currentTime, setCurrentTime] = useState(Date.now());
 
   const { attributes, listeners, setNodeRef, transform } = useDraggable({

@@ -1,3 +1,5 @@
+import { useSettingsStore } from "../../stores/settingsStore";
+
 import React from 'react';
 import { X, Printer, Clock, CircleCheck as CheckCircle, Truck, Play, Mail, CalendarClock, CircleAlert as AlertCircle, ExternalLink, ShoppingBag, Utensils } from 'lucide-react';
 import { Order, OrderStatus, OrderNotification, useOrderStore } from '../../stores/orderStore';
@@ -26,6 +28,7 @@ const statusOptions: { value: OrderStatus; label: string; icon: React.ComponentT
 ];
 
 export default function PedidoDrawer({ order, onClose, onStatusChange }: Props) {
+  const storeTimezone = useSettingsStore((state) => state.timezone);
   const { fetchNotificationsByOrder } = useOrderStore();
   const { toast } = useToast();
   const [notifications, setNotifications] = React.useState<OrderNotification[]>([]);

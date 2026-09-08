@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { CircleAlert as AlertCircle, Search, CircleEllipsis, CalendarDays } from 'lucide-react';
 import { useOrderStore, Order } from '../stores/orderStore';
+import { useSettingsStore } from '../stores/settingsStore';
 import PedidoDrawer from '../components/pedidos/PedidoDrawer';
 import DateRangePicker from '../components/DateRangePicker';
 import SkeletonTable from '../components/skeletons/SkeletonTable';
@@ -13,6 +14,7 @@ import { formatCurrency } from '../utils/formatCurrency';
 type OrderTypeFilter = 'Todos' | 'Agendados' | 'Inmediatos';
 
 export default function OrderHistory() {
+  const storeTimezone = useSettingsStore((state) => state.timezone);
   const {
     orders,
     loading,

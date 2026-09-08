@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 import { es } from 'date-fns/locale';
+import { useSettingsStore } from "../stores/settingsStore";
+
 import { useOrderStore, OrderStatus } from '../stores/orderStore';
 import PedidoCard from '../components/pedidos/PedidoCard';
 import PedidoDrawer from '../components/pedidos/PedidoDrawer';
@@ -71,6 +73,7 @@ function DroppableColumn({
 }
 
 export default function Orders() {
+  const storeTimezone = useSettingsStore((state) => state.timezone);
   const {
     orders,
     loading,

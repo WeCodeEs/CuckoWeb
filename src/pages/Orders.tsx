@@ -258,7 +258,7 @@ export default function Orders() {
             <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 dark:bg-white/10 px-3 py-0.5 tabular-nums">
               <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
               <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                {formatInTimeZone(now, storeTimezone, 'h:mm a')}
+                {formatInTimeZone(now, storeTimezone, 'HH:mm')}
               </span>
             </span>
           </div>

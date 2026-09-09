@@ -55,6 +55,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
           isOpen: data.is_open,
           maintenanceMode: data.is_in_maintenance,
           scheduledOrdersEnabled: data.allow_scheduled_orders,
+          timezone: data.timezone || 'America/Mexico_City',
           schedules: data.store_schedules || [],
           isLoading: false,
           error: null,

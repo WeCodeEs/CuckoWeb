@@ -18,6 +18,7 @@ interface SettingsState {
   isOpen: boolean;
   maintenanceMode: boolean;
   scheduledOrdersEnabled: boolean;
+  timezone: string;
   schedules: StoreSchedule[];
   isLoading: boolean;
   error: string | null;
@@ -34,6 +35,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   isOpen: true,
   maintenanceMode: false,
   scheduledOrdersEnabled: true,
+  timezone: 'America/Mexico_City',
   schedules: [],
   isLoading: true,
   error: null,
@@ -43,7 +45,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     try {
       const { data, error } = await supabase
         .from('store_details')
-        .select('id, is_open, is_in_maintenance, allow_scheduled_orders, store_schedules(day_of_week, is_open, open_time, close_time)')
+        .select('id, is_open, is_in_maintenance, allow_scheduled_orders, timezone, store_schedules(day_of_week, is_open, open_time, close_time)')
         .single();
 
       if (error) throw error;
@@ -53,6 +55,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
           isOpen: data.is_open,
           maintenanceMode: data.is_in_maintenance,
           scheduledOrdersEnabled: data.allow_scheduled_orders,
+          timezone: data.timezone || 'America/Mexico_City',
           schedules: data.store_schedules || [],
           isLoading: false,
           error: null,

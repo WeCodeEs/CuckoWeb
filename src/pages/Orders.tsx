@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import { es } from 'date-fns/locale';
+import { useSettingsStore } from "../stores/settingsStore";
+
 import { useOrderStore, OrderStatus } from '../stores/orderStore';
 import PedidoCard from '../components/pedidos/PedidoCard';
 import PedidoDrawer from '../components/pedidos/PedidoDrawer';
@@ -70,6 +73,7 @@ function DroppableColumn({
 }
 
 export default function Orders() {
+  const storeTimezone = useSettingsStore((state) => state.timezone);
   const {
     orders,
     loading,
@@ -164,7 +168,7 @@ export default function Orders() {
   };
 
   const handlePrintOrder = (order: any) => {
-    const success = printViaIframe(buildTicketHtml(order));
+    const success = printViaIframe(buildTicketHtml(storeTimezone, order));
     if (!success) {
       toast({
         variant: 'destructive',
@@ -249,12 +253,12 @@ export default function Orders() {
           </h1>
           <div className="flex items-center gap-3 mt-1">
             <span className="text-sm text-gray-500 dark:text-gray-400 capitalize">
-              {format(now, "EEEE d 'de' MMMM", { locale: es })}
+              {formatInTimeZone(now, storeTimezone, "EEEE d 'de' MMMM", { locale: es })}
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 dark:bg-white/10 px-3 py-0.5 tabular-nums">
               <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
               <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                {format(now, 'h:mm a')}
+                {formatInTimeZone(now, storeTimezone, 'HH:mm')}
               </span>
             </span>
           </div>

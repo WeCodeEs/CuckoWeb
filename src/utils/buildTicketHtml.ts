@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import { es } from 'date-fns/locale';
 import { formatCurrency } from './formatCurrency';
 import type { Order } from '../stores/orderStore';
@@ -54,8 +55,8 @@ function formatDate(dateStr: string): string {
   return format(new Date(dateStr), 'dd/MM/yyyy HH:mm', { locale: es });
 }
 
-function formatTime(dateStr: string): string {
-  return format(new Date(dateStr), 'HH:mm');
+function formatTime(dateStr: string, storeTimezone: string): string {
+  return formatInTimeZone(new Date(dateStr), storeTimezone, 'HH:mm');
 }
 
 function escapeHtml(text: string): string {
@@ -66,7 +67,8 @@ function escapeHtml(text: string): string {
     .replace(/"/g, '&quot;');
 }
 
-export function buildTicketHtml(order?: Order, isTest = false): string {
+export function buildTicketHtml(
+  storeTimezone: string,order?: Order, isTest = false): string {
   const o = isTest ? testOrder : order;
   if (!o) return '';
 
@@ -81,7 +83,7 @@ export function buildTicketHtml(order?: Order, isTest = false): string {
     !isTest && o.scheduled_delivery_time
       ? `<div style="font-size:18px;margin:8px 0;font-weight:bold;padding:6px;border:2px solid #000;border-radius:4px;">
            <p style="margin:0 0 2px 0;">PEDIDO AGENDADO</p>
-           <p style="margin:0;font-size:16px;">Para la(s) ${formatTime(o.scheduled_delivery_time)}</p>
+           <p style="margin:0;font-size:16px;">Para la(s) ${formatTime(o.scheduled_delivery_time, storeTimezone)}</p>
          </div>`
       : '';
 

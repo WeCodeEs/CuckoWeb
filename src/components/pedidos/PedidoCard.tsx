@@ -1,3 +1,6 @@
+import { formatInTimeZone } from "date-fns-tz";
+import { useSettingsStore } from "../../stores/settingsStore";
+
 import React, { useState, useEffect } from 'react';
 import { Clock, CalendarClock, Printer, Timer, ShoppingBag, Utensils } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -39,6 +42,7 @@ const statusLabels = {
 };
 
 export default function PedidoCard({ order, onClick, onPrint, isDragging = false, enableDrag = true }: Props) {
+  const storeTimezone = useSettingsStore((state) => state.timezone);
   const [currentTime, setCurrentTime] = useState(Date.now());
 
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
@@ -133,14 +137,14 @@ export default function PedidoCard({ order, onClick, onPrint, isDragging = false
               <>
                 <Timer className={clsx("w-4 h-4 text-white dark:text-white", alertInfo.iconAnimation)} />
                 <span className="text-xs sm:text-sm font-bold truncate">
-                  {alertInfo.badgeText} - Entrega: {format(new Date(order.scheduled_delivery_time as string), "HH:mm")}
+                  {alertInfo.badgeText} - Entrega: {formatInTimeZone(new Date(order.scheduled_delivery_time as string), storeTimezone, 'HH:mm')}
                 </span>
               </>
             ) : (
               <>
                 <CalendarClock className="w-4 h-4 text-white dark:text-white" />
                 <span className="text-xs sm:text-sm font-medium">
-                  Agendado para la(s) {format(new Date(order.scheduled_delivery_time as string), "HH:mm")}
+                  Agendado para la(s) {formatInTimeZone(new Date(order.scheduled_delivery_time as string), storeTimezone, 'HH:mm')}
                 </span>
               </>
             )}

@@ -1,17 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { CircleAlert as AlertCircle, Search, CircleEllipsis, CalendarDays } from 'lucide-react';
 import { useOrderStore, Order } from '../stores/orderStore';
+import { useSettingsStore } from '../stores/settingsStore';
 import PedidoDrawer from '../components/pedidos/PedidoDrawer';
 import DateRangePicker from '../components/DateRangePicker';
 import SkeletonTable from '../components/skeletons/SkeletonTable';
 import clsx from 'clsx';
 import { format } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import { es } from 'date-fns/locale';
 import { formatCurrency } from '../utils/formatCurrency';
 
 type OrderTypeFilter = 'Todos' | 'Agendados' | 'Inmediatos';
 
 export default function OrderHistory() {
+  const storeTimezone = useSettingsStore((state) => state.timezone);
   const {
     orders,
     loading,
@@ -175,12 +178,12 @@ export default function OrderHistory() {
               <tbody className="divide-y divide-gray-100 dark:divide-darkbg">
                 {filteredOrders.map((order) => {
                   const fullName = `${order.user?.first_name ?? ''} ${order.user?.last_name ?? ''}`.trim() || '-';
-                  const fecha = format(new Date(order.created_at), "d 'de' MMMM, yyyy' a las 'HH:mm", { locale: es });
-                  const creado = format(new Date(order.created_at), "HH:mm", { locale: es });
-                  const agendado = order.scheduled_delivery_time ? format(new Date(order.scheduled_delivery_time), "HH:mm", { locale: es }) : null;
-                  const preparando = order.started_at ? format(new Date(order.started_at), "HH:mm", { locale: es }) : null;
-                  const listo = order.ready_at ? format(new Date(order.ready_at), "HH:mm", { locale: es }) : null;
-                  const entregado = order.delivered_at ? format(new Date(order.delivered_at), "HH:mm", { locale: es }) : null;
+                  const fecha = formatInTimeZone(new Date(order.created_at), storeTimezone, "d 'de' MMMM, yyyy' a las 'HH:mm", { locale: es });
+                  const creado = formatInTimeZone(new Date(order.created_at), storeTimezone, "HH:mm", { locale: es });
+                  const agendado = order.scheduled_delivery_time ? formatInTimeZone(new Date(order.scheduled_delivery_time), storeTimezone, "HH:mm", { locale: es }) : null;
+                  const preparando = order.started_at ? formatInTimeZone(new Date(order.started_at), storeTimezone, "HH:mm", { locale: es }) : null;
+                  const listo = order.ready_at ? formatInTimeZone(new Date(order.ready_at), storeTimezone, "HH:mm", { locale: es }) : null;
+                  const entregado = order.delivered_at ? formatInTimeZone(new Date(order.delivered_at), storeTimezone, "HH:mm", { locale: es }) : null;
                   const tipo = order.scheduled_delivery_time ? 'Agendado' : 'Inmediato';
                   return (
                     <tr

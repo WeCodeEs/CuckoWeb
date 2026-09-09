@@ -1,26 +1,40 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Clock, Settings as SettingsIcon, Wrench, Calendar } from 'lucide-react';
 import Switch from '../components/ui/switch';
 import ConfirmationModal from '../components/ConfirmationModal';
 import Banners from './Banners';
-import { useSettingsStore } from '../stores/settingsStore';
+import { useSettingsStore, StoreSchedule } from '../stores/settingsStore';
 import { useToast } from '../components/ui/use-toast';
 
 type ConfirmationType = 'isOpen' | 'maintenanceMode' | 'scheduledOrders' | null;
 
+const DAYS_OF_WEEK = [
+  { id: 1, name: 'Lunes' },
+  { id: 2, name: 'Martes' },
+  { id: 3, name: 'Miércoles' },
+  { id: 4, name: 'Jueves' },
+  { id: 5, name: 'Viernes' },
+  { id: 6, name: 'Sábado' },
+  { id: 0, name: 'Domingo' },
+];
+
+const DEFAULT_SCHEDULE = {
+  is_open: true,
+  open_time: '08:00',
+  close_time: '18:00',
+};
+
 export default function Settings() {
   const {
     isOpen,
-    openingTime,
-    closingTime,
     maintenanceMode,
     scheduledOrdersEnabled,
+    schedules,
     isLoading,
     error,
     fetchSettings,
     updateSettings,
-    setLocalOpeningTime,
-    setLocalClosingTime,
+    updateSchedules,
   } = useSettingsStore();
 
   const { toast } = useToast();
@@ -29,18 +43,49 @@ export default function Settings() {
   const [confirmationType, setConfirmationType] = useState<ConfirmationType>(null);
   const [pendingValue, setPendingValue] = useState<boolean>(false);
 
-  const [draftOpening, setDraftOpening] = useState(openingTime);
-  const [draftClosing, setDraftClosing] = useState(closingTime);
+  const [draftSchedules, setDraftSchedules] = useState<Record<number, StoreSchedule>>({});
   const [savingHours, setSavingHours] = useState(false);
+  const [activeDayTab, setActiveDayTab] = useState<number>(1);
 
-  useEffect(() => { setDraftOpening(openingTime); }, [openingTime]);
-  useEffect(() => { setDraftClosing(closingTime); }, [closingTime]);
+  // Initialize draft schedules from store
+  useEffect(() => {
+    const draft: Record<number, StoreSchedule> = {};
+    DAYS_OF_WEEK.forEach((d) => {
+      const existing = schedules.find((s) => s.day_of_week === d.id);
+      if (existing) {
+        draft[d.id] = { ...existing };
+      } else {
+        draft[d.id] = { day_of_week: d.id, ...DEFAULT_SCHEDULE };
+      }
+    });
+    setDraftSchedules(draft);
+  }, [schedules]);
 
-  // Habilita botón solo si hubo cambios
-  const isDirtyHours = draftOpening !== openingTime || draftClosing !== closingTime;
+  const isDirtyHours = useMemo(() => {
+    if (isLoading) return false;
+    if (Object.keys(draftSchedules).length === 0) return false;
+    
+    if (schedules.length === 0 && Object.keys(draftSchedules).length > 0) return true;
+    for (const d of DAYS_OF_WEEK) {
+      const draft = draftSchedules[d.id];
+      if (!draft) return false;
+      const orig = schedules.find((s) => s.day_of_week === d.id);
+      if (!orig) return true;
+      
+      const cleanTime = (t) => t.substring(0, 5); // handle HH:MM:SS from DB
+      
+      if (
+        draft.is_open !== orig.is_open ||
+        cleanTime(draft.open_time) !== cleanTime(orig.open_time) ||
+        cleanTime(draft.close_time) !== cleanTime(orig.close_time)
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }, [schedules, draftSchedules, isLoading]);
 
   useEffect(() => {
-    // Carga inicial de configuraciones
     fetchSettings().catch(() => {});
   }, [fetchSettings]);
 
@@ -74,21 +119,27 @@ export default function Settings() {
   const onSaveHours = async () => {
     try {
       setSavingHours(true);
-      await updateSettings({
-        opening_time: draftOpening, // "HH:mm"
-        closing_time: draftClosing, // "HH:mm"
-      });
-      setLocalOpeningTime(draftOpening);
-      setLocalClosingTime(draftClosing);
-      toast({ title: 'Horario actualizado' });
+      const newSchedules = Object.values(draftSchedules);
+      await updateSchedules(newSchedules);
+      toast({ title: 'Horarios actualizados', description: 'Los horarios semanales han sido guardados.' });
     } catch (e: any) {
       toast({
         title: 'Error al actualizar',
-        description: e?.message ?? 'El horario no se ha actualizado.',
+        description: e?.message ?? 'Los horarios no se han actualizado.',
       });
     } finally {
       setSavingHours(false);
     }
+  };
+
+  const handleScheduleChange = (dayId: number, field: keyof StoreSchedule, value: any) => {
+    setDraftSchedules(prev => ({
+      ...prev,
+      [dayId]: {
+        ...prev[dayId],
+        [field]: value
+      }
+    }));
   };
 
   const confirmationContent = (() => {
@@ -144,10 +195,10 @@ export default function Settings() {
               </div>
               <div className="flex-1">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-                  Estado de la Cafetería
+                  Estado de la Cafetería (Cierre Emergencia)
                 </h2>
                 <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
-                  Controla si la cafetería está abierta o cerrada para recibir pedidos
+                  Control manual para anular el horario y cerrar la tienda temporalmente
                 </p>
                 <span
                   className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
@@ -156,7 +207,7 @@ export default function Settings() {
                       : 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-400'
                   }`}
                 >
-                  {isOpen ? 'Abierto' : 'Cerrado'}
+                  {isOpen ? 'Abierto' : 'Cerrado Temporalmente'}
                 </span>
               </div>
             </div>
@@ -175,10 +226,10 @@ export default function Settings() {
               </div>
               <div className="flex-1">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-                  Horario de Operación
+                  Horarios de Operación
                 </h2>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Define el horario de apertura y cierre de la cafetería
+                  Define los días y horarios en los que la tienda opera de forma automática
                 </p>
               </div>
             </div>
@@ -192,32 +243,85 @@ export default function Settings() {
                   : 'bg-primary text-white dark:bg-secondary hover:opacity-90'}`}
               aria-disabled={!isDirtyHours || savingHours}
             >
-              {savingHours ? 'Guardando…' : 'Guardar horario'}
+              {savingHours ? 'Guardando…' : 'Guardar horarios'}
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Hora de Apertura
-              </label>
-              <input
-                type="time"
-                value={draftOpening}
-                onChange={(e) => setDraftOpening(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary bg-white dark:bg-darkbg text-gray-900 dark:text-white"
-              />
+          <div className="flex flex-col border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-darkbg-lighter">
+            {/* Tabs Header */}
+            <div className="flex border-b border-gray-200 dark:border-gray-800 overflow-x-auto hide-scrollbar">
+              {DAYS_OF_WEEK.map((day) => {
+                const isActive = activeDayTab === day.id;
+                const draft = draftSchedules[day.id];
+                return (
+                  <button
+                    key={day.id}
+                    onClick={() => setActiveDayTab(day.id)}
+                    className={`flex-1 min-w-[80px] py-3 text-sm font-medium transition-colors border-b-2 
+                      ${isActive 
+                        ? 'border-primary text-primary dark:border-secondary dark:text-secondary bg-primary/5 dark:bg-secondary/10' 
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-darkbg'
+                      }`}
+                  >
+                    <div className="flex flex-col items-center gap-1.5">
+                      <span>{day.name.substring(0, 3)}</span>
+                      <div className={`w-1.5 h-1.5 rounded-full ${draft?.is_open ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Hora de Cierre
-              </label>
-              <input
-                type="time"
-                value={draftClosing}
-                onChange={(e) => setDraftClosing(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-darkbg focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary bg-white dark:bg-darkbg text-gray-900 dark:text-white"
-              />
+
+            {/* Tab Content */}
+            <div className="p-6 min-h-[120px] flex items-center">
+              {(() => {
+                const draft = draftSchedules[activeDayTab];
+                if (!draft) return null;
+                const cleanTime = (t: string) => t.substring(0, 5);
+                const activeDayName = DAYS_OF_WEEK.find(d => d.id === activeDayTab)?.name;
+
+                return (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 w-full">
+                    <div className="flex items-center gap-4">
+                      <Switch
+                        checked={draft.is_open}
+                        onChange={(val) => handleScheduleChange(activeDayTab, 'is_open', val)}
+                      />
+                      <div>
+                        <p className={`font-semibold text-base ${draft.is_open ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>
+                          {activeDayName}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {draft.is_open ? 'Abierto en este horario' : 'Cerrado todo el día'}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {draft.is_open && (
+                      <div className="flex items-center gap-4">
+                        <div className="flex flex-col">
+                          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 ml-1">Apertura</label>
+                          <input
+                            type="time"
+                            value={cleanTime(draft.open_time)}
+                            onChange={(e) => handleScheduleChange(activeDayTab, 'open_time', e.target.value)}
+                            className="px-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all"
+                          />
+                        </div>
+                        <div className="flex flex-col">
+                          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 ml-1">Cierre</label>
+                          <input
+                            type="time"
+                            value={cleanTime(draft.close_time)}
+                            onChange={(e) => handleScheduleChange(activeDayTab, 'close_time', e.target.value)}
+                            className="px-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

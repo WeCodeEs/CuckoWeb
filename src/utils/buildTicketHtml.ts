@@ -81,23 +81,11 @@ export function buildTicketHtml(
 
   const scheduledBlock =
     !isTest && o.scheduled_delivery_time
-      ? `<div style="font-size:18px;margin:8px 0;font-weight:bold;padding:6px;border:2px solid #000;border-radius:4px;">
+      ? `<div style="font-size:20px;margin:8px 0;font-weight:bold;padding:6px;border:2px solid #000;border-radius:4px;">
            <p style="margin:0 0 2px 0;">PEDIDO AGENDADO</p>
-           <p style="margin:0;font-size:16px;">Para la(s) ${formatTime(o.scheduled_delivery_time, storeTimezone)}</p>
+           <p style="margin:0;font-size:18px;">Para la(s) ${formatTime(o.scheduled_delivery_time, storeTimezone)}</p>
          </div>`
       : '';
-
-  const timestampLines = [
-    o.started_at
-      ? `<p style="margin:0;">Iniciado: ${formatDate(o.started_at)}</p>`
-      : '',
-    o.ready_at
-      ? `<p style="margin:0;">Listo: ${formatDate(o.ready_at)}</p>`
-      : '',
-    o.delivered_at
-      ? `<p style="margin:0;">Entregado: ${formatDate(o.delivered_at)}</p>`
-      : '',
-  ].join('');
 
   const detailRows = o.details
     .map((detail) => {
@@ -106,13 +94,13 @@ export function buildTicketHtml(
       );
       const optionsLine =
         detail.options && detail.options.length > 0
-          ? `<div style="padding-left:12px;color:#000;font-size:14px;">${detail.options
+          ? `<div style="padding-left:14px;color:#000;font-size:16px;font-weight:normal;">${detail.options
               .map((opt) =>
                 escapeHtml(opt.option_name || opt.option?.name || 'Opcion eliminada')
               )
               .join(', ')}</div>`
           : '';
-      return `<div style="font-size:14px;margin-bottom:4px;">
+      return `<div style="font-size:18px;font-weight:bold;margin-bottom:6px;">
         <div style="display:flex;justify-content:space-between;">
           <span style="max-width:60%;word-wrap:break-word;">${detail.quantity}x ${name}</span>
           <span>${formatCurrency(detail.subtotal)}</span>
@@ -123,31 +111,29 @@ export function buildTicketHtml(
     .join('');
 
   const testFooter = isTest
-    ? `<div style="margin-top:16px;text-align:center;font-size:10px;border:1px solid #000;padding:8px;">
-         <p style="margin:0 0 4px 0;font-weight:bold;">PRUEBA DE IMPRESIÓN 80MM</p>
-         <p style="margin:0;">Si puede leer esto claramente y el texto no se corta, la impresora está configurada correctamente para papel de 80mm.</p>
+    ? `<div style="margin-top:16px;text-align:center;font-size:12px;border:1px solid #000;padding:8px;">
+         <p style="margin:0 0 4px 0;font-weight:bold;">PRUEBA DE IMPRESION 80MM</p>
+         <p style="margin:0;">Si puede leer esto claramente y el texto no se corta, la impresora esta configurada correctamente.</p>
        </div>`
     : '';
 
-  return `<div style="width:80mm;padding:8px;font-family:monospace;color:#000;">
-    <div style="text-align:center;margin-bottom:8px;">
-      <h1 style="font-size:22px;margin:0 0 4px 0;font-weight:bold;">CuckooEats</h1>
-      <p style="font-size:24px;margin:4px 0;font-weight:bold;">${title}</p>
-      <div style="font-size:20px;margin:8px 0;font-weight:bold;padding:6px;border:3px solid #000;border-radius:4px;text-align:center;">
+  return `<div style="width:80mm;padding:8px;font-family:monospace;color:#000;font-weight:bold;">
+    <div style="text-align:center;margin-bottom:10px;">
+      <h1 style="font-size:24px;margin:0 0 4px 0;font-weight:bold;">CuckooEats</h1>
+      <p style="font-size:26px;margin:4px 0;font-weight:bold;">${title}</p>
+      <div style="font-size:22px;margin:8px 0;font-weight:bold;padding:8px;border:3px solid #000;border-radius:4px;text-align:center;">
         ${takeawayLabel}
       </div>
       ${scheduledBlock}
     </div>
-    <div style="font-size:13px;margin-bottom:8px;">
-      <p style="margin:0;">Fecha: ${formatDate(o.created_at)}</p>
+    <div style="font-size:16px;margin-bottom:10px;">
+      <p style="margin:0 0 2px 0;">Fecha: ${formatDate(o.created_at)}</p>
       <p style="margin:0;">Cliente: ${clientName}${facultyLine}</p>
-      <p style="margin:0;">Estado: ${escapeHtml(o.status)}</p>
-      ${timestampLines}
     </div>
-    <div style="border-top:1px dashed #000;border-bottom:1px dashed #000;padding:8px 0;margin-bottom:8px;">
+    <div style="border-top:2px dashed #000;border-bottom:2px dashed #000;padding:10px 0;margin-bottom:10px;">
       ${detailRows}
     </div>
-    <div style="font-size:16px;text-align:right;font-weight:bold;margin-bottom:8px;">
+    <div style="font-size:22px;text-align:right;font-weight:bold;margin-bottom:8px;">
       Total: ${formatCurrency(o.total)}
     </div>
     ${testFooter}

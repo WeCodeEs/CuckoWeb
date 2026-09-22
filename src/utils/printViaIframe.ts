@@ -28,9 +28,10 @@ export function printViaIframe(ticketHtml: string): boolean {
         padding: 8px;
         width: 80mm;
         font-family: 'Courier New', monospace;
-        font-size: 11px;
-        line-height: 1.2;
+        font-size: 14px;
+        line-height: 1.3;
         color: #000;
+        font-weight: bold;
       }
       * {
         box-sizing: border-box;

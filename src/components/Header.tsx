@@ -8,7 +8,7 @@ export default function Header() {
   const { user, signOut } = useAuthStore();
 
   return (
-    <header className="relative z-20 bg-white dark:bg-darkbg border-b border-gray-200 dark:border-darkbg-darker h-16 px-6 flex items-center justify-between transition-colors duration-200">
+    <header className="bg-white dark:bg-darkbg border-b border-gray-200 dark:border-darkbg-darker h-16 px-6 flex items-center justify-between transition-colors duration-200">
       <h1 className="text-xl font-semibold text-primary-dark dark:text-secondary-light">
         Sistema de Gestión de Cafetería
       </h1>

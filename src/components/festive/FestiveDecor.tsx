@@ -66,12 +66,16 @@ export function SidebarGarland() {
   );
 }
 
-/** Fondo del área de contenido: ramos de cempasúchil o calabazas asomando detrás de las tarjetas. */
+/**
+ * Fondo del área de contenido: ramos de cempasúchil o calabazas asomando detrás de las tarjetas.
+ * Va con z negativo dentro del contenedor `isolate` de MainLayout: así el contenido y los paneles fijos
+ * (el detalle de un pedido, por ejemplo) conservan su orden de capas original.
+ */
 export function PageBackdrop() {
   const isDark = useThemeStore((s) => s.isDark);
 
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+    <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
       {isDark ? (
         <>
           <div

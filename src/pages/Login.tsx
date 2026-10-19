@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import { LoginDecor } from '../components/festive/FestiveDecor';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -30,8 +31,9 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-darkbg flex flex-col items-center justify-center py-6 sm:px-6 lg:px-8 transition-colors duration-200">
-      <div className="w-full max-w-md space-y-4">
+    <div className="relative min-h-screen bg-gray-50 dark:bg-darkbg flex flex-col items-center justify-center py-6 sm:px-6 lg:px-8 transition-colors duration-200 overflow-hidden">
+      <LoginDecor />
+      <div className="relative z-10 w-full max-w-md space-y-4">
         <img
           src={`${SUPABASE_URL}/storage/v1/object/sign/images/Logo_Vertical_removebg.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9iYjIwYTQ2OC0zZGUxLTQ4ZGMtOWY4Zi04ODUyNDRiNDIwYzEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvTG9nb19WZXJ0aWNhbF9yZW1vdmViZy5wbmciLCJpYXQiOjE3NTk4Njk2MTcsImV4cCI6NDkxMzQ2OTYxN30.mHw60hLmacUR5tLUhs9DuOKTnyeALMFRuWbJ0heaEqE`}
           alt="CuckooEats Logo"

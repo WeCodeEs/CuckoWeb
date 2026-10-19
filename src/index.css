@@ -2,6 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Edición limitada Día de Muertos / Halloween (temporal).
+ * Modo claro  = Día de Muertos: fondo crema, texto ciruela, grises cálidos.
+ * Modo oscuro = Halloween: fondo berenjena, grises lavanda, violeta y naranja calabaza.
+ * Valores originales: white #ffffff · gray = escala neutra de Tailwind · primary #0B818F / #183542 / #139FAA ·
+ * secondary #49BCCE / #B3E1E4 · accent #F07122 · darkbg #183542 / #1F4456 / #132A36.
+ * Los colores van en canales "R G B" para que funcionen los modificadores de opacidad (bg-primary/10).
+ */
+:root {
+  --c-white: 255 251 242;
+  --c-gray-50: 253 247 233;
+  --c-gray-100: 249 240 222;
+  --c-gray-200: 242 224 198;
+  --c-gray-300: 232 208 174;
+  --c-gray-400: 168 151 160;
+  --c-gray-500: 125 107 120;
+  --c-gray-600: 101 79 104;
+  --c-gray-700: 75 51 80;
+  --c-gray-800: 58 34 64;
+  --c-gray-900: 45 12 51;
+
+  --c-primary: 11 129 143;
+  --c-primary-dark: 24 53 66;
+  --c-primary-light: 19 159 170;
+  --c-secondary: 73 188 206;
+  --c-secondary-light: 179 225 228;
+  --c-accent: 240 113 34;
+
+  --c-darkbg: 24 53 66;
+  --c-darkbg-lighter: 31 68 86;
+  --c-darkbg-darker: 19 42 54;
+}
+
+.dark {
+  --c-white: 255 247 237;
+  --c-gray-50: 243 232 255;
+  --c-gray-100: 233 213 255;
+  --c-gray-200: 221 199 242;
+  --c-gray-300: 205 182 232;
+  --c-gray-400: 168 144 200;
+  --c-gray-500: 134 110 166;
+  --c-gray-600: 99 77 128;
+  --c-gray-700: 70 48 99;
+  --c-gray-800: 42 26 61;
+  --c-gray-900: 27 16 38;
+
+  --c-primary: 123 63 168;
+  --c-primary-dark: 36 17 58;
+  --c-primary-light: 155 95 201;
+  --c-secondary: 160 100 210;
+  --c-secondary-light: 233 213 255;
+  --c-accent: 255 122 26;
+
+  --c-darkbg: 27 16 38;
+  --c-darkbg-lighter: 42 26 61;
+  --c-darkbg-darker: 18 10 27;
+}
+
 @layer base {
   body {
     @apply bg-gray-50 dark:bg-darkbg;
@@ -159,5 +217,22 @@
 
   .dark .scroll-smooth-touch::-webkit-scrollbar-thumb {
     background-color: rgb(31 41 55);
+  }
+}
+
+/* Edición Día de Muertos / Halloween: arañas que se balancean (se desactiva con "reducir movimiento"). */
+@keyframes festive-swing {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
+}
+
+.festive-swing {
+  transform-origin: top center;
+  animation: festive-swing 5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .festive-swing {
+    animation: none;
   }
 }

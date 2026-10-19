@@ -53,6 +53,19 @@ export function SidebarDecor() {
   return <img {...img} src={cobweb} className="pointer-events-none absolute left-0 top-0 z-10 w-16 opacity-60" />;
 }
 
+/** Tira de papel picado colgando bajo el logo del menú lateral (solo Día de Muertos, con el menú expandido). */
+export function SidebarGarland() {
+  const isDark = useThemeStore((s) => s.isDark);
+  if (isDark) return null;
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none h-[42px] shrink-0"
+      style={{ backgroundImage: `url(${garland})`, backgroundRepeat: 'repeat-x', backgroundPosition: 'center top', backgroundSize: '260px 42px' }}
+    />
+  );
+}
+
 /** Fondo del área de contenido: ramos de cempasúchil o calabazas asomando detrás de las tarjetas. */
 export function PageBackdrop() {
   const isDark = useThemeStore((s) => s.isDark);

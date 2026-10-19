@@ -26,7 +26,8 @@ import DateRangePicker from '../components/DateRangePicker';
 import SkeletonCard from '../components/skeletons/SkeletonCard';
 import { generatePDFReport, generateExcelReport } from '../utils/reportGenerator';
 
-const COLORS = ['#0B818F', '#139FAA', '#49BCCE', '#B3E1E4', '#F07122'];
+// Edición Día de Muertos / Halloween: tonos que se leen en ambos modos. Original: ['#0B818F', '#139FAA', '#49BCCE', '#B3E1E4', '#F07122']
+const COLORS = ['#F07122', '#D9548A', '#9E5AB2', '#F6B437', '#B98AE0'];
 
 const CustomTooltip = ({ active, payload, label, labelFormatter, valueFormatter }: any) => {
   if (active && payload && payload.length) {
@@ -233,7 +234,7 @@ export default function Dashboard() {
                     />
                     <Bar
                       dataKey="total"
-                      fill="#0B818F"
+                      fill="#F07122"
                       radius={[8, 8, 0, 0]}
                     />
                   </BarChart>

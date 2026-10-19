@@ -5,7 +5,7 @@ import { Route } from '../types';
 import { useAuthStore } from '../stores/authStore';
 import { useSidebarStore } from '../stores/sidebarStore';
 import SidebarTooltip from './SidebarTooltip';
-import { SidebarDecor } from './festive/FestiveDecor';
+import { SidebarDecor, SidebarGarland } from './festive/FestiveDecor';
 import clsx from 'clsx';
 
 interface SubRoute {
@@ -221,6 +221,7 @@ export default function Sidebar() {
           <div className="h-8" />
         )}
       </div>
+      {!isCollapsed && <SidebarGarland />}
 
       <nav className={clsx("flex-1 space-y-1 overflow-y-auto", isCollapsed ? 'p-2' : 'p-4')}>
         {filteredRoutes.map(route => renderNavItem(route))}

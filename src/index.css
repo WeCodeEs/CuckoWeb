@@ -23,11 +23,12 @@
   --c-gray-800: 58 34 64;
   --c-gray-900: 45 12 51;
 
-  --c-primary: 11 129 143;
-  --c-primary-dark: 24 53 66;
-  --c-primary-light: 19 159 170;
-  --c-secondary: 73 188 206;
-  --c-secondary-light: 179 225 228;
+  /* Día de Muertos: ciruela, violeta y rosa mexicano (el azul de la marca queda solo en el modo original). */
+  --c-primary: 122 58 140;
+  --c-primary-dark: 45 12 51;
+  --c-primary-light: 158 90 178;
+  --c-secondary: 217 84 138;
+  --c-secondary-light: 248 220 232;
   --c-accent: 240 113 34;
 
   --c-darkbg: 24 53 66;

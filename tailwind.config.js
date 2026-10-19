@@ -1,26 +1,46 @@
 /** @type {import('tailwindcss').Config} */
+
+// Edición limitada Día de Muertos / Halloween (temporal).
+// Los colores salen de variables CSS definidas en src/index.css: el modo claro es la versión
+// Día de Muertos y el modo oscuro (clase `dark`) es la versión Halloween. Los valores originales
+// (azul grisáceo, grises neutros, #183542 de fondo oscuro) están anotados en index.css.
+const v = (name) => `rgb(var(--c-${name}) / <alpha-value>)`;
+
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   darkMode: 'class',
   theme: {
     extend: {
       colors: {
+        white: v('white'),
+        gray: {
+          50: v('gray-50'),
+          100: v('gray-100'),
+          200: v('gray-200'),
+          300: v('gray-300'),
+          400: v('gray-400'),
+          500: v('gray-500'),
+          600: v('gray-600'),
+          700: v('gray-700'),
+          800: v('gray-800'),
+          900: v('gray-900'),
+        },
         primary: {
-          DEFAULT: '#0B818F',
-          dark: '#183542',
-          light: '#139FAA',
+          DEFAULT: v('primary'),
+          dark: v('primary-dark'),
+          light: v('primary-light'),
         },
         secondary: {
-          DEFAULT: '#49BCCE',
-          light: '#B3E1E4',
+          DEFAULT: v('secondary'),
+          light: v('secondary-light'),
         },
-        accent: '#F07122',
+        accent: v('accent'),
         dark: '#000000',
         // Dark mode specific colors
         darkbg: {
-          DEFAULT: '#183542',
-          lighter: '#1F4456',
-          darker: '#132A36',
+          DEFAULT: v('darkbg'),
+          lighter: v('darkbg-lighter'),
+          darker: v('darkbg-darker'),
         }
       },
       boxShadow: {

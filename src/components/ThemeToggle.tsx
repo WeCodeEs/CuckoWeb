@@ -1,7 +1,10 @@
 import React, { useEffect } from 'react';
-import { Moon, Sun } from 'lucide-react';
 import { useThemeStore } from '../stores/themeStore';
+import pumpkin from '../assets/festive/pumpkin.svg';
+import skull from '../assets/festive/calaverita.webp';
 
+// Edición Día de Muertos / Halloween: el modo claro es la versión Día de Muertos y el oscuro la
+// versión Halloween. El botón muestra la versión a la que se cambia (calabaza ↔ calaverita).
 export default function ThemeToggle() {
   const { isDark, toggleTheme } = useThemeStore();
 
@@ -13,16 +16,19 @@ export default function ThemeToggle() {
     }
   }, [isDark]);
 
+  const label = isDark ? 'Cambiar a Día de Muertos' : 'Cambiar a Halloween';
+
   return (
     <button
       onClick={toggleTheme}
-      className="p-2 rounded-lg transition-all duration-200 hover:bg-gray-100 dark:hover:bg-darkbg active:scale-95"
-      title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      className="shrink-0 p-2 rounded-lg transition-all duration-200 hover:bg-gray-100 dark:hover:bg-darkbg active:scale-95"
+      title={label}
+      aria-label={label}
     >
       {isDark ? (
-        <Sun className="w-5 h-5 text-secondary-light" />
+        <img src={skull} alt="" aria-hidden draggable={false} className="h-6 w-6 shrink-0 object-contain" />
       ) : (
-        <Moon className="w-5 h-5 text-gray-500" />
+        <img src={pumpkin} alt="" aria-hidden draggable={false} className="h-6 w-6 shrink-0 object-contain" />
       )}
     </button>
   );

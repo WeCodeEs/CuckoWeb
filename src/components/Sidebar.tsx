@@ -5,6 +5,7 @@ import { Route } from '../types';
 import { useAuthStore } from '../stores/authStore';
 import { useSidebarStore } from '../stores/sidebarStore';
 import SidebarTooltip from './SidebarTooltip';
+import { SidebarDecor, SidebarGarland } from './festive/FestiveDecor';
 import clsx from 'clsx';
 
 interface SubRoute {
@@ -198,16 +199,17 @@ export default function Sidebar() {
 
   return (
     <div className={clsx(
-      "hidden md:flex bg-primary-dark dark:bg-darkbg-darker text-white h-screen flex-col transition-all duration-300 flex-shrink-0",
+      "relative hidden md:flex bg-primary-dark dark:bg-darkbg-darker text-white h-screen flex-col transition-all duration-300 flex-shrink-0",
       isCollapsed ? 'w-16' : 'w-64'
     )}>
+      <SidebarDecor />
       <div className="bg-white dark:bg-darkbg-darker p-4 flex flex-col items-center">
         {!isCollapsed ? (
           <>
             <img
               src={`${SUPABASE_URL}/storage/v1/object/sign/images/Logo_Vertical.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9iYjIwYTQ2OC0zZGUxLTQ4ZGMtOWY4Zi04ODUyNDRiNDIwYzEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvTG9nb19WZXJ0aWNhbC5qcGciLCJpYXQiOjE3NTk4Njk0ODQsImV4cCI6NDkxMzQ2OTQ4NH0.fVr0DAFBXQuW-38eQIqfCCAqNwo3mCdEo45tLJmohqM`}
               alt="Café Admin Logo"
-              className="h-28 w-auto mb-4 block dark:hidden"
+              className="h-28 w-auto mb-4 block dark:hidden mix-blend-multiply"
             />
             <img
               src={`${SUPABASE_URL}/storage/v1/object/sign/images/Logo_Cuckoo_Fondo_Oscuro.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9iYjIwYTQ2OC0zZGUxLTQ4ZGMtOWY4Zi04ODUyNDRiNDIwYzEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvTG9nb19DdWNrb29fRm9uZG9fT3NjdXJvLnBuZyIsImlhdCI6MTc1OTg2OTcxNywiZXhwIjo0OTEzNDY5NzE3fQ.6JcaTT2Nwfu9PpiDSpjhhbGREcnVvI1lPktXne9A_DQ`}
@@ -219,6 +221,7 @@ export default function Sidebar() {
           <div className="h-8" />
         )}
       </div>
+      {!isCollapsed && <SidebarGarland />}
 
       <nav className={clsx("flex-1 space-y-1 overflow-y-auto", isCollapsed ? 'p-2' : 'p-4')}>
         {filteredRoutes.map(route => renderNavItem(route))}

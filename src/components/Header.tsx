@@ -2,6 +2,7 @@ import React from 'react';
 import { Bell, User, LogOut } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import ThemeToggle from './ThemeToggle';
+import { HeaderDecor } from './festive/FestiveDecor';
 
 export default function Header() {
   const { user, signOut } = useAuthStore();
@@ -11,6 +12,8 @@ export default function Header() {
       <h1 className="text-xl font-semibold text-primary-dark dark:text-secondary-light">
         Sistema de Gestión de Cafetería
       </h1>
+
+      <HeaderDecor />
       
       <div className="flex items-center gap-4">
         <ThemeToggle />
